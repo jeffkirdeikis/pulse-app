@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Calendar, MapPin, Clock, Star, Check, Bell, Search, Filter, ChevronRight, X, Plus, Edit2, Trash2, Eye, Users, DollarSign, AlertCircle, CheckCircle, XCircle, SlidersHorizontal, Building, Wrench, TrendingUp, Phone, Globe, Navigation, Mail, Share2, Ticket, Percent, Tag, Repeat, ExternalLink, Heart, Copy, Info, Gift, Sparkles, Zap, Camera } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import { useUserData } from './hooks/useUserData';
@@ -8053,6 +8053,39 @@ const expandRecurringEvents = (baseEvents) => {
 // Expand the events
 REAL_DATA.events = expandRecurringEvents(REAL_DATA.events);
 
+// Smart Deal Title Generator - creates clean, compelling titles (max ~50 chars)
+const generateSmartDealTitle = (deal, venueName = '') => {
+  const { title = '', description = '' } = deal;
+
+  // Generic titles that need enhancement
+  const genericTitles = ['happy hour', 'family night', 'date night', 'special', 'deal', 'promo', 'offer'];
+  const isGeneric = genericTitles.some(g => title.toLowerCase().trim() === g);
+
+  // Check if title already looks good (has price/value and is reasonable length)
+  const hasGoodValue = /\$\d+|\d+%|free|half price|bogo/i.test(title);
+  if (hasGoodValue && title.length <= 45 && !isGeneric) {
+    return title;
+  }
+
+  // For generic titles, add venue name
+  if (isGeneric && venueName) {
+    return `${title} @ ${venueName}`;
+  }
+
+  // If title is too long, try to shorten it smartly
+  if (title.length > 45) {
+    // Try to cut at a natural break point
+    const shortened = title.substring(0, 42);
+    const lastSpace = shortened.lastIndexOf(' ');
+    if (lastSpace > 25) {
+      return shortened.substring(0, lastSpace) + '...';
+    }
+    return shortened + '...';
+  }
+
+  return title || 'Special Offer';
+};
+
 export default function PulseApp() {
   const [view, setView] = useState('consumer');
   const [currentSection, setCurrentSection] = useState('classes'); // classes, events, deals, services - DEFAULT TO CLASSES
@@ -8104,6 +8137,15 @@ export default function PulseApp() {
   const [profileForm, setProfileForm] = useState({});
 
   const [showSavedModal, setShowSavedModal] = useState(false);
+  const [localSavedItems, setLocalSavedItems] = useState(() => {
+    // Initialize from localStorage for persistence without login
+    try {
+      const saved = localStorage.getItem('pulse_local_saves');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
   const [showMyCalendarModal, setShowMyCalendarModal] = useState(false);
   const [serviceCategoryFilter, setServiceCategoryFilter] = useState('All');
   const [dealCategoryFilter, setDealCategoryFilter] = useState('All');
@@ -8856,14 +8898,36 @@ export default function PulseApp() {
     });
   };
 
-  const toggleSave = async (id, type, name = '', data = {}) => {
+  const toggleSave = useCallback(async (id, type, name = '', data = {}) => {
+    const itemKey = `${type}-${id}`;
+
     if (!isAuthenticated) {
-      // Could show a login prompt here
-      console.log('Please sign in to save items');
+      // Use local storage when not logged in
+      setLocalSavedItems(prev => {
+        const exists = prev.includes(itemKey);
+        const newSaves = exists
+          ? prev.filter(k => k !== itemKey)
+          : [...prev, itemKey];
+        localStorage.setItem('pulse_local_saves', JSON.stringify(newSaves));
+        return newSaves;
+      });
       return;
     }
+
+    // Optimistic update for logged-in users
+    setLocalSavedItems(prev => {
+      const exists = prev.includes(itemKey);
+      return exists ? prev.filter(k => k !== itemKey) : [...prev, itemKey];
+    });
+
     await toggleSaveItem(type, String(id), name, data);
-  };
+  }, [isAuthenticated, toggleSaveItem]);
+
+  // Combined check for saved items (local + database)
+  const isItemSavedLocal = useCallback((type, id) => {
+    const itemKey = `${type}-${id}`;
+    return localSavedItems.includes(itemKey) || isItemSaved(type, String(id));
+  }, [localSavedItems, isItemSaved]);
 
   // Debounce search for smoother performance
   useEffect(() => {
@@ -8891,7 +8955,14 @@ export default function PulseApp() {
       );
 
       dealCardRefs.current.forEach((card) => {
-        if (card) observer.observe(card);
+        if (card) {
+          observer.observe(card);
+          // Check if already visible on first load
+          const rect = card.getBoundingClientRect();
+          if (rect.top < window.innerHeight && rect.bottom > 0) {
+            card.classList.add('deal-card-visible');
+          }
+        }
       });
 
       return () => {
@@ -8922,7 +8993,14 @@ export default function PulseApp() {
       );
 
       eventCardRefs.current.forEach((card) => {
-        if (card) observer.observe(card);
+        if (card) {
+          observer.observe(card);
+          // Check if already visible on first load
+          const rect = card.getBoundingClientRect();
+          if (rect.top < window.innerHeight && rect.bottom > 0) {
+            card.classList.add('event-card-visible');
+          }
+        }
       });
 
       return () => {
@@ -8953,7 +9031,14 @@ export default function PulseApp() {
       );
 
       serviceCardRefs.current.forEach((card) => {
-        if (card) observer.observe(card);
+        if (card) {
+          observer.observe(card);
+          // Check if already visible on first load
+          const rect = card.getBoundingClientRect();
+          if (rect.top < window.innerHeight && rect.bottom > 0) {
+            card.classList.add('service-card-visible');
+          }
+        }
       });
 
       return () => {
@@ -8984,7 +9069,14 @@ export default function PulseApp() {
       );
 
       classCardRefs.current.forEach((card) => {
-        if (card) observer.observe(card);
+        if (card) {
+          observer.observe(card);
+          // Check if already visible on first load
+          const rect = card.getBoundingClientRect();
+          if (rect.top < window.innerHeight && rect.bottom > 0) {
+            card.classList.add('class-card-visible');
+          }
+        }
       });
 
       return () => {
@@ -9029,21 +9121,22 @@ export default function PulseApp() {
   }, [currentSection]);
 
   const EventCard = React.forwardRef(({ event }, ref) => {
-    const isSaved = isItemSaved('event', String(event.id));
+    const itemType = event.eventType === 'class' ? 'class' : 'event';
+    const isSaved = isItemSavedLocal(itemType, event.id);
 
     const handleSave = async (e) => {
       e.stopPropagation();
-      await toggleSave(event.id, 'event', event.title, { venue: event.venue, date: event.date });
+      await toggleSave(event.id, itemType, event.title, { venue: event.venue, date: event.date });
     };
-    
+
     return (
       <div ref={ref} className="event-card" onClick={() => setSelectedEvent(event)}>
         <div className="event-card-header">
           <div className="event-title-section">
             <h3>{event.title}</h3>
             {REAL_DATA.venues.find(v => v.id === event.venueId)?.verified && (
-              <div 
-                className="verified-badge-premium-inline" 
+              <div
+                className="verified-badge-premium-inline"
                 onClick={(e) => e.stopPropagation()}
                 data-tooltip="Verified"
               >
@@ -9051,17 +9144,6 @@ export default function PulseApp() {
               </div>
             )}
           </div>
-          <button 
-            className="save-event-btn"
-            onClick={handleSave}
-            data-tooltip={isSaved ? "Saved" : "Save"}
-          >
-            {isSaved ? (
-              <Star size={20} fill="#3b82f6" stroke="#3b82f6" strokeWidth={2} />
-            ) : (
-              <Star size={20} stroke="#9ca3af" strokeWidth={2} />
-            )}
-          </button>
         </div>
 
         <div className="event-card-body">
@@ -9096,6 +9178,13 @@ export default function PulseApp() {
           </div>
         </div>
 
+        <button
+          className={`save-star-btn ${isSaved ? 'saved' : ''}`}
+          onClick={handleSave}
+          data-tooltip={isSaved ? "Saved" : "Save"}
+        >
+          <Star size={24} fill={isSaved ? "#f59e0b" : "none"} stroke={isSaved ? "#f59e0b" : "#9ca3af"} strokeWidth={2} />
+        </button>
         <ChevronRight className="event-chevron" size={20} />
       </div>
     );
@@ -9403,10 +9492,10 @@ export default function PulseApp() {
                   >
                     <div className="deal-card-header-new">
                       <div className="deal-title-section">
-                        <h3>{deal.title}</h3>
+                        <h3>{generateSmartDealTitle(deal, getVenueName(deal.venueId, deal))}</h3>
                         {deal.verified && (
-                          <div 
-                            className="verified-badge-premium" 
+                          <div
+                            className="verified-badge-premium"
                             onClick={(e) => e.stopPropagation()}
                             data-tooltip="Verified"
                           >
@@ -9414,7 +9503,7 @@ export default function PulseApp() {
                           </div>
                         )}
                       </div>
-                      {deal.savingsPercent && (
+                      {deal.savingsPercent > 0 && (
                         <div className="savings-badge-new">{deal.savingsPercent}% OFF</div>
                       )}
                     </div>
@@ -9438,11 +9527,21 @@ export default function PulseApp() {
                         </div>
                       </div>
 
-                      {deal.description && (
-                        <p className="deal-description-new">{deal.description}</p>
+                      {deal.description && deal.description.toLowerCase() !== deal.title.toLowerCase() && (
+                        <p className="deal-description-new">{deal.description.length > 80 ? deal.description.substring(0, 77) + '...' : deal.description}</p>
                       )}
                     </div>
 
+                    <button
+                      className={`save-star-btn ${isItemSavedLocal('deal', deal.id) ? 'saved' : ''}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleSave(deal.id, 'deal', deal.title, { venue: getVenueName(deal.venueId, deal) });
+                      }}
+                      data-tooltip={isItemSavedLocal('deal', deal.id) ? "Saved" : "Save"}
+                    >
+                      <Star size={24} fill={isItemSavedLocal('deal', deal.id) ? "#f59e0b" : "none"} stroke={isItemSavedLocal('deal', deal.id) ? "#f59e0b" : "#9ca3af"} strokeWidth={2} />
+                    </button>
                     <ChevronRight className="deal-chevron" size={20} />
                   </div>
                 ))}
@@ -9781,14 +9880,14 @@ export default function PulseApp() {
 
                 {/* Quick Actions */}
                 <div className="event-quick-actions">
-                  <button 
-                    className={`quick-action-btn ${isItemSaved('event', String(selectedEvent.id)) ? 'saved' : ''}`}
-                    onClick={() => toggleSave(selectedEvent.id, 'event', selectedEvent.title, { venue: selectedEvent.venue, date: selectedEvent.date })}
+                  <button
+                    className={`quick-action-btn ${isItemSavedLocal(selectedEvent.eventType === 'class' ? 'class' : 'event', selectedEvent.id) ? 'saved' : ''}`}
+                    onClick={() => toggleSave(selectedEvent.id, selectedEvent.eventType === 'class' ? 'class' : 'event', selectedEvent.title, { venue: selectedEvent.venue, date: selectedEvent.date })}
                   >
-                    <div className={`quick-action-icon save ${isItemSaved('event', String(selectedEvent.id)) ? 'saved' : ''}`}>
-                      <Star size={20} fill={isItemSaved('event', String(selectedEvent.id)) ? 'currentColor' : 'none'} />
+                    <div className={`quick-action-icon save ${isItemSavedLocal(selectedEvent.eventType === 'class' ? 'class' : 'event', selectedEvent.id) ? 'saved' : ''}`}>
+                      <Star size={20} fill={isItemSavedLocal(selectedEvent.eventType === 'class' ? 'class' : 'event', selectedEvent.id) ? 'currentColor' : 'none'} />
                     </div>
-                    <span>{isItemSaved('event', String(selectedEvent.id)) ? 'Saved' : 'Save'}</span>
+                    <span>{isItemSavedLocal(selectedEvent.eventType === 'class' ? 'class' : 'event', selectedEvent.id) ? 'Saved' : 'Save'}</span>
                   </button>
                   <button className="quick-action-btn">
                     <div className="quick-action-icon share">
@@ -9930,7 +10029,7 @@ export default function PulseApp() {
                         </span>
                       </div>
                     )}
-                    <h1 className="deal-hero-title">{selectedDeal.title}</h1>
+                    <h1 className="deal-hero-title">{generateSmartDealTitle(selectedDeal, getVenueName(selectedDeal.venueId, selectedDeal))}</h1>
                     <div className="deal-hero-venue">
                       <MapPin size={16} />
                       <span>{getVenueName(selectedDeal.venueId, selectedDeal)}</span>
@@ -9951,14 +10050,14 @@ export default function PulseApp() {
 
                 {/* Quick Actions */}
                 <div className="deal-quick-actions">
-                  <button 
-                    className={`quick-action-btn ${isItemSaved('deal', String(selectedDeal.id)) ? 'saved' : ''}`}
+                  <button
+                    className={`quick-action-btn ${isItemSavedLocal('deal', selectedDeal.id) ? 'saved' : ''}`}
                     onClick={() => toggleSave(selectedDeal.id, 'deal', selectedDeal.title, { business: selectedDeal.venueName })}
                   >
-                    <div className={`quick-action-icon save ${isItemSaved('deal', String(selectedDeal.id)) ? 'saved' : ''}`}>
-                      <Star size={20} fill={isItemSaved('deal', String(selectedDeal.id)) ? 'currentColor' : 'none'} />
+                    <div className={`quick-action-icon save ${isItemSavedLocal('deal', selectedDeal.id) ? 'saved' : ''}`}>
+                      <Star size={20} fill={isItemSavedLocal('deal', selectedDeal.id) ? 'currentColor' : 'none'} />
                     </div>
-                    <span>{isItemSaved('deal', String(selectedDeal.id)) ? 'Saved' : 'Save'}</span>
+                    <span>{isItemSavedLocal('deal', selectedDeal.id) ? 'Saved' : 'Save'}</span>
                   </button>
                   <button className="quick-action-btn">
                     <div className="quick-action-icon share">
@@ -10118,14 +10217,14 @@ export default function PulseApp() {
                     </div>
                     <span>Website</span>
                   </a>
-                  <button 
-                    className={`quick-action-btn ${isItemSaved('service', String(selectedService.id)) ? 'saved' : ''}`}
+                  <button
+                    className={`quick-action-btn ${isItemSavedLocal('service', selectedService.id) ? 'saved' : ''}`}
                     onClick={() => toggleSave(selectedService.id, 'service', selectedService.name, { category: selectedService.category })}
                   >
-                    <div className={`quick-action-icon save ${isItemSaved('service', String(selectedService.id)) ? 'saved' : ''}`}>
-                      <Star size={20} fill={isItemSaved('service', String(selectedService.id)) ? 'currentColor' : 'none'} />
+                    <div className={`quick-action-icon save ${isItemSavedLocal('service', selectedService.id) ? 'saved' : ''}`}>
+                      <Star size={20} fill={isItemSavedLocal('service', selectedService.id) ? 'currentColor' : 'none'} />
                     </div>
-                    <span>{isItemSaved('service', String(selectedService.id)) ? 'Saved' : 'Save'}</span>
+                    <span>{isItemSavedLocal('service', selectedService.id) ? 'Saved' : 'Save'}</span>
                   </button>
                 </div>
 
@@ -14151,29 +14250,24 @@ export default function PulseApp() {
         .event-card-header {
           display: flex;
           align-items: flex-start;
-          justify-content: space-between;
           gap: 12px;
         }
 
         .event-title-section {
-          flex: 1;
-          display: flex;
-          align-items: center;
-          gap: 8px;
+          display: block;
+          margin-right: 50px;
         }
 
         .event-title-section h3 {
-          font-size: 18px;
+          font-size: 17px;
           font-weight: 700;
           color: #111827;
           margin: 0;
-          line-height: 1.3;
-          overflow: hidden;
-          text-overflow: ellipsis;
+          line-height: 1.35;
           display: -webkit-box;
           -webkit-line-clamp: 2;
           -webkit-box-orient: vertical;
-          flex: 1;
+          overflow: hidden;
         }
 
         .event-card-body {
@@ -14331,41 +14425,46 @@ export default function PulseApp() {
           opacity: 1;
           transition: opacity 0s;
         }
-        .save-event-btn {
+        .save-star-btn {
           position: absolute;
-          top: 20px;
+          top: 16px;
           right: 16px;
-          background: white;
-          border: 1.5px solid #e5e7eb;
-          border-radius: 50%;
-          width: 40px;
-          height: 40px;
+          background: transparent;
+          border: none;
+          padding: 8px;
+          cursor: pointer;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+          z-index: 10;
           display: flex;
           align-items: center;
           justify-content: center;
-          cursor: pointer;
-          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-          z-index: 2;
         }
-        
-        .save-event-btn:hover {
-          transform: translateY(-2px) scale(1.05);
-          box-shadow: 0 6px 20px rgba(59, 130, 246, 0.2);
-          background: #f0f9ff;
-          border-color: #3b82f6;
+
+        .save-star-btn:hover {
+          transform: scale(1.15);
         }
-        
-        .save-event-btn:active {
-          transform: translateY(0) scale(0.95);
+
+        .save-star-btn:hover svg {
+          stroke: #f59e0b;
         }
-        
-        .save-event-btn svg {
-          transition: all 0.2s ease;
+
+        .save-star-btn:active {
+          transform: scale(0.95);
         }
-        
-        .save-event-btn:hover svg {
-          transform: scale(1.1);
+
+        .save-star-btn.saved svg {
+          filter: drop-shadow(0 2px 4px rgba(245, 158, 11, 0.4));
+        }
+
+        .save-star-btn.saved:hover svg {
+          filter: drop-shadow(0 4px 8px rgba(245, 158, 11, 0.5));
+        }
+
+        .deal-header-actions {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex-shrink: 0;
         }
         
         .class-badge { position: absolute; top: 12px; right: 80px; background: #8b5cf6; color: #fff; padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
@@ -14443,29 +14542,24 @@ export default function PulseApp() {
         .deal-card-header-new {
           display: flex;
           align-items: flex-start;
-          justify-content: space-between;
           gap: 12px;
         }
 
         .deal-title-section {
-          flex: 1;
-          display: flex;
-          align-items: center;
-          gap: 8px;
+          display: block;
+          margin-right: 50px;
         }
 
         .deal-title-section h3 {
-          font-size: 18px;
+          font-size: 17px;
           font-weight: 700;
           color: #111827;
           margin: 0;
-          line-height: 1.3;
-          overflow: hidden;
-          text-overflow: ellipsis;
+          line-height: 1.35;
           display: -webkit-box;
           -webkit-line-clamp: 2;
           -webkit-box-orient: vertical;
-          flex: 1;
+          overflow: hidden;
         }
 
         .savings-badge-new {
@@ -22302,9 +22396,8 @@ export default function PulseApp() {
           position: absolute;
           top: 20px;
           right: 20px;
-          background: rgba(255,255,255,0.95);
-          backdrop-filter: blur(10px);
-          border: 1px solid rgba(0,0,0,0.1);
+          background: #f3f4f6;
+          border: none;
           width: 40px;
           height: 40px;
           border-radius: 50%;
@@ -22315,12 +22408,13 @@ export default function PulseApp() {
           cursor: pointer;
           transition: all 0.2s ease;
           z-index: 20;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+          box-shadow: 0 2px 8px rgba(0,0,0,0.15);
         }
 
         .deal-close:hover {
-          background: #fff;
+          background: #e5e7eb;
           transform: scale(1.05);
+          color: #111827;
         }
 
         /* Deal Hero */
