@@ -8353,6 +8353,19 @@ export default function PulseApp() {
   });
   const [showFilters, setShowFilters] = useState(false);
 
+  // Kids age range filter state
+  const [kidsAgeRange, setKidsAgeRange] = useState([0, 18]);
+  const ageRangeOptions = [
+    { label: 'Prenatal', min: -1, max: 0 },
+    { label: '0-1', min: 0, max: 1 },
+    { label: '1-2', min: 1, max: 2 },
+    { label: '2-5', min: 2, max: 5 },
+    { label: '5-7', min: 5, max: 7 },
+    { label: '7-10', min: 7, max: 10 },
+    { label: '10-13', min: 10, max: 13 },
+    { label: '13-18', min: 13, max: 18 }
+  ];
+
   const categories = ['All', 'Music', 'Fitness', 'Arts', 'Community', 'Games', 'Wellness', 'Outdoors & Nature', 'Nightlife', 'Family', 'Food & Drink'];
 
   // Helper to close Add Event modal and reset form
