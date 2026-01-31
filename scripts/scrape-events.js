@@ -12,6 +12,11 @@ const SUPABASE_KEY = process.env.SUPABASE_KEY || 'REDACTED_SERVICE_KEY';
 // Squamish event sources
 const EVENT_SOURCES = [
   {
+    name: 'Together Nest',
+    url: 'https://together-nest.com/discover?category=activities',
+    category: 'Community'
+  },
+  {
     name: 'Tourism Squamish',
     url: 'https://www.tourismsquamish.com/events/',
     category: 'Community'

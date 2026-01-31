@@ -8769,7 +8769,35 @@ export default function PulseApp() {
 
     // Age filtering
     if (filters.age === 'kids') {
-      filtered = filtered.filter(e => e.ageGroup?.includes('Kids') || e.ageGroup === 'All Ages');
+      filtered = filtered.filter(e => {
+        // Basic kids filter - must be for kids or all ages
+        if (!e.ageGroup?.includes('Kids') && e.ageGroup !== 'All Ages') return false;
+
+        // If specific age range is selected, match against event titles/descriptions
+        if (kidsAgeRange[0] !== 0 || kidsAgeRange[1] !== 18) {
+          // Extract age numbers from title/description
+          const text = `${e.title} ${e.description}`.toLowerCase();
+
+          // Check for prenatal
+          if (kidsAgeRange[0] === -1 && kidsAgeRange[1] === 0) {
+            return text.includes('prenatal') || text.includes('perinatal') || text.includes('pregnant');
+          }
+
+          // Try to extract age range from title like "(3-5)" or "Ages 4-8"
+          const ageMatch = text.match(/(?:ages?\s*)?(\d+)\s*[-–]\s*(\d+)/i);
+          if (ageMatch) {
+            const eventMinAge = parseInt(ageMatch[1]);
+            const eventMaxAge = parseInt(ageMatch[2]);
+            // Check if event age range overlaps with selected range
+            return eventMinAge <= kidsAgeRange[1] && eventMaxAge >= kidsAgeRange[0];
+          }
+
+          // If no age range found in title, include it (generic kids class)
+          return true;
+        }
+
+        return true;
+      });
     } else if (filters.age === 'adults') {
       filtered = filtered.filter(e => e.ageGroup?.includes('Adults') || e.ageGroup === '19+' || e.ageGroup === 'Teens & Adults');
     }
@@ -8836,7 +8864,10 @@ export default function PulseApp() {
       return (
         <div className="empty-state">
           <p>No {currentSection} found matching your filters.</p>
-          <button onClick={() => setFilters({ day: 'today', age: 'all', category: 'all', time: 'all', price: 'all', location: 'all' })}>
+          <button onClick={() => {
+            setFilters({ day: 'today', age: 'all', category: 'all', time: 'all', price: 'all', location: 'all' });
+            setKidsAgeRange([0, 18]);
+          }}>
             Clear Filters
           </button>
         </div>
@@ -9388,9 +9419,14 @@ export default function PulseApp() {
 
                   {/* Age Filter */}
                   <div className="filter-group">
-                    <select 
-                      value={filters.age} 
-                      onChange={(e) => setFilters({...filters, age: e.target.value})}
+                    <select
+                      value={filters.age}
+                      onChange={(e) => {
+                        setFilters({...filters, age: e.target.value});
+                        if (e.target.value !== 'kids') {
+                          setKidsAgeRange([0, 18]); // Reset when not kids
+                        }
+                      }}
                       className="filter-dropdown"
                     >
                       <option value="all">👥 All Ages</option>
@@ -9399,6 +9435,80 @@ export default function PulseApp() {
                     </select>
                   </div>
                 </div>
+
+                {/* Kids Age Range Slider - Shows when Kids is selected */}
+                {filters.age === 'kids' && (
+                  <div className="kids-age-slider-section">
+                    <div className="age-slider-header">
+                      <span className="age-slider-label">Age Range</span>
+                      <span className="age-slider-value">
+                        {kidsAgeRange[0] === -1 ? 'Prenatal' : `${kidsAgeRange[0]} yrs`} - {kidsAgeRange[1]} yrs
+                      </span>
+                    </div>
+
+                    {/* Dual Range Slider */}
+                    <div className="age-slider-container">
+                      <div className="age-slider-track">
+                        <div
+                          className="age-slider-fill"
+                          style={{
+                            left: `${((kidsAgeRange[0] + 1) / 19) * 100}%`,
+                            width: `${((kidsAgeRange[1] - kidsAgeRange[0]) / 19) * 100}%`
+                          }}
+                        />
+                      </div>
+                      <input
+                        type="range"
+                        min="-1"
+                        max="18"
+                        value={kidsAgeRange[0]}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value);
+                          if (val < kidsAgeRange[1]) {
+                            setKidsAgeRange([val, kidsAgeRange[1]]);
+                          }
+                        }}
+                        className="age-slider age-slider-min"
+                      />
+                      <input
+                        type="range"
+                        min="-1"
+                        max="18"
+                        value={kidsAgeRange[1]}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value);
+                          if (val > kidsAgeRange[0]) {
+                            setKidsAgeRange([kidsAgeRange[0], val]);
+                          }
+                        }}
+                        className="age-slider age-slider-max"
+                      />
+                    </div>
+
+                    {/* Quick Select Buttons */}
+                    <div className="age-range-buttons">
+                      {ageRangeOptions.map((opt) => {
+                        const isSelected = kidsAgeRange[0] <= opt.min && kidsAgeRange[1] >= opt.max;
+                        const isExactMatch = kidsAgeRange[0] === opt.min && kidsAgeRange[1] === opt.max;
+                        return (
+                          <button
+                            key={opt.label}
+                            className={`age-range-btn ${isExactMatch ? 'active' : isSelected ? 'in-range' : ''}`}
+                            onClick={() => setKidsAgeRange([opt.min, opt.max])}
+                          >
+                            {opt.label}
+                          </button>
+                        );
+                      })}
+                      <button
+                        className={`age-range-btn ${kidsAgeRange[0] === 0 && kidsAgeRange[1] === 18 ? 'active' : ''}`}
+                        onClick={() => setKidsAgeRange([0, 18])}
+                      >
+                        All Kids
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 <div className="filters-row-bottom">
                   {/* Category Filter */}
@@ -9428,11 +9538,15 @@ export default function PulseApp() {
 
                   {/* Reset Button */}
                   {(() => {
-                    const hasActiveFilters = filters.day !== 'today' || filters.time !== 'all' || 
-                                            filters.age !== 'all' || filters.category !== 'all' || filters.price !== 'all';
+                    const hasActiveFilters = filters.day !== 'today' || filters.time !== 'all' ||
+                                            filters.age !== 'all' || filters.category !== 'all' || filters.price !== 'all' ||
+                                            (kidsAgeRange[0] !== 0 || kidsAgeRange[1] !== 18);
                     return hasActiveFilters ? (
-                      <button 
-                        onClick={() => setFilters({day: 'today', time: 'all', age: 'all', category: 'all', price: 'all'})}
+                      <button
+                        onClick={() => {
+                          setFilters({day: 'today', time: 'all', age: 'all', category: 'all', price: 'all'});
+                          setKidsAgeRange([0, 18]);
+                        }}
                         className="reset-btn"
                       >
                         ↺ Reset
@@ -14100,7 +14214,163 @@ export default function PulseApp() {
           transform: translateY(-1px);
           box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
         }
-        
+
+        /* ========== KIDS AGE SLIDER ========== */
+        .kids-age-slider-section {
+          background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+          border-radius: 16px;
+          padding: 16px 20px;
+          margin-top: 12px;
+          border: 2px solid #f59e0b;
+          animation: slideDown 0.3s ease-out;
+        }
+
+        .age-slider-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 12px;
+        }
+
+        .age-slider-label {
+          font-size: 14px;
+          font-weight: 700;
+          color: #92400e;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        .age-slider-value {
+          font-size: 15px;
+          font-weight: 700;
+          color: #d97706;
+          background: white;
+          padding: 4px 12px;
+          border-radius: 20px;
+          border: 2px solid #f59e0b;
+        }
+
+        .age-slider-container {
+          position: relative;
+          height: 32px;
+          margin-bottom: 16px;
+        }
+
+        .age-slider-track {
+          position: absolute;
+          top: 50%;
+          transform: translateY(-50%);
+          width: 100%;
+          height: 8px;
+          background: rgba(255, 255, 255, 0.8);
+          border-radius: 4px;
+          border: 2px solid #fbbf24;
+        }
+
+        .age-slider-fill {
+          position: absolute;
+          top: 0;
+          height: 100%;
+          background: linear-gradient(90deg, #f59e0b 0%, #d97706 100%);
+          border-radius: 4px;
+        }
+
+        .age-slider {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          -webkit-appearance: none;
+          appearance: none;
+          background: transparent;
+          pointer-events: none;
+          z-index: 2;
+        }
+
+        .age-slider::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          appearance: none;
+          width: 24px;
+          height: 24px;
+          background: white;
+          border: 3px solid #f59e0b;
+          border-radius: 50%;
+          cursor: pointer;
+          pointer-events: auto;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+          transition: all 0.15s ease;
+        }
+
+        .age-slider::-webkit-slider-thumb:hover {
+          transform: scale(1.15);
+          box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+        }
+
+        .age-slider::-moz-range-thumb {
+          width: 24px;
+          height: 24px;
+          background: white;
+          border: 3px solid #f59e0b;
+          border-radius: 50%;
+          cursor: pointer;
+          pointer-events: auto;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .age-range-buttons {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          justify-content: center;
+        }
+
+        .age-range-btn {
+          background: white;
+          border: 2px solid #fcd34d;
+          border-radius: 20px;
+          padding: 8px 14px;
+          font-size: 13px;
+          font-weight: 600;
+          color: #92400e;
+          cursor: pointer;
+          transition: all 0.15s ease;
+        }
+
+        .age-range-btn:hover {
+          background: #fef3c7;
+          border-color: #f59e0b;
+          transform: translateY(-1px);
+        }
+
+        .age-range-btn.active {
+          background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+          border-color: #d97706;
+          color: white;
+          box-shadow: 0 2px 8px rgba(245, 158, 11, 0.35);
+        }
+
+        .age-range-btn.in-range {
+          background: #fef3c7;
+          border-color: #f59e0b;
+        }
+
+        @media (max-width: 768px) {
+          .kids-age-slider-section {
+            padding: 14px 16px;
+            margin-top: 10px;
+          }
+
+          .age-range-buttons {
+            gap: 6px;
+          }
+
+          .age-range-btn {
+            padding: 6px 10px;
+            font-size: 12px;
+          }
+        }
+
         /* Mobile responsive */
         @media (max-width: 768px) {
           .filters-toggle-section {
