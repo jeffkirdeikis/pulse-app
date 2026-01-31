@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run dev:*)",
+      "Bash(curl:*)",
+      "Bash(python3:*)",
+      "Bash(brew list:*)",
+      "Bash(brew install:*)",
+      "Bash(npm install:*)",
+      "Bash(npx supabase:*)",
+      "Bash(node_modules/.bin/supabase:*)",
+      "Bash(node:*)",
+      "Bash(lsof:*)",
+      "Bash(git init:*)",
+      "Bash(git add:*)"
+    ]
+  }
+}
