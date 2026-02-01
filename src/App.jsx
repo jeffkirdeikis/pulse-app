@@ -8086,6 +8086,92 @@ const generateSmartDealTitle = (deal, venueName = '') => {
   return title || 'Special Offer';
 };
 
+// Enhanced Deal Description Generator - creates rich, informative descriptions
+const generateEnhancedDealDescription = (deal, venueName = '') => {
+  const { title = '', description = '', category = '', discount = '', schedule = '', terms = '' } = deal;
+
+  // If there's already a good description (> 50 chars), use it
+  if (description && description.length > 50 && description.toLowerCase() !== title.toLowerCase()) {
+    return description;
+  }
+
+  // Build an enhanced description based on available data
+  const parts = [];
+  const businessName = venueName || deal.venueName || 'this local business';
+
+  // Category-specific openers
+  const categoryOpeners = {
+    'Food & Drink': `Treat yourself to something delicious at ${businessName}.`,
+    'Retail': `Shop local and save at ${businessName}.`,
+    'Health & Wellness': `Take care of yourself with this special offer from ${businessName}.`,
+    'Entertainment': `Experience something fun at ${businessName}.`,
+    'Services': `Get professional service at a great price from ${businessName}.`,
+    'Beauty': `Look and feel your best with this deal from ${businessName}.`,
+    'Fitness': `Get moving and save with this offer from ${businessName}.`,
+    'Other': `Don't miss this special offer from ${businessName}.`
+  };
+
+  parts.push(categoryOpeners[category] || categoryOpeners['Other']);
+
+  // Add discount details
+  if (discount) {
+    if (discount.toLowerCase().includes('%')) {
+      parts.push(`Enjoy ${discount} your purchase.`);
+    } else if (discount.toLowerCase().includes('bogo') || discount.toLowerCase().includes('buy one')) {
+      parts.push(`Take advantage of this buy-one-get-one deal.`);
+    } else if (discount.toLowerCase().includes('free')) {
+      parts.push(`Get a free item with your visit.`);
+    } else if (discount.includes('$')) {
+      parts.push(`Save ${discount} on your next visit.`);
+    }
+  }
+
+  // Add schedule info if available
+  if (schedule && schedule.toLowerCase() !== 'anytime') {
+    parts.push(`Available ${schedule.toLowerCase()}.`);
+  }
+
+  // Add any original description content that's useful
+  if (description && description.length > 10 && description.toLowerCase() !== title.toLowerCase()) {
+    // Clean up and add if it provides value
+    const cleanDesc = description.replace(/\.$/, '');
+    if (!parts.some(p => p.toLowerCase().includes(cleanDesc.toLowerCase()))) {
+      parts.push(cleanDesc + '.');
+    }
+  }
+
+  // Add a call to action
+  const ctas = [
+    'Stop by today and save!',
+    'Visit soon to redeem this offer.',
+    'Limited time offer—don\'t miss out!',
+    'Show this deal to redeem.',
+    'A great way to support local!'
+  ];
+  parts.push(ctas[Math.floor(title.length % ctas.length)]);
+
+  return parts.join(' ');
+};
+
+// Helper to get related deals from the same business
+const getRelatedDeals = (currentDeal, allDeals) => {
+  if (!currentDeal) return [];
+
+  const currentVenue = currentDeal.venueName || currentDeal.venueId;
+  if (!currentVenue) return [];
+
+  return allDeals.filter(deal => {
+    if (deal.id === currentDeal.id) return false;
+    const dealVenue = deal.venueName || deal.venueId;
+    // Match by venue name (case insensitive) or venue ID
+    return dealVenue && (
+      dealVenue === currentVenue ||
+      (typeof dealVenue === 'string' && typeof currentVenue === 'string' &&
+       dealVenue.toLowerCase() === currentVenue.toLowerCase())
+    );
+  });
+};
+
 export default function PulseApp() {
   const [view, setView] = useState('consumer');
   const [currentSection, setCurrentSection] = useState('classes'); // classes, events, deals, services - DEFAULT TO CLASSES
@@ -10212,7 +10298,9 @@ export default function PulseApp() {
                 {/* About Section */}
                 <div className="deal-section">
                   <h2 className="deal-section-title">About This Deal</h2>
-                  <p className="deal-about-text">{selectedDeal.description}</p>
+                  <p className="deal-about-text">
+                    {generateEnhancedDealDescription(selectedDeal, getVenueName(selectedDeal.venueId, selectedDeal))}
+                  </p>
                 </div>
 
                 {/* Details Section */}
@@ -10250,6 +10338,46 @@ export default function PulseApp() {
                     </div>
                   </div>
                 )}
+
+                {/* More from this Business Section */}
+                {(() => {
+                  const allDeals = [...REAL_DATA.deals, ...dbDeals];
+                  const relatedDeals = getRelatedDeals(selectedDeal, allDeals);
+                  if (relatedDeals.length === 0) return null;
+
+                  return (
+                    <div className="deal-section">
+                      <h2 className="deal-section-title">
+                        More from {getVenueName(selectedDeal.venueId, selectedDeal)}
+                      </h2>
+                      <div className="related-deals-grid">
+                        {relatedDeals.slice(0, 3).map(deal => (
+                          <div
+                            key={deal.id}
+                            className="related-deal-card"
+                            onClick={() => setSelectedDeal(deal)}
+                          >
+                            <div className="related-deal-content">
+                              <h4 className="related-deal-title">
+                                {generateSmartDealTitle(deal, getVenueName(deal.venueId, deal))}
+                              </h4>
+                              {deal.discount && (
+                                <span className="related-deal-discount">{deal.discount}</span>
+                              )}
+                              {deal.schedule && (
+                                <span className="related-deal-schedule">
+                                  <Clock size={12} />
+                                  {deal.schedule}
+                                </span>
+                              )}
+                            </div>
+                            <ChevronRight size={18} className="related-deal-arrow" />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* CTA Section */}
                 <div className="deal-cta-section">
@@ -22993,6 +23121,80 @@ export default function PulseApp() {
           line-height: 1.6;
           color: #92400e;
           margin: 0;
+        }
+
+        /* Related Deals Grid */
+        .related-deals-grid {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+
+        .related-deal-card {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 14px 16px;
+          background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+          border: 1px solid #e2e8f0;
+          border-radius: 12px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .related-deal-card:hover {
+          background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+          border-color: #cbd5e1;
+          transform: translateX(4px);
+        }
+
+        .related-deal-content {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          flex: 1;
+          min-width: 0;
+        }
+
+        .related-deal-title {
+          font-size: 14px;
+          font-weight: 600;
+          color: #1e293b;
+          margin: 0;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .related-deal-discount {
+          display: inline-flex;
+          align-items: center;
+          padding: 3px 8px;
+          background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+          color: white;
+          font-size: 11px;
+          font-weight: 700;
+          border-radius: 6px;
+          width: fit-content;
+        }
+
+        .related-deal-schedule {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          font-size: 12px;
+          color: #64748b;
+        }
+
+        .related-deal-arrow {
+          color: #94a3b8;
+          flex-shrink: 0;
+          transition: transform 0.2s ease;
+        }
+
+        .related-deal-card:hover .related-deal-arrow {
+          color: #64748b;
+          transform: translateX(2px);
         }
 
         /* Deal CTA */
