@@ -8497,16 +8497,17 @@ export default function PulseApp() {
 
       // Map Supabase events to the UI format
       const mappedEvents = data.map(event => {
-        const startDate = new Date(event.start_date);
+        // Parse date as local time (not UTC) by using YYYY-MM-DD format with explicit time
+        const [year, month, day] = event.start_date.split('-').map(Number);
         const [hours, minutes] = (event.start_time || '09:00').split(':').map(Number);
-        startDate.setHours(hours, minutes, 0, 0);
+        const startDate = new Date(year, month - 1, day, hours, minutes, 0, 0);
 
-        let endDate = new Date(startDate);
+        let endDate;
         if (event.end_time) {
           const [endHours, endMinutes] = event.end_time.split(':').map(Number);
-          endDate.setHours(endHours, endMinutes, 0, 0);
+          endDate = new Date(year, month - 1, day, endHours, endMinutes, 0, 0);
         } else {
-          endDate.setHours(hours + 1, minutes, 0, 0);
+          endDate = new Date(year, month - 1, day, hours + 1, minutes, 0, 0);
         }
 
         return {
@@ -8564,12 +8565,16 @@ export default function PulseApp() {
         venueAddress: deal.business_address || 'Squamish, BC',
         category: deal.category || 'Other',
         description: deal.description || '',
+        // Keep raw values for scoring
+        discountType: deal.discount_type,
+        discountValue: deal.discount_value,
+        originalPrice: deal.original_price,
+        dealPrice: deal.deal_price,
+        // Formatted display string
         discount: deal.discount_type === 'percent' ? `${deal.discount_value}% off` :
                   deal.discount_type === 'fixed' ? `$${deal.discount_value} off` :
                   deal.discount_type === 'bogo' ? 'Buy One Get One' :
                   deal.discount_type === 'free_item' ? 'Free Item' : 'Special Offer',
-        originalPrice: deal.original_price ? `$${deal.original_price}` : null,
-        dealPrice: deal.deal_price ? `$${deal.deal_price}` : null,
         validUntil: deal.valid_until,
         terms: deal.terms_conditions || '',
         image: deal.image_url,
