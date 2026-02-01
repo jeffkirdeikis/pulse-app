@@ -11059,18 +11059,6 @@ export default function PulseApp() {
                   <p className="event-about-text">{selectedEvent.description}</p>
                 </div>
 
-                {/* Tags Section */}
-                {selectedEvent.tags && selectedEvent.tags.length > 0 && (
-                  <div className="event-section">
-                    <h2 className="event-section-title">Tags</h2>
-                    <div className="event-tags-grid">
-                      {selectedEvent.tags.map(tag => (
-                        <span key={tag} className="event-tag-pill">{tag}</span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
                 {/* CTA Section */}
                 <div className="event-cta-section">
                   {selectedEvent.eventType === 'class' && (
