@@ -9837,15 +9837,10 @@ export default function PulseApp() {
                     .map((deal, index) => (
                   <div
                     key={deal.id}
-                    className={`deal-card ${getDealTier(deal)?.tier ? 'deal-card-' + getDealTier(deal).tier : ''}`}
+                    className="deal-card"
                     onClick={() => setSelectedDeal(deal)}
                     ref={(el) => dealCardRefs.current[index] = el}
                   >
-                    {getDealTier(deal) && (
-                      <div className="deal-tier-badge" style={{ background: getDealTier(deal).color }}>
-                        {getDealTier(deal).label}
-                      </div>
-                    )}
                     <div className="deal-card-header-new">
                       <div className="deal-title-section">
                         <h3>{generateSmartDealTitle(deal, getVenueName(deal.venueId, deal))}</h3>
@@ -15117,49 +15112,6 @@ export default function PulseApp() {
             transform: scale(0.98);
             background: #f9fafb;
           }
-        }
-
-        /* Deal Tier Badges - for hot/great/good deals */
-        .deal-tier-badge {
-          display: inline-flex;
-          align-items: center;
-          padding: 4px 10px;
-          border-radius: 6px;
-          font-size: 11px;
-          font-weight: 700;
-          color: white;
-          margin-bottom: 10px;
-          letter-spacing: 0.02em;
-        }
-
-        .deal-card-hot {
-          border-color: #fecaca;
-          background: linear-gradient(135deg, #fff5f5 0%, #fef2f2 100%);
-        }
-
-        .deal-card-hot:hover {
-          border-color: #ef4444;
-          box-shadow: 0 8px 24px rgba(239, 68, 68, 0.15);
-        }
-
-        .deal-card-great {
-          border-color: #ddd6fe;
-          background: linear-gradient(135deg, #faf5ff 0%, #f5f3ff 100%);
-        }
-
-        .deal-card-great:hover {
-          border-color: #8b5cf6;
-          box-shadow: 0 8px 24px rgba(139, 92, 246, 0.15);
-        }
-
-        .deal-card-good {
-          border-color: #d1fae5;
-          background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
-        }
-
-        .deal-card-good:hover {
-          border-color: #10b981;
-          box-shadow: 0 8px 24px rgba(16, 185, 129, 0.15);
         }
 
         .deal-card-header-new {
