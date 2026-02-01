@@ -8931,7 +8931,7 @@ export default function PulseApp() {
 
   // Handle contact business
   const handleContactBusiness = (business) => {
-    if (!user) {
+    if (user.isGuest) {
       setShowAuthModal(true);
       return;
     }
@@ -8974,7 +8974,7 @@ export default function PulseApp() {
 
   // Open messages modal
   const openMessages = () => {
-    if (!user) {
+    if (user.isGuest) {
       setShowAuthModal(true);
       return;
     }
@@ -10186,7 +10186,7 @@ export default function PulseApp() {
                   <span className="notification-dot"></span>
                 </button>
                 <div className="profile-btn" onClick={() => setShowProfileMenu(!showProfileMenu)}>
-                  <div className="profile-avatar">JD</div>
+                  <div className="profile-avatar">{user.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'U'}</div>
                 </div>
               </div>
             </div>
@@ -10964,13 +10964,34 @@ export default function PulseApp() {
                     </div>
                     <span>{isItemSavedLocal(selectedEvent.eventType === 'class' ? 'class' : 'event', selectedEvent.id) ? 'Saved' : 'Save'}</span>
                   </button>
-                  <button className="quick-action-btn">
+                  <button
+                    className="quick-action-btn"
+                    onClick={async () => {
+                      const shareData = {
+                        title: selectedEvent.title,
+                        text: `Check out ${selectedEvent.title} at ${getVenueName(selectedEvent.venueId, selectedEvent)}`,
+                        url: window.location.href
+                      };
+                      try {
+                        if (navigator.share) {
+                          await navigator.share(shareData);
+                        } else {
+                          await navigator.clipboard.writeText(`${shareData.text} - ${shareData.url}`);
+                          setCalendarToastMessage('Link copied to clipboard!');
+                          setShowCalendarToast(true);
+                          setTimeout(() => setShowCalendarToast(false), 2000);
+                        }
+                      } catch (err) {
+                        console.error('Error sharing:', err);
+                      }
+                    }}
+                  >
                     <div className="quick-action-icon share">
                       <Share2 size={20} />
                     </div>
                     <span>Share</span>
                   </button>
-                  <a 
+                  <a
                     href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(getVenueName(selectedEvent.venueId, selectedEvent) + ' Squamish BC')}`}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -11149,13 +11170,34 @@ export default function PulseApp() {
                     </div>
                     <span>{isItemSavedLocal('deal', selectedDeal.id) ? 'Saved' : 'Save'}</span>
                   </button>
-                  <button className="quick-action-btn">
+                  <button
+                    className="quick-action-btn"
+                    onClick={async () => {
+                      const shareData = {
+                        title: selectedDeal.title,
+                        text: `Check out this deal: ${selectedDeal.title} at ${getVenueName(selectedDeal.venueId, selectedDeal)}`,
+                        url: window.location.href
+                      };
+                      try {
+                        if (navigator.share) {
+                          await navigator.share(shareData);
+                        } else {
+                          await navigator.clipboard.writeText(`${shareData.text} - ${shareData.url}`);
+                          setCalendarToastMessage('Link copied to clipboard!');
+                          setShowCalendarToast(true);
+                          setTimeout(() => setShowCalendarToast(false), 2000);
+                        }
+                      } catch (err) {
+                        console.error('Error sharing:', err);
+                      }
+                    }}
+                  >
                     <div className="quick-action-icon share">
                       <Share2 size={20} />
                     </div>
                     <span>Share</span>
                   </button>
-                  <a 
+                  <a
                     href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(getVenueName(selectedDeal.venueId, selectedDeal) + ' Squamish BC')}`}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -11254,7 +11296,14 @@ export default function PulseApp() {
 
                 {/* CTA Section */}
                 <div className="deal-cta-section">
-                  <button className="deal-cta-btn primary">
+                  <button
+                    className="deal-cta-btn primary"
+                    onClick={() => {
+                      setCalendarToastMessage(`Deal saved! Show this to ${getVenueName(selectedDeal.venueId, selectedDeal)} to redeem.`);
+                      setShowCalendarToast(true);
+                      setTimeout(() => setShowCalendarToast(false), 3000);
+                    }}
+                  >
                     <Ticket size={18} />
                     Redeem Deal
                   </button>
