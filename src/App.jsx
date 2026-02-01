@@ -13102,39 +13102,39 @@ export default function PulseApp() {
                           <div className="biz-achievements-section">
                             <div className="section-header">
                               <h3>Business Badges</h3>
-                              <span className="badge-count">8 / 15</span>
+                              <span className="badge-count">0 / 10</span>
                             </div>
                             <div className="biz-badges-grid">
-                              <div className="biz-badge earned">
-                                <div className="badge-icon" style={{background: '#10b981'}}><Check size={18} /></div>
+                              <div className="biz-badge locked">
+                                <div className="badge-icon"><Check size={18} /></div>
                                 <span>Verified</span>
                               </div>
-                              <div className="biz-badge earned">
-                                <div className="badge-icon" style={{background: '#3b82f6'}}><Star size={18} /></div>
+                              <div className="biz-badge locked">
+                                <div className="badge-icon"><Star size={18} /></div>
                                 <span>Top Rated</span>
                               </div>
-                              <div className="biz-badge earned">
-                                <div className="badge-icon" style={{background: '#8b5cf6'}}><Zap size={18} /></div>
+                              <div className="biz-badge locked">
+                                <div className="badge-icon"><Zap size={18} /></div>
                                 <span>Quick Responder</span>
                               </div>
-                              <div className="biz-badge earned">
-                                <div className="badge-icon" style={{background: '#f59e0b'}}><TrendingUp size={18} /></div>
+                              <div className="biz-badge locked">
+                                <div className="badge-icon"><TrendingUp size={18} /></div>
                                 <span>Rising Star</span>
                               </div>
-                              <div className="biz-badge earned">
-                                <div className="badge-icon" style={{background: '#ec4899'}}><Heart size={18} /></div>
+                              <div className="biz-badge locked">
+                                <div className="badge-icon"><Heart size={18} /></div>
                                 <span>Community Fave</span>
                               </div>
-                              <div className="biz-badge earned">
-                                <div className="badge-icon" style={{background: '#06b6d4'}}><Calendar size={18} /></div>
+                              <div className="biz-badge locked">
+                                <div className="badge-icon"><Calendar size={18} /></div>
                                 <span>Event Pro</span>
                               </div>
-                              <div className="biz-badge earned">
-                                <div className="badge-icon" style={{background: '#84cc16'}}><Percent size={18} /></div>
+                              <div className="biz-badge locked">
+                                <div className="badge-icon"><Percent size={18} /></div>
                                 <span>Deal Maker</span>
                               </div>
-                              <div className="biz-badge earned">
-                                <div className="badge-icon" style={{background: '#f97316'}}><Users size={18} /></div>
+                              <div className="biz-badge locked">
+                                <div className="badge-icon"><Users size={18} /></div>
                                 <span>1K Followers</span>
                               </div>
                               <div className="biz-badge locked">
@@ -13150,21 +13150,21 @@ export default function PulseApp() {
 
                           {/* Insights & Tips */}
                           <div className="biz-insights-section">
-                            <h3>💡 Growth Insights</h3>
+                            <h3>💡 Growth Tips</h3>
                             <div className="insights-list">
                               <div className="insight-card hot">
-                                <div className="insight-badge">Hot Tip</div>
-                                <p>Businesses that post deals on Thursdays see <strong>47% more redemptions</strong>. Your best day is currently Friday.</p>
-                                <button className="insight-action">Create Thursday Deal</button>
-                              </div>
-                              <div className="insight-card">
-                                <div className="insight-badge">Opportunity</div>
-                                <p>You're only <strong>153 views away</strong> from your 3K goal! Share your profile to get there faster.</p>
-                                <button className="insight-action">Share Profile</button>
+                                <div className="insight-badge">Get Started</div>
+                                <p>Post your first <strong>deal or event</strong> to start attracting customers on Pulse.</p>
+                                <button className="insight-action">Create Deal</button>
                               </div>
                               <div className="insight-card">
                                 <div className="insight-badge">Tip</div>
-                                <p>Respond to inquiries quickly to improve customer satisfaction and engagement.</p>
+                                <p>Complete your business profile to <strong>build trust</strong> with potential customers.</p>
+                                <button className="insight-action">Edit Profile</button>
+                              </div>
+                              <div className="insight-card">
+                                <div className="insight-badge">Tip</div>
+                                <p>Respond to inquiries quickly to improve customer satisfaction and earn badges.</p>
                               </div>
                             </div>
                           </div>
@@ -14064,39 +14064,39 @@ export default function PulseApp() {
               <div className="premium-section badges-section">
                 <div className="section-header-premium">
                   <h2>Business Badges</h2>
-                  <span className="badge-progress">8 / 15 earned</span>
+                  <span className="badge-progress">0 / 10 earned</span>
                 </div>
-                
+
                 <div className="badges-showcase">
-                  <div className="badge-item earned" style={{'--badge-color': '#10b981'}}>
+                  <div className="badge-item locked">
                     <div className="badge-icon"><Check size={18} /></div>
                     <span>Verified</span>
                   </div>
-                  <div className="badge-item earned" style={{'--badge-color': '#3b82f6'}}>
+                  <div className="badge-item locked">
                     <div className="badge-icon"><Star size={18} /></div>
                     <span>Top Rated</span>
                   </div>
-                  <div className="badge-item earned" style={{'--badge-color': '#8b5cf6'}}>
+                  <div className="badge-item locked">
                     <div className="badge-icon"><Zap size={18} /></div>
                     <span>Quick Reply</span>
                   </div>
-                  <div className="badge-item earned" style={{'--badge-color': '#f59e0b'}}>
+                  <div className="badge-item locked">
                     <div className="badge-icon"><TrendingUp size={18} /></div>
                     <span>Rising Star</span>
                   </div>
-                  <div className="badge-item earned" style={{'--badge-color': '#ec4899'}}>
+                  <div className="badge-item locked">
                     <div className="badge-icon"><Heart size={18} /></div>
                     <span>Community Fave</span>
                   </div>
-                  <div className="badge-item earned" style={{'--badge-color': '#06b6d4'}}>
+                  <div className="badge-item locked">
                     <div className="badge-icon"><Calendar size={18} /></div>
                     <span>Event Pro</span>
                   </div>
-                  <div className="badge-item earned" style={{'--badge-color': '#84cc16'}}>
+                  <div className="badge-item locked">
                     <div className="badge-icon"><Percent size={18} /></div>
                     <span>Deal Maker</span>
                   </div>
-                  <div className="badge-item earned" style={{'--badge-color': '#f97316'}}>
+                  <div className="badge-item locked">
                     <div className="badge-icon"><Users size={18} /></div>
                     <span>1K Followers</span>
                   </div>
@@ -14114,19 +14114,19 @@ export default function PulseApp() {
               {/* Growth Insights */}
               <div className="premium-section insights-section">
                 <div className="section-header-premium">
-                  <h2>💡 Growth Insights</h2>
+                  <h2>💡 Growth Tips</h2>
                 </div>
-                
+
                 <div className="insights-cards">
                   <div className="insight-item hot">
-                    <div className="insight-tag">Hot Tip</div>
-                    <p>Businesses that post deals on <strong>Thursdays</strong> see <strong>47% more redemptions</strong>. Your best day is currently Friday.</p>
-                    <button className="insight-btn">Create Thursday Deal</button>
+                    <div className="insight-tag">Get Started</div>
+                    <p>Post your first <strong>deal or event</strong> to start attracting customers on Pulse.</p>
+                    <button className="insight-btn">Create Deal</button>
                   </div>
                   <div className="insight-item">
-                    <div className="insight-tag">Opportunity</div>
-                    <p>You're only <strong>2,153 views away</strong> from your 15K goal! Share your profile to get there faster.</p>
-                    <button className="insight-btn">Share Profile</button>
+                    <div className="insight-tag">Tip</div>
+                    <p>Complete your business profile to <strong>build trust</strong> with potential customers.</p>
+                    <button className="insight-btn">Edit Profile</button>
                   </div>
                   <div className="insight-item">
                     <div className="insight-tag">Tip</div>
