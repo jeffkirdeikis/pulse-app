@@ -15093,6 +15093,122 @@ export default function PulseApp() {
         </div>
       )}
 
+      {/* ========== GLOBAL MODALS (render regardless of view) ========== */}
+
+      {/* Auth Modal */}
+      {showAuthModal && (
+        <div className="modal-overlay" onClick={() => setShowAuthModal(false)}>
+          <div className="auth-modal" onClick={(e) => e.stopPropagation()}>
+            <button className="auth-modal-close" onClick={() => setShowAuthModal(false)}><X size={24} /></button>
+            <div className="auth-modal-header">
+              <div className="auth-logo">
+                <MapPin size={32} />
+              </div>
+              <h2>Welcome to Pulse</h2>
+              <p>Sign in to save events, claim your business, and connect with the Squamish community</p>
+            </div>
+            <div className="auth-modal-body">
+              <button className="auth-btn google" onClick={async () => {
+                const { error } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } });
+                if (error) console.error('Auth error:', error);
+              }}>
+                <svg viewBox="0 0 24 24" width="20" height="20"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                Continue with Google
+              </button>
+              <div className="auth-divider">
+                <span>or</span>
+              </div>
+              <button className="auth-btn email" onClick={() => {
+                const email = prompt('Enter your email:');
+                if (email) {
+                  supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.origin } })
+                    .then(() => alert('Check your email for a sign-in link!'))
+                    .catch(err => alert('Error: ' + err.message));
+                }
+              }}>
+                <Mail size={20} />
+                Continue with Email
+              </button>
+            </div>
+            <div className="auth-modal-footer">
+              <p>By continuing, you agree to our Terms of Service and Privacy Policy</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Global Claim Business Modal */}
+      {showClaimBusinessModal && (
+        <div className="modal-overlay" onClick={() => setShowClaimBusinessModal(false)}>
+          <div className="claim-modal-premium" onClick={(e) => e.stopPropagation()}>
+            <button className="claim-modal-close" onClick={() => setShowClaimBusinessModal(false)}><X size={24} /></button>
+            <div className="claim-modal-header">
+              <div className="claim-modal-icon">
+                <Building size={32} />
+              </div>
+              <h2>Claim Your Business</h2>
+              <p>Get access to analytics, manage your listings, and connect with customers</p>
+            </div>
+            <div className="claim-modal-body">
+              {!session?.user ? (
+                <div className="claim-signin-prompt">
+                  <div className="signin-message">
+                    <AlertCircle size={24} />
+                    <p>Please sign in to claim your business</p>
+                  </div>
+                  <button className="claim-signin-btn" onClick={() => { setShowClaimBusinessModal(false); setShowAuthModal(true); }}>
+                    Sign In to Continue
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <div className="claim-form-grid">
+                    <div className="claim-form-group full">
+                      <label>Business Name *</label>
+                      <input type="text" placeholder="e.g., The Sound Martial Arts" value={claimFormData.businessName} onChange={(e) => setClaimFormData({...claimFormData, businessName: e.target.value})} />
+                    </div>
+                    <div className="claim-form-group">
+                      <label>Your Name *</label>
+                      <input type="text" placeholder="Full name" value={claimFormData.ownerName} onChange={(e) => setClaimFormData({...claimFormData, ownerName: e.target.value})} />
+                    </div>
+                    <div className="claim-form-group">
+                      <label>Email *</label>
+                      <input type="email" placeholder="your@email.com" value={claimFormData.email} onChange={(e) => setClaimFormData({...claimFormData, email: e.target.value})} />
+                    </div>
+                    <div className="claim-form-group">
+                      <label>Phone</label>
+                      <input type="tel" placeholder="(604) 555-1234" value={claimFormData.phone} onChange={(e) => setClaimFormData({...claimFormData, phone: e.target.value})} />
+                    </div>
+                    <div className="claim-form-group">
+                      <label>Role</label>
+                      <select value={claimFormData.role} onChange={(e) => setClaimFormData({...claimFormData, role: e.target.value})}>
+                        <option value="owner">Owner</option>
+                        <option value="manager">Manager</option>
+                        <option value="representative">Authorized Representative</option>
+                      </select>
+                    </div>
+                    <div className="claim-form-group full">
+                      <label>Business Address</label>
+                      <input type="text" placeholder="Street address in Squamish" value={claimFormData.address} onChange={(e) => setClaimFormData({...claimFormData, address: e.target.value})} />
+                    </div>
+                  </div>
+                  <div className="claim-benefits">
+                    <div className="claim-benefit"><CheckCircle size={18} /><span>Manage your business profile</span></div>
+                    <div className="claim-benefit"><CheckCircle size={18} /><span>View analytics & insights</span></div>
+                    <div className="claim-benefit"><CheckCircle size={18} /><span>Respond to reviews</span></div>
+                    <div className="claim-benefit"><CheckCircle size={18} /><span>Create deals & promotions</span></div>
+                  </div>
+                  <div className="claim-modal-actions">
+                    <button className="claim-cancel-btn" onClick={() => { setShowClaimBusinessModal(false); setClaimFormData({ businessName: '', ownerName: '', email: '', phone: '', role: 'owner', address: '' }); }}>Cancel</button>
+                    <button className="claim-submit-btn" onClick={handleClaimBusiness} disabled={claimSubmitting}>{claimSubmitting ? 'Submitting...' : 'Submit Claim'}</button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <style jsx>{`
         * { margin: 0; padding: 0; box-sizing: border-box; }
         .pulse-app { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif; background: #fff; min-height: 100vh; color: #000; }
@@ -20907,6 +21023,146 @@ export default function PulseApp() {
         /* Add Event Modal */
         .add-event-modal {
           max-width: 600px;
+        }
+
+        /* Auth Modal */
+        .auth-modal {
+          background: #fff;
+          border-radius: 24px;
+          max-width: 400px;
+          width: 90%;
+          max-height: 90vh;
+          overflow-y: auto;
+          position: relative;
+          box-shadow: 0 25px 80px rgba(0,0,0,0.25);
+          animation: modalSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .auth-modal-close {
+          position: absolute;
+          top: 16px;
+          right: 16px;
+          background: #f3f4f6;
+          border: none;
+          border-radius: 50%;
+          width: 36px;
+          height: 36px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          color: #6b7280;
+          z-index: 10;
+          transition: all 0.2s;
+        }
+
+        .auth-modal-close:hover {
+          background: #e5e7eb;
+          color: #374151;
+        }
+
+        .auth-modal-header {
+          padding: 40px 32px 24px;
+          text-align: center;
+          border-bottom: 1px solid #e5e7eb;
+        }
+
+        .auth-logo {
+          width: 64px;
+          height: 64px;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          border-radius: 16px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin: 0 auto 20px;
+          color: #fff;
+        }
+
+        .auth-modal-header h2 {
+          font-size: 24px;
+          font-weight: 700;
+          color: #111827;
+          margin: 0 0 8px;
+        }
+
+        .auth-modal-header p {
+          font-size: 14px;
+          color: #6b7280;
+          margin: 0;
+          line-height: 1.5;
+        }
+
+        .auth-modal-body {
+          padding: 24px 32px;
+        }
+
+        .auth-btn {
+          width: 100%;
+          padding: 14px 20px;
+          border-radius: 12px;
+          font-size: 15px;
+          font-weight: 600;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 12px;
+          transition: all 0.2s;
+          margin-bottom: 12px;
+        }
+
+        .auth-btn.google {
+          background: #fff;
+          border: 1px solid #e5e7eb;
+          color: #374151;
+        }
+
+        .auth-btn.google:hover {
+          background: #f9fafb;
+          border-color: #d1d5db;
+        }
+
+        .auth-btn.email {
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          border: none;
+          color: #fff;
+        }
+
+        .auth-btn.email:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .auth-divider {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          margin: 20px 0;
+        }
+
+        .auth-divider::before,
+        .auth-divider::after {
+          content: '';
+          flex: 1;
+          height: 1px;
+          background: #e5e7eb;
+        }
+
+        .auth-divider span {
+          font-size: 13px;
+          color: #9ca3af;
+        }
+
+        .auth-modal-footer {
+          padding: 16px 32px 24px;
+          text-align: center;
+        }
+
+        .auth-modal-footer p {
+          font-size: 12px;
+          color: #9ca3af;
+          margin: 0;
         }
 
         /* Premium Claim Business Modal */
