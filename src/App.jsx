@@ -9071,12 +9071,11 @@ export default function PulseApp() {
     }
 
     // Day filtering - for infinite scroll, we get events for next 30 days when "today" is selected
+    // Only show events that haven't started yet (filter out past events from today)
     if (filters.day === 'today') {
-      const today = new Date(now);
-      today.setHours(0, 0, 0, 0);
-      const thirtyDaysLater = new Date(today);
-      thirtyDaysLater.setDate(today.getDate() + 30);
-      filtered = filtered.filter(e => e.start >= today && e.start < thirtyDaysLater);
+      const thirtyDaysLater = new Date(now);
+      thirtyDaysLater.setDate(now.getDate() + 30);
+      filtered = filtered.filter(e => e.start >= now && e.start < thirtyDaysLater);
     } else if (filters.day === 'tomorrow') {
       const tomorrow = new Date(now);
       tomorrow.setDate(now.getDate() + 1);
