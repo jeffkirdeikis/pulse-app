@@ -9427,7 +9427,7 @@ export default function PulseApp() {
                           setKidsAgeRange([0, 18]); // Reset when not kids
                         }
                       }}
-                      className="filter-dropdown"
+                      className={`filter-dropdown ${filters.age === 'kids' ? 'filter-active' : ''}`}
                     >
                       <option value="all">👥 All Ages</option>
                       <option value="kids">Kids</option>
@@ -14177,7 +14177,13 @@ export default function PulseApp() {
           box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1), 0 2px 8px rgba(59, 130, 246, 0.15);
           transform: translateY(-1px);
         }
-        
+
+        .filter-dropdown.filter-active {
+          border-color: #3b82f6;
+          background: linear-gradient(135deg, #eff6ff 0%, #f8fafc 100%);
+          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+        }
+
         .filter-dropdown option {
           padding: 10px;
           background: #ffffff;
@@ -14215,13 +14221,15 @@ export default function PulseApp() {
           box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
         }
 
-        /* ========== KIDS AGE SLIDER ========== */
+        /* ========== KIDS AGE SLIDER - Premium Design ========== */
         .kids-age-slider-section {
-          background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-          border-radius: 16px;
-          padding: 16px 20px;
+          background: #ffffff;
+          border-radius: 20px;
+          padding: 20px 24px;
           margin-top: 12px;
-          border: 2px solid #f59e0b;
+          margin-bottom: 16px;
+          border: 1px solid #e5e7eb;
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
           animation: slideDown 0.3s ease-out;
         }
 
@@ -14229,50 +14237,52 @@ export default function PulseApp() {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 12px;
+          margin-bottom: 20px;
         }
 
         .age-slider-label {
-          font-size: 14px;
-          font-weight: 700;
-          color: #92400e;
+          font-size: 13px;
+          font-weight: 600;
+          color: #6b7280;
           text-transform: uppercase;
-          letter-spacing: 0.5px;
+          letter-spacing: 0.8px;
         }
 
         .age-slider-value {
-          font-size: 15px;
+          font-size: 14px;
           font-weight: 700;
-          color: #d97706;
-          background: white;
-          padding: 4px 12px;
-          border-radius: 20px;
-          border: 2px solid #f59e0b;
+          color: #3b82f6;
+          background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+          padding: 6px 16px;
+          border-radius: 100px;
+          border: none;
         }
 
         .age-slider-container {
           position: relative;
-          height: 32px;
-          margin-bottom: 16px;
+          height: 40px;
+          margin-bottom: 20px;
+          padding: 0 6px;
         }
 
         .age-slider-track {
           position: absolute;
           top: 50%;
+          left: 6px;
+          right: 6px;
           transform: translateY(-50%);
-          width: 100%;
-          height: 8px;
-          background: rgba(255, 255, 255, 0.8);
-          border-radius: 4px;
-          border: 2px solid #fbbf24;
+          height: 6px;
+          background: #f1f5f9;
+          border-radius: 100px;
+          border: none;
         }
 
         .age-slider-fill {
           position: absolute;
           top: 0;
           height: 100%;
-          background: linear-gradient(90deg, #f59e0b 0%, #d97706 100%);
-          border-radius: 4px;
+          background: linear-gradient(90deg, #3b82f6 0%, #2563eb 100%);
+          border-radius: 100px;
         }
 
         .age-slider {
@@ -14291,83 +14301,99 @@ export default function PulseApp() {
         .age-slider::-webkit-slider-thumb {
           -webkit-appearance: none;
           appearance: none;
-          width: 24px;
-          height: 24px;
-          background: white;
-          border: 3px solid #f59e0b;
+          width: 28px;
+          height: 28px;
+          background: #ffffff;
+          border: none;
           border-radius: 50%;
           cursor: pointer;
           pointer-events: auto;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-          transition: all 0.15s ease;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12), 0 4px 16px rgba(59, 130, 246, 0.2), inset 0 0 0 2px #3b82f6;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .age-slider::-webkit-slider-thumb:hover {
-          transform: scale(1.15);
-          box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+          transform: scale(1.1);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 6px 20px rgba(59, 130, 246, 0.3), inset 0 0 0 2px #2563eb;
+        }
+
+        .age-slider::-webkit-slider-thumb:active {
+          transform: scale(0.95);
         }
 
         .age-slider::-moz-range-thumb {
-          width: 24px;
-          height: 24px;
-          background: white;
-          border: 3px solid #f59e0b;
+          width: 28px;
+          height: 28px;
+          background: #ffffff;
+          border: none;
           border-radius: 50%;
           cursor: pointer;
           pointer-events: auto;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12), 0 4px 16px rgba(59, 130, 246, 0.2), inset 0 0 0 2px #3b82f6;
         }
 
         .age-range-buttons {
           display: flex;
           flex-wrap: wrap;
-          gap: 8px;
+          gap: 10px;
           justify-content: center;
         }
 
         .age-range-btn {
-          background: white;
-          border: 2px solid #fcd34d;
-          border-radius: 20px;
-          padding: 8px 14px;
-          font-size: 13px;
+          background: #f8fafc;
+          border: 1.5px solid #e2e8f0;
+          border-radius: 100px;
+          padding: 10px 18px;
+          font-size: 14px;
           font-weight: 600;
-          color: #92400e;
+          color: #475569;
           cursor: pointer;
-          transition: all 0.15s ease;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .age-range-btn:hover {
-          background: #fef3c7;
-          border-color: #f59e0b;
-          transform: translateY(-1px);
+          background: #f1f5f9;
+          border-color: #cbd5e1;
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
         }
 
         .age-range-btn.active {
-          background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-          border-color: #d97706;
+          background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+          border-color: transparent;
           color: white;
-          box-shadow: 0 2px 8px rgba(245, 158, 11, 0.35);
+          box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);
+          transform: translateY(-1px);
         }
 
         .age-range-btn.in-range {
-          background: #fef3c7;
-          border-color: #f59e0b;
+          background: #eff6ff;
+          border-color: #93c5fd;
+          color: #2563eb;
         }
 
         @media (max-width: 768px) {
           .kids-age-slider-section {
-            padding: 14px 16px;
+            padding: 16px 18px;
             margin-top: 10px;
+            border-radius: 16px;
+          }
+
+          .age-slider-header {
+            margin-bottom: 16px;
+          }
+
+          .age-slider-container {
+            margin-bottom: 16px;
           }
 
           .age-range-buttons {
-            gap: 6px;
+            gap: 8px;
           }
 
           .age-range-btn {
-            padding: 6px 10px;
-            font-size: 12px;
+            padding: 8px 14px;
+            font-size: 13px;
           }
         }
 

@@ -12,39 +12,191 @@ const SUPABASE_KEY = process.env.SUPABASE_KEY || 'REDACTED_SERVICE_KEY';
 // Squamish event sources
 const EVENT_SOURCES = [
   {
-    name: 'Together Nest',
+    name: 'Together Nest - Activities',
     url: 'https://together-nest.com/discover?category=activities',
-    category: 'Community'
+    category: 'Community',
+    type: 'activities' // Special handling for Together Nest
+  },
+  {
+    name: 'Together Nest - Events',
+    url: 'https://together-nest.com/discover?category=events',
+    category: 'Community',
+    type: 'events'
   },
   {
     name: 'Tourism Squamish',
     url: 'https://www.tourismsquamish.com/events/',
-    category: 'Community'
+    category: 'Community',
+    type: 'events'
   },
   {
     name: 'Squamish Chief',
     url: 'https://www.squamishchief.com/local-news/events',
-    category: 'Community'
+    category: 'Community',
+    type: 'events'
   },
   {
     name: 'District of Squamish',
     url: 'https://squamish.ca/events/',
-    category: 'Community'
+    category: 'Community',
+    type: 'events'
   },
   {
     name: 'Squamish Arts Council',
     url: 'https://www.squamishartscouncil.com/events',
-    category: 'Arts & Culture'
+    category: 'Arts & Culture',
+    type: 'events'
   },
   {
     name: 'Sea to Sky Community Services',
     url: 'https://www.sscs.ca/events/',
-    category: 'Community'
+    category: 'Community',
+    type: 'events'
   }
 ];
 
-async function scrapeUrl(url, sourceName) {
+// Special scraper for Together Nest - parses markdown since it's a SPA
+async function scrapeTogetherNest(url, sourceType) {
+  try {
+    const response = await fetch('https://api.firecrawl.dev/v1/scrape', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${FIRECRAWL_API_KEY}`
+      },
+      body: JSON.stringify({
+        url,
+        formats: ['markdown'],
+        waitFor: 5000,
+        actions: [
+          { type: 'scroll', direction: 'down', amount: 3000 },
+          { type: 'wait', milliseconds: 2000 },
+          { type: 'scroll', direction: 'down', amount: 3000 },
+          { type: 'wait', milliseconds: 1000 }
+        ]
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      console.error(`   API Error: ${data.error || response.status}`);
+      return [];
+    }
+
+    const markdown = data.data?.markdown || '';
+
+    // Parse activity cards from markdown
+    // Pattern: ### Title followed by category, location, age, price info
+    const activities = [];
+    const sections = markdown.split('###').slice(1); // Skip content before first ###
+
+    for (const section of sections) {
+      const lines = section.trim().split('\n').filter(l => l.trim());
+      if (lines.length === 0) continue;
+
+      const title = lines[0].trim();
+
+      // Skip non-activity headings
+      if (title.includes('Activities') || title.includes('Back to') || title.includes('Filter')) continue;
+
+      // Extract info from following lines
+      let category = '';
+      let location = 'Squamish, BC';
+      let ageRange = '';
+      let price = 'Paid';
+      let provider = '';
+
+      for (const line of lines.slice(1)) {
+        const l = line.trim();
+        if (l.includes('by ')) {
+          provider = l.replace('by ', '').trim();
+        } else if (l.includes('Squamish')) {
+          location = l;
+        } else if (l.includes('years') || l.includes('months')) {
+          ageRange = l;
+        } else if (l === 'Free' || l === 'Paid') {
+          price = l;
+        } else if (!l.includes('Click') && !l.includes('Registration') && !l.includes('Available') && l.length < 50) {
+          // Likely the category
+          if (!category) category = l;
+        }
+      }
+
+      activities.push({
+        title,
+        provider: provider || title.split(' - ')[0],
+        description: `${category} for ${ageRange || 'all ages'}`,
+        location,
+        price,
+        isClass: sourceType === 'activities'
+      });
+    }
+
+    return activities;
+  } catch (error) {
+    console.error(`   Error scraping Together Nest: ${error.message}`);
+    return [];
+  }
+}
+
+async function scrapeUrl(url, sourceName, sourceType = 'events') {
   console.log(`   Fetching: ${url}`);
+
+  // Special handling for Together Nest - use markdown parsing
+  if (sourceName.includes('Together Nest')) {
+    return await scrapeTogetherNest(url, sourceType);
+  }
+
+  // Different extraction for activities vs events
+  const isActivities = sourceType === 'activities';
+
+  const schema = isActivities ? {
+    type: 'object',
+    properties: {
+      activities: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            title: { type: 'string', description: 'Activity/class name' },
+            provider: { type: 'string', description: 'Business/organization offering this' },
+            category: { type: 'string', description: 'Type of activity (Yoga, Martial Arts, Sports, etc.)' },
+            location: { type: 'string', description: 'Location/city' },
+            ageRange: { type: 'string', description: 'Age range (e.g., 5 years - 18 years)' },
+            price: { type: 'string', description: 'Paid or Free' },
+            description: { type: 'string', description: 'Description of the activity' }
+          }
+        }
+      }
+    }
+  } : {
+    type: 'object',
+    properties: {
+      events: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            title: { type: 'string', description: 'Event name/title' },
+            date: { type: 'string', description: 'Event date (e.g., January 15, 2026 or 2026-01-15)' },
+            time: { type: 'string', description: 'Event start time (e.g., 7:00 PM or 19:00)' },
+            end_time: { type: 'string', description: 'Event end time if available' },
+            location: { type: 'string', description: 'Venue name or address' },
+            address: { type: 'string', description: 'Full address if different from location' },
+            description: { type: 'string', description: 'Event description' },
+            price: { type: 'string', description: 'Ticket price or "Free"' },
+            url: { type: 'string', description: 'Link to event details' },
+            image: { type: 'string', description: 'Event image URL' }
+          }
+        }
+      }
+    }
+  };
+
+  const prompt = isActivities
+    ? `Extract ALL activities and classes from this page. Each card/listing is an activity. Include title, provider/business name, category type, location, age range, and whether it's paid or free. Extract as many as you can find.`
+    : `Extract ALL upcoming events from this Squamish, BC events page. Include every event you can find with title, date, time, location, description, price, and any links. Focus on events happening in the future. Today is ${new Date().toISOString().split('T')[0]}.`;
 
   try {
     const response = await fetch('https://api.firecrawl.dev/v1/scrape', {
@@ -56,32 +208,8 @@ async function scrapeUrl(url, sourceName) {
       body: JSON.stringify({
         url,
         formats: ['extract'],
-        extract: {
-          schema: {
-            type: 'object',
-            properties: {
-              events: {
-                type: 'array',
-                items: {
-                  type: 'object',
-                  properties: {
-                    title: { type: 'string', description: 'Event name/title' },
-                    date: { type: 'string', description: 'Event date (e.g., January 15, 2026 or 2026-01-15)' },
-                    time: { type: 'string', description: 'Event start time (e.g., 7:00 PM or 19:00)' },
-                    end_time: { type: 'string', description: 'Event end time if available' },
-                    location: { type: 'string', description: 'Venue name or address' },
-                    address: { type: 'string', description: 'Full address if different from location' },
-                    description: { type: 'string', description: 'Event description' },
-                    price: { type: 'string', description: 'Ticket price or "Free"' },
-                    url: { type: 'string', description: 'Link to event details' },
-                    image: { type: 'string', description: 'Event image URL' }
-                  }
-                }
-              }
-            }
-          },
-          prompt: `Extract ALL upcoming events from this Squamish, BC events page. Include every event you can find with title, date, time, location, description, price, and any links. Focus on events happening in the future. Today is ${new Date().toISOString().split('T')[0]}.`
-        }
+        waitFor: 3000, // Wait for JS to load
+        extract: { schema, prompt }
       })
     });
 
@@ -90,6 +218,20 @@ async function scrapeUrl(url, sourceName) {
     if (!response.ok) {
       console.error(`   API Error: ${data.error || response.status}`);
       return [];
+    }
+
+    // Return activities or events based on type
+    if (isActivities) {
+      const activities = data.data?.extract?.activities || [];
+      // Convert activities to event format for storage
+      return activities.map(a => ({
+        title: a.title,
+        description: a.description || `${a.category} class for ${a.ageRange || 'all ages'}`,
+        location: a.location || 'Squamish, BC',
+        price: a.price || 'Paid',
+        provider: a.provider,
+        isClass: true // Flag to store as class
+      }));
     }
 
     return data.data?.extract?.events || [];
@@ -149,16 +291,19 @@ function parseTime(timeStr) {
   return '09:00';
 }
 
-async function checkEventExists(title, date) {
-  const response = await fetch(
-    `${SUPABASE_URL}/rest/v1/events?title=eq.${encodeURIComponent(title)}&start_date=eq.${date}`,
-    {
-      headers: {
-        'apikey': SUPABASE_KEY,
-        'Authorization': `Bearer ${SUPABASE_KEY}`
-      }
+async function checkEventExists(title, date, isClass = false) {
+  // For classes, just check title (they're ongoing, not date-specific)
+  // For events, check title + date
+  const query = isClass
+    ? `${SUPABASE_URL}/rest/v1/events?title=eq.${encodeURIComponent(title)}&event_type=eq.class`
+    : `${SUPABASE_URL}/rest/v1/events?title=eq.${encodeURIComponent(title)}&start_date=eq.${date}`;
+
+  const response = await fetch(query, {
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`
     }
-  );
+  });
   const data = await response.json();
   return data.length > 0;
 }
@@ -192,8 +337,8 @@ async function main() {
     console.log(`\n📍 ${source.name}`);
     console.log('-'.repeat(40));
 
-    const events = await scrapeUrl(source.url, source.name);
-    console.log(`   Found ${events.length} events`);
+    const events = await scrapeUrl(source.url, source.name, source.type);
+    console.log(`   Found ${events.length} ${source.type === 'activities' ? 'activities' : 'events'}`);
 
     for (const event of events) {
       totalFound++;
@@ -203,16 +348,24 @@ async function main() {
         continue;
       }
 
-      const eventDate = parseDate(event.date);
-      if (!eventDate || eventDate < new Date()) {
-        console.log(`   ⚪ Skipped: ${event.title.substring(0, 30)}... (past/invalid date)`);
-        continue;
+      // Activities (classes) don't need dates - they're ongoing
+      const isClass = event.isClass || source.type === 'activities';
+      let dateStr;
+
+      if (isClass) {
+        // For classes, use today's date as start (they're ongoing)
+        dateStr = new Date().toISOString().split('T')[0];
+      } else {
+        const eventDate = parseDate(event.date);
+        if (!eventDate || eventDate < new Date()) {
+          console.log(`   ⚪ Skipped: ${event.title.substring(0, 30)}... (past/invalid date)`);
+          continue;
+        }
+        dateStr = eventDate.toISOString().split('T')[0];
       }
 
-      const dateStr = eventDate.toISOString().split('T')[0];
-
       // Check for duplicates
-      const exists = await checkEventExists(event.title, dateStr);
+      const exists = await checkEventExists(event.title, dateStr, isClass);
       if (exists) {
         console.log(`   ⚪ Exists: ${event.title.substring(0, 40)}`);
         duplicates++;
@@ -231,14 +384,14 @@ async function main() {
         }
       }
 
-      // Insert event
+      // Insert event or class
       const success = await insertEvent({
         title: event.title,
         description: event.description || '',
-        venue_name: event.location || 'Squamish',
+        venue_name: event.provider || event.location || 'Squamish',
         venue_address: event.address || event.location || 'Squamish, BC',
         category: source.category,
-        event_type: 'event',
+        event_type: isClass ? 'class' : 'event',
         start_date: dateStr,
         start_time: parseTime(event.time),
         end_time: event.end_time ? parseTime(event.end_time) : null,
