@@ -9535,9 +9535,9 @@ export default function PulseApp() {
       return;
     }
     if (!session?.user?.id) {
-      setCalendarToastMessage('Please sign in to claim a business');
-      setShowCalendarToast(true);
-      setTimeout(() => setShowCalendarToast(false), 3000);
+      // This shouldn't happen since we show sign-in prompt, but just in case
+      setShowClaimBusinessModal(false);
+      setShowAuthModal(true);
       return;
     }
     setClaimSubmitting(true);
@@ -11699,69 +11699,91 @@ export default function PulseApp() {
             </div>
           )}
 
-          {/* Claim Business Modal */}
+          {/* Claim Business Modal - Premium Purple Theme */}
           {showClaimBusinessModal && (
             <div className="modal-overlay" onClick={() => setShowClaimBusinessModal(false)}>
-              <div className="modal-content claim-business-modal" onClick={(e) => e.stopPropagation()}>
-                <button className="close-btn" onClick={() => setShowClaimBusinessModal(false)}><X size={24} /></button>
-                <div className="modal-header-premium">
-                  <Building size={32} className="modal-icon" />
+              <div className="claim-modal-premium" onClick={(e) => e.stopPropagation()}>
+                <button className="claim-modal-close" onClick={() => setShowClaimBusinessModal(false)}><X size={24} /></button>
+
+                {/* Purple Gradient Header */}
+                <div className="claim-modal-header">
+                  <div className="claim-modal-icon">
+                    <Building size={32} />
+                  </div>
                   <h2>Claim Your Business</h2>
                   <p>Get access to analytics, manage your listings, and connect with customers</p>
                 </div>
-                <div className="modal-body-premium">
-                  <div className="form-grid">
-                    <div className="form-group full-width">
-                      <label>Business Name *</label>
-                      <input type="text" placeholder="e.g., The Sound Martial Arts" className="form-input" value={claimFormData.businessName} onChange={(e) => setClaimFormData({...claimFormData, businessName: e.target.value})} />
+
+                {/* Form Body */}
+                <div className="claim-modal-body">
+                  {!session?.user ? (
+                    <div className="claim-signin-prompt">
+                      <div className="signin-message">
+                        <AlertCircle size={24} />
+                        <p>Please sign in to claim your business</p>
+                      </div>
+                      <button className="claim-signin-btn" onClick={() => { setShowClaimBusinessModal(false); setShowAuthModal(true); }}>
+                        Sign In to Continue
+                      </button>
                     </div>
-                    <div className="form-group">
-                      <label>Your Name *</label>
-                      <input type="text" placeholder="Full name" className="form-input" value={claimFormData.ownerName} onChange={(e) => setClaimFormData({...claimFormData, ownerName: e.target.value})} />
-                    </div>
-                    <div className="form-group">
-                      <label>Email *</label>
-                      <input type="email" placeholder="your@email.com" className="form-input" value={claimFormData.email} onChange={(e) => setClaimFormData({...claimFormData, email: e.target.value})} />
-                    </div>
-                    <div className="form-group">
-                      <label>Phone</label>
-                      <input type="tel" placeholder="(604) 555-1234" className="form-input" value={claimFormData.phone} onChange={(e) => setClaimFormData({...claimFormData, phone: e.target.value})} />
-                    </div>
-                    <div className="form-group">
-                      <label>Role</label>
-                      <select className="form-input" value={claimFormData.role} onChange={(e) => setClaimFormData({...claimFormData, role: e.target.value})}>
-                        <option value="owner">Owner</option>
-                        <option value="manager">Manager</option>
-                        <option value="representative">Authorized Representative</option>
-                      </select>
-                    </div>
-                    <div className="form-group full-width">
-                      <label>Business Address</label>
-                      <input type="text" placeholder="Street address" className="form-input" value={claimFormData.address} onChange={(e) => setClaimFormData({...claimFormData, address: e.target.value})} />
-                    </div>
-                  </div>
-                  <div className="benefits-grid">
-                    <div className="benefit-item">
-                      <CheckCircle size={20} />
-                      <span>Manage your business profile</span>
-                    </div>
-                    <div className="benefit-item">
-                      <CheckCircle size={20} />
-                      <span>View analytics & insights</span>
-                    </div>
-                    <div className="benefit-item">
-                      <CheckCircle size={20} />
-                      <span>Respond to reviews</span>
-                    </div>
-                    <div className="benefit-item">
-                      <CheckCircle size={20} />
-                      <span>Create deals & promotions</span>
-                    </div>
-                  </div>
-                  <div className="modal-actions">
-                    <button className="btn-secondary" onClick={() => { setShowClaimBusinessModal(false); setClaimFormData({ businessName: '', ownerName: '', email: '', phone: '', role: 'owner', address: '' }); }}>Cancel</button>
-                    <button className="btn-primary" onClick={handleClaimBusiness} disabled={claimSubmitting}>{claimSubmitting ? 'Submitting...' : 'Submit Claim'}</button>
-                  </div>
+                  ) : (
+                    <>
+                      <div className="claim-form-grid">
+                        <div className="claim-form-group full">
+                          <label>Business Name *</label>
+                          <input type="text" placeholder="e.g., The Sound Martial Arts" value={claimFormData.businessName} onChange={(e) => setClaimFormData({...claimFormData, businessName: e.target.value})} />
+                        </div>
+                        <div className="claim-form-group">
+                          <label>Your Name *</label>
+                          <input type="text" placeholder="Full name" value={claimFormData.ownerName} onChange={(e) => setClaimFormData({...claimFormData, ownerName: e.target.value})} />
+                        </div>
+                        <div className="claim-form-group">
+                          <label>Email *</label>
+                          <input type="email" placeholder="your@email.com" value={claimFormData.email} onChange={(e) => setClaimFormData({...claimFormData, email: e.target.value})} />
+                        </div>
+                        <div className="claim-form-group">
+                          <label>Phone</label>
+                          <input type="tel" placeholder="(604) 555-1234" value={claimFormData.phone} onChange={(e) => setClaimFormData({...claimFormData, phone: e.target.value})} />
+                        </div>
+                        <div className="claim-form-group">
+                          <label>Role</label>
+                          <select value={claimFormData.role} onChange={(e) => setClaimFormData({...claimFormData, role: e.target.value})}>
+                            <option value="owner">Owner</option>
+                            <option value="manager">Manager</option>
+                            <option value="representative">Authorized Representative</option>
+                          </select>
+                        </div>
+                        <div className="claim-form-group full">
+                          <label>Business Address</label>
+                          <input type="text" placeholder="Street address in Squamish" value={claimFormData.address} onChange={(e) => setClaimFormData({...claimFormData, address: e.target.value})} />
+                        </div>
+                      </div>
+
+                      <div className="claim-benefits">
+                        <div className="claim-benefit">
+                          <CheckCircle size={18} />
+                          <span>Manage your business profile</span>
+                        </div>
+                        <div className="claim-benefit">
+                          <CheckCircle size={18} />
+                          <span>View analytics & insights</span>
+                        </div>
+                        <div className="claim-benefit">
+                          <CheckCircle size={18} />
+                          <span>Respond to reviews</span>
+                        </div>
+                        <div className="claim-benefit">
+                          <CheckCircle size={18} />
+                          <span>Create deals & promotions</span>
+                        </div>
+                      </div>
+
+                      <div className="claim-modal-actions">
+                        <button className="claim-cancel-btn" onClick={() => { setShowClaimBusinessModal(false); setClaimFormData({ businessName: '', ownerName: '', email: '', phone: '', role: 'owner', address: '' }); }}>Cancel</button>
+                        <button className="claim-submit-btn" onClick={handleClaimBusiness} disabled={claimSubmitting}>{claimSubmitting ? 'Submitting...' : 'Submit Claim'}</button>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -20882,9 +20904,235 @@ export default function PulseApp() {
         .action-btn.saved { background: #fef3c7; border-color: #fbbf24; color: #92400e; }
         .saved-section h2 { font-size: 24px; font-weight: 700; margin-bottom: 24px; color: #111827; }
         
-        /* Add Event & Claim Business Modals */
-        .add-event-modal, .claim-business-modal {
+        /* Add Event Modal */
+        .add-event-modal {
           max-width: 600px;
+        }
+
+        /* Premium Claim Business Modal */
+        .claim-modal-premium {
+          background: #fff;
+          border-radius: 24px;
+          max-width: 520px;
+          width: 100%;
+          max-height: 90vh;
+          overflow-y: auto;
+          position: relative;
+          box-shadow: 0 25px 80px rgba(0,0,0,0.25);
+          animation: modalSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .claim-modal-close {
+          position: absolute;
+          top: 16px;
+          right: 16px;
+          background: rgba(255,255,255,0.2);
+          border: none;
+          border-radius: 50%;
+          width: 40px;
+          height: 40px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          color: #fff;
+          z-index: 10;
+          transition: background 0.2s;
+        }
+
+        .claim-modal-close:hover {
+          background: rgba(255,255,255,0.3);
+        }
+
+        .claim-modal-header {
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #6B46C1 100%);
+          padding: 40px 32px 32px;
+          text-align: center;
+          border-radius: 24px 24px 0 0;
+        }
+
+        .claim-modal-icon {
+          width: 72px;
+          height: 72px;
+          background: rgba(255,255,255,0.15);
+          border-radius: 20px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin: 0 auto 20px;
+          color: #fff;
+        }
+
+        .claim-modal-header h2 {
+          font-size: 26px;
+          font-weight: 800;
+          color: #fff;
+          margin: 0 0 8px;
+        }
+
+        .claim-modal-header p {
+          font-size: 14px;
+          color: rgba(255,255,255,0.8);
+          margin: 0;
+        }
+
+        .claim-modal-body {
+          padding: 28px;
+        }
+
+        .claim-signin-prompt {
+          text-align: center;
+          padding: 20px 0;
+        }
+
+        .signin-message {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 12px;
+          color: #6b7280;
+          margin-bottom: 20px;
+        }
+
+        .signin-message svg {
+          color: #f59e0b;
+        }
+
+        .claim-signin-btn {
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: #fff;
+          border: none;
+          padding: 14px 32px;
+          border-radius: 12px;
+          font-size: 15px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .claim-signin-btn:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .claim-form-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 16px;
+          margin-bottom: 24px;
+        }
+
+        .claim-form-group {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+
+        .claim-form-group.full {
+          grid-column: 1 / -1;
+        }
+
+        .claim-form-group label {
+          font-size: 13px;
+          font-weight: 600;
+          color: #374151;
+        }
+
+        .claim-form-group input,
+        .claim-form-group select {
+          padding: 12px 14px;
+          border: 1px solid #e5e7eb;
+          border-radius: 10px;
+          font-size: 14px;
+          background: #f9fafb;
+          transition: all 0.2s;
+        }
+
+        .claim-form-group input:focus,
+        .claim-form-group select:focus {
+          outline: none;
+          border-color: #667eea;
+          background: #fff;
+          box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .claim-benefits {
+          background: linear-gradient(135deg, #eff6ff 0%, #f5f3ff 100%);
+          border-radius: 12px;
+          padding: 16px;
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 12px;
+          margin-bottom: 24px;
+        }
+
+        .claim-benefit {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 13px;
+          color: #374151;
+        }
+
+        .claim-benefit svg {
+          color: #667eea;
+          flex-shrink: 0;
+        }
+
+        .claim-modal-actions {
+          display: flex;
+          gap: 12px;
+        }
+
+        .claim-cancel-btn {
+          flex: 1;
+          padding: 14px;
+          border: 1px solid #e5e7eb;
+          border-radius: 12px;
+          background: #fff;
+          color: #374151;
+          font-size: 15px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .claim-cancel-btn:hover {
+          background: #f9fafb;
+          border-color: #d1d5db;
+        }
+
+        .claim-submit-btn {
+          flex: 1;
+          padding: 14px;
+          border: none;
+          border-radius: 12px;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: #fff;
+          font-size: 15px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .claim-submit-btn:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .claim-submit-btn:disabled {
+          opacity: 0.7;
+          cursor: not-allowed;
+          transform: none;
+        }
+
+        @media (max-width: 480px) {
+          .claim-form-grid {
+            grid-template-columns: 1fr;
+          }
+          .claim-benefits {
+            grid-template-columns: 1fr;
+          }
         }
 
         /* ========== PREMIUM EVENT/CLASS DETAIL MODAL ========== */
