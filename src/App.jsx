@@ -8501,12 +8501,30 @@ export default function PulseApp() {
       const mappedEvents = data.map(event => {
         // Parse date as local time (not UTC) by using YYYY-MM-DD format with explicit time
         const [year, month, day] = event.start_date.split('-').map(Number);
-        const [hours, minutes] = (event.start_time || '09:00').split(':').map(Number);
+        let [hours, minutes] = (event.start_time || '09:00').split(':').map(Number);
+
+        // Fix suspicious times: classes at 1-5 AM are likely data errors, default to 9 AM
+        // Also fix weird times like XX:26 which indicate scraping errors
+        if (hours >= 1 && hours <= 5) {
+          hours = 9;
+          minutes = 0;
+        } else if (minutes === 26) {
+          // Times ending in :26 are a common scraping error, round to nearest hour
+          minutes = 0;
+        }
+
         const startDate = new Date(year, month - 1, day, hours, minutes, 0, 0);
 
         let endDate;
         if (event.end_time) {
-          const [endHours, endMinutes] = event.end_time.split(':').map(Number);
+          let [endHours, endMinutes] = event.end_time.split(':').map(Number);
+          // Apply same fixes for suspicious end times
+          if (endHours >= 1 && endHours <= 5) {
+            endHours = 10; // Default to 10 AM for end time
+            endMinutes = 0;
+          } else if (endMinutes === 26) {
+            endMinutes = 0;
+          }
           endDate = new Date(year, month - 1, day, endHours, endMinutes, 0, 0);
         } else {
           endDate = new Date(year, month - 1, day, hours + 1, minutes, 0, 0);
