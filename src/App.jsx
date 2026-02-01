@@ -8140,6 +8140,80 @@ const generateEnhancedDealDescription = (deal, venueName = '') => {
   return parts.join(' ');
 };
 
+// Deal Category Normalizer - maps 40+ scraped categories to 8 UI categories
+const DEAL_CATEGORY_MAP = {
+  // Food & Drink
+  'Food & Drink': 'Food & Drink',
+  'Restaurants & Dining': 'Food & Drink',
+  'Cafes & Bakeries': 'Food & Drink',
+  'Breweries & Distilleries': 'Food & Drink',
+  'Craft Brewery': 'Food & Drink',
+  'Grocery & Markets': 'Food & Drink',
+  'Farms & Markets': 'Food & Drink',
+  'Catering': 'Food & Drink',
+
+  // Fitness
+  'Fitness': 'Fitness',
+  'Fitness & Gyms': 'Fitness',
+  'Fitness & Wellness': 'Fitness',
+  'Yoga & Pilates': 'Fitness',
+
+  // Wellness
+  'Wellness': 'Wellness',
+  'Health & Wellness': 'Wellness',
+  'Medical Clinics': 'Wellness',
+  'Dental': 'Wellness',
+  'Pharmacy': 'Wellness',
+  'Veterinary': 'Wellness',
+
+  // Family
+  'Family': 'Family',
+  'Childcare': 'Family',
+  'Childcare & Education': 'Family',
+  'Middle School': 'Family',
+
+  // Recreation & Entertainment
+  'Recreation': 'Recreation',
+  'Recreation & Sports': 'Recreation',
+  'Entertainment': 'Recreation',
+  'Outdoor Adventures': 'Recreation',
+  'Arts & Culture': 'Recreation',
+  'Events & Festivals': 'Recreation',
+  'Attractions': 'Recreation',
+  'Heritage Railway': 'Recreation',
+
+  // Accommodations
+  'Accommodations': 'Accommodations',
+  'Hotels & Lodging': 'Accommodations',
+
+  // Shopping & Retail
+  'Shopping': 'Shopping',
+  'Retail & Shopping': 'Shopping',
+  'Outdoor Gear & Shops': 'Shopping',
+  'Office Supplies/Printing': 'Shopping',
+
+  // Services (catch-all for professional services)
+  'Services': 'Services',
+  'Auto Services': 'Services',
+  'Financial Services': 'Services',
+  'Notaries': 'Services',
+  'Accounting & Tax': 'Services',
+  'Event Services': 'Services',
+  'Moving & Storage': 'Services',
+  'Pest Control': 'Services',
+  'Roofing': 'Services',
+  'Hvac': 'Services',
+  'Plumbing & HVAC': 'Services',
+  'Postal & Shipping': 'Services',
+  'Squamish Nation': 'Services'
+};
+
+// Normalize a deal's category to one of the UI categories
+const normalizeDealCategory = (category) => {
+  if (!category) return 'Other';
+  return DEAL_CATEGORY_MAP[category] || 'Other';
+};
+
 // Helper to get related deals from the same business
 const getRelatedDeals = (currentDeal, allDeals) => {
   if (!currentDeal) return [];
@@ -9638,7 +9712,7 @@ export default function PulseApp() {
 
           <div className="content">
             <div className="results-count">
-              {currentSection === 'deals' ? filterDeals().filter(d => dealCategoryFilter === 'All' || d.category === dealCategoryFilter).length : 
+              {currentSection === 'deals' ? filterDeals().filter(d => dealCategoryFilter === 'All' || normalizeDealCategory(d.category) === dealCategoryFilter).length : 
                currentSection === 'services' ? REAL_DATA.services.filter(s => {
                  if (serviceCategoryFilter === 'All') return true;
                  const normalizedCategory = s.category.toLowerCase();
@@ -9664,18 +9738,20 @@ export default function PulseApp() {
                 <div className="filters-section" style={{marginTop: '20px'}}>
                   <div className="filters-row-single">
                     <div className="filter-group">
-                      <select 
-                        value={dealCategoryFilter} 
+                      <select
+                        value={dealCategoryFilter}
                         onChange={(e) => setDealCategoryFilter(e.target.value)}
                         className="filter-dropdown"
                       >
                         <option value="All">💰 All Deals</option>
                         <option value="Food & Drink">🍔 Food & Drink</option>
+                        <option value="Shopping">🛍️ Shopping</option>
+                        <option value="Services">🔧 Services</option>
                         <option value="Fitness">💪 Fitness</option>
-                        <option value="Family">👨‍👩‍👧‍👦 Family</option>
-                        <option value="Wellness">🧘 Wellness</option>
                         <option value="Recreation">🎯 Recreation</option>
+                        <option value="Wellness">🧘 Wellness</option>
                         <option value="Accommodations">🏨 Accommodations</option>
+                        <option value="Family">👨‍👩‍👧‍👦 Family</option>
                       </select>
                     </div>
                   </div>
@@ -9685,7 +9761,8 @@ export default function PulseApp() {
                   {filterDeals()
                     .filter(deal => {
                       if (dealCategoryFilter === 'All') return true;
-                      return deal.category === dealCategoryFilter;
+                      // Use normalized category for filtering
+                      return normalizeDealCategory(deal.category) === dealCategoryFilter;
                     })
                     .map((deal, index) => (
                   <div 
