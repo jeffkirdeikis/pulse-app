@@ -1,9 +1,111 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Calendar, CalendarPlus, MapPin, Clock, Star, Check, Bell, Search, Filter, ChevronRight, X, Plus, Edit2, Trash2, Eye, Users, DollarSign, AlertCircle, CheckCircle, XCircle, SlidersHorizontal, Building, Wrench, TrendingUp, Phone, Globe, Navigation, Mail, Share2, Ticket, Percent, Tag, Repeat, ExternalLink, Heart, Copy, Info, Gift, Sparkles, Zap, Camera } from 'lucide-react';
+import { Calendar, CalendarPlus, MapPin, Clock, Star, Check, Bell, Search, Filter, ChevronRight, ChevronLeft, X, Plus, Edit2, Trash2, Eye, Users, DollarSign, AlertCircle, CheckCircle, XCircle, SlidersHorizontal, Building, Wrench, TrendingUp, Phone, Globe, Navigation, Mail, Share2, Ticket, Percent, Tag, Repeat, ExternalLink, Heart, Copy, Info, Gift, Sparkles, Zap, Camera, MessageCircle, Send } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import { useUserData } from './hooks/useUserData';
 import { addUserXP, getLevelProgress, getLevelTitle } from './lib/gamification';
 import { trackBusinessView, getBusinessSocialProof, getBusinessAnalytics, generateSocialProofText, formatResponseTime } from './lib/businessAnalytics';
+
+// Booking systems lookup - maps venue names to their booking URLs
+// Sources: Mindbody, WellnessLiving, JaneApp scrapers
+const BOOKING_SYSTEMS = {
+  // Mindbody Widget API
+  'Shala Yoga': {
+    type: 'mindbody',
+    bookingUrl: 'https://clients.mindbodyonline.com/classic/ws?studioid=189264',
+    widgetId: '189264'
+  },
+  'Wild Life Gym': {
+    type: 'mindbody',
+    bookingUrl: 'https://clients.mindbodyonline.com/classic/ws?studioid=69441',
+    widgetId: '69441'
+  },
+  // Mindbody Classic Interface
+  'Squamish Barbell': {
+    type: 'mindbody',
+    bookingUrl: 'https://clients.mindbodyonline.com/classic/mainclass?studioid=7879&tg=7',
+    studioId: '7879'
+  },
+  'Seed Studio': {
+    type: 'mindbody',
+    bookingUrl: 'https://clients.mindbodyonline.com/classic/mainclass?studioid=5729485&tg=7',
+    studioId: '5729485'
+  },
+  // Mindbody BrandedWeb
+  'Oxygen Yoga & Fitness': {
+    type: 'mindbody',
+    bookingUrl: 'https://oxygenyogaandfitness.com/squamish/schedule/',
+    widgetId: '5922581a2'
+  },
+  'Oxygen Yoga & Fitness Squamish': {
+    type: 'mindbody',
+    bookingUrl: 'https://oxygenyogaandfitness.com/squamish/schedule/',
+    widgetId: '5922581a2'
+  },
+  // WellnessLiving
+  'Breathe Fitness Studio': {
+    type: 'wellnessliving',
+    bookingUrl: 'https://www.wellnessliving.com/schedule/breathe_fitness_squamish',
+    businessId: '338540'
+  },
+  'Breathe Fitness': {
+    type: 'wellnessliving',
+    bookingUrl: 'https://www.wellnessliving.com/schedule/breathe_fitness_squamish',
+    businessId: '338540'
+  },
+  'The Sound Martial Arts': {
+    type: 'wellnessliving',
+    bookingUrl: 'https://www.wellnessliving.com/schedule/thesoundmartialarts',
+    businessId: '414578'
+  },
+  // Ground Up Climbing - direct website
+  'Ground Up Climbing Centre': {
+    type: 'website',
+    bookingUrl: 'https://groundupclimbing.ca/schedule'
+  },
+  // Mountain Fitness Center
+  'Mountain Fitness Center': {
+    type: 'website',
+    bookingUrl: 'https://mountainfitnesscenter.ca/'
+  }
+};
+
+// Helper to get booking URL for a venue
+const getBookingUrl = (venueName) => {
+  if (!venueName) return null;
+
+  // Direct lookup
+  if (BOOKING_SYSTEMS[venueName]) {
+    return BOOKING_SYSTEMS[venueName].bookingUrl;
+  }
+
+  // Fuzzy match - check if venue name contains known business
+  const normalizedName = venueName.toLowerCase();
+  for (const [key, value] of Object.entries(BOOKING_SYSTEMS)) {
+    if (normalizedName.includes(key.toLowerCase()) || key.toLowerCase().includes(normalizedName)) {
+      return value.bookingUrl;
+    }
+  }
+
+  return null;
+};
+
+// Helper to get booking system type
+const getBookingType = (venueName) => {
+  if (!venueName) return null;
+
+  if (BOOKING_SYSTEMS[venueName]) {
+    return BOOKING_SYSTEMS[venueName].type;
+  }
+
+  const normalizedName = venueName.toLowerCase();
+  for (const [key, value] of Object.entries(BOOKING_SYSTEMS)) {
+    if (normalizedName.includes(key.toLowerCase()) || key.toLowerCase().includes(normalizedName)) {
+      return value.type;
+    }
+  }
+
+  return null;
+};
 
 // Real Squamish data from Tourism Squamish and local businesses
 const REAL_DATA = {
@@ -8608,6 +8710,391 @@ export default function PulseApp() {
     fetchDeals();
   }, []);
 
+  // Fetch user conversations when messages modal opens
+  const fetchConversations = async () => {
+    if (!user?.id) {
+      setConversations([]);
+      setConversationsLoading(false);
+      return;
+    }
+    setConversationsLoading(true);
+    try {
+      const { data, error } = await supabase.rpc('get_user_conversations', { p_user_id: user.id });
+      if (error) throw error;
+      setConversations(data || []);
+    } catch (err) {
+      console.error('Error fetching conversations:', err);
+      setConversations([]);
+    } finally {
+      setConversationsLoading(false);
+    }
+  };
+
+  // Fetch messages for a specific conversation
+  const fetchMessages = async (conversationId) => {
+    if (!conversationId) return;
+    setMessagesLoading(true);
+    try {
+      const { data, error } = await supabase.rpc('get_conversation_messages', {
+        p_conversation_id: conversationId,
+        p_limit: 50
+      });
+      if (error) throw error;
+      setConversationMessages(data || []);
+      // Mark as read
+      await supabase.rpc('mark_conversation_read', {
+        p_conversation_id: conversationId,
+        p_reader_type: 'user'
+      });
+    } catch (err) {
+      console.error('Error fetching messages:', err);
+      setConversationMessages([]);
+    } finally {
+      setMessagesLoading(false);
+    }
+  };
+
+  // Send a message
+  const sendMessage = async () => {
+    if (!messageInput.trim() || !currentConversation || sendingMessage) return;
+    setSendingMessage(true);
+    try {
+      const { data, error } = await supabase.rpc('send_message', {
+        p_conversation_id: currentConversation.id,
+        p_sender_id: user.id,
+        p_sender_type: 'user',
+        p_content: messageInput.trim()
+      });
+      if (error) throw error;
+      setMessageInput('');
+      await fetchMessages(currentConversation.id);
+    } catch (err) {
+      console.error('Error sending message:', err);
+      alert('Failed to send message. Please try again.');
+    } finally {
+      setSendingMessage(false);
+    }
+  };
+
+  // Start a new conversation with a business
+  const startConversation = async (businessId, subject, initialMessage) => {
+    if (!user?.id || !businessId) return null;
+    try {
+      const { data, error } = await supabase.rpc('get_or_create_conversation', {
+        p_user_id: user.id,
+        p_business_id: businessId,
+        p_subject: subject,
+        p_initial_message: initialMessage
+      });
+      if (error) throw error;
+      return data;
+    } catch (err) {
+      console.error('Error starting conversation:', err);
+      return null;
+    }
+  };
+
+  // Track analytics event
+  const trackAnalytics = async (eventType, businessId, referenceId = null) => {
+    try {
+      await supabase.from('business_analytics').insert({
+        business_id: businessId,
+        event_type: eventType,
+        user_id: user?.id || null,
+        reference_id: referenceId
+      });
+    } catch (err) {
+      console.error('Analytics tracking error:', err);
+    }
+  };
+
+  // Get business info for an event, including booking URL from lookup
+  const getBusinessForEvent = (event) => {
+    const venueName = getVenueName(event.venueId, event);
+    const venue = REAL_DATA.venues.find(v => v.name === venueName);
+    const bookingUrl = getBookingUrl(venueName) || event.bookingUrl;
+    const bookingType = getBookingType(venueName);
+
+    return {
+      id: venue?.id || event.venueId,
+      name: venueName,
+      booking_url: bookingUrl,
+      booking_type: bookingType,
+      ...venue
+    };
+  };
+
+  // Handle booking button click
+  const handleBookClick = (event) => {
+    const business = getBusinessForEvent(event);
+
+    // Track booking click
+    trackAnalytics('booking_click', business.id, event.id);
+
+    setBookingEvent(event);
+    setIframeLoaded(false);
+    setIframeFailed(false);
+    setBookingRequestMessage('');
+
+    // Determine booking step based on whether business has booking URL
+    const hasBookingUrl = business.booking_url;
+    if (hasBookingUrl) {
+      setBookingStep('iframe');
+    } else {
+      setBookingStep('request');
+    }
+
+    setShowBookingSheet(true);
+  };
+
+  // Close booking sheet and show confirmation
+  const closeBookingSheet = () => {
+    const business = bookingEvent ? getBusinessForEvent(bookingEvent) : null;
+    const hasBookingUrl = business?.booking_url;
+
+    setShowBookingSheet(false);
+
+    // Only show confirmation if there was a booking URL (user might have booked externally)
+    if (hasBookingUrl && bookingStep === 'iframe') {
+      setShowBookingConfirmation(true);
+    }
+  };
+
+  // Handle booking confirmation response
+  const handleBookingConfirmation = async (didBook) => {
+    if (didBook && bookingEvent) {
+      const business = getBusinessForEvent(bookingEvent);
+
+      // Track confirmed booking
+      await trackAnalytics('booking_confirmed', business.id, bookingEvent.id);
+
+      // Add to calendar
+      addToCalendar(bookingEvent);
+
+      setCalendarToastMessage('Great! Added to your calendar');
+      setShowCalendarToast(true);
+      setTimeout(() => setShowCalendarToast(false), 2000);
+    }
+
+    setShowBookingConfirmation(false);
+    setBookingEvent(null);
+  };
+
+  // Submit booking request (for businesses without booking URL)
+  const submitBookingRequest = async () => {
+    if (!bookingEvent) return;
+
+    const business = getBusinessForEvent(bookingEvent);
+
+    setSendingMessage(true);
+    try {
+      const subject = `Booking Request: ${bookingEvent.title}`;
+      const message = `Hi, I'd like to book:\n\n` +
+        `Class: ${bookingEvent.title}\n` +
+        `Date: ${bookingEvent.start.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}\n` +
+        `Time: ${bookingEvent.start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}\n\n` +
+        (bookingRequestMessage ? `Message: ${bookingRequestMessage}` : '');
+
+      const conversationId = await startConversation(business.id, subject, message);
+
+      if (conversationId) {
+        // Track message received
+        await trackAnalytics('message_received', business.id, bookingEvent.id);
+
+        setShowBookingSheet(false);
+        setBookingEvent(null);
+
+        setCalendarToastMessage('Request sent! You\'ll hear back soon.');
+        setShowCalendarToast(true);
+        setTimeout(() => {
+          setShowCalendarToast(false);
+          // Open messages to show the sent request
+          openMessages();
+        }, 1500);
+      }
+    } catch (err) {
+      console.error('Error submitting booking request:', err);
+      alert('Failed to send request. Please try again.');
+    } finally {
+      setSendingMessage(false);
+    }
+  };
+
+  // Handle iframe load/error
+  const handleIframeLoad = () => {
+    setIframeLoaded(true);
+  };
+
+  const handleIframeError = () => {
+    setIframeFailed(true);
+  };
+
+  // Handle contact business
+  const handleContactBusiness = (business) => {
+    if (!user) {
+      setShowAuthModal(true);
+      return;
+    }
+    setContactBusiness(business);
+    setContactSubject('');
+    setContactMessage('');
+    setShowContactSheet(true);
+  };
+
+  // Submit contact form
+  const submitContactForm = async () => {
+    if (!contactMessage.trim() || !contactBusiness) return;
+    setSendingMessage(true);
+    try {
+      const conversationId = await startConversation(
+        contactBusiness.id,
+        contactSubject || `Inquiry about ${contactBusiness.name}`,
+        contactMessage.trim()
+      );
+      if (conversationId) {
+        // Track message received
+        await trackAnalytics('message_received', contactBusiness.id);
+
+        setShowContactSheet(false);
+        setContactBusiness(null);
+        setContactSubject('');
+        setContactMessage('');
+
+        setCalendarToastMessage('Message sent!');
+        setShowCalendarToast(true);
+        setTimeout(() => setShowCalendarToast(false), 2000);
+      }
+    } catch (err) {
+      console.error('Error submitting contact form:', err);
+      alert('Failed to send message. Please try again.');
+    } finally {
+      setSendingMessage(false);
+    }
+  };
+
+  // Open messages modal
+  const openMessages = () => {
+    if (!user) {
+      setShowAuthModal(true);
+      return;
+    }
+    fetchConversations();
+    setShowMessagesModal(true);
+    setCurrentConversation(null);
+  };
+
+  // Fetch business inbox conversations
+  const fetchBusinessInbox = async (businessId, type = 'all') => {
+    if (!businessId) return;
+    setBusinessConversationsLoading(true);
+    try {
+      const { data, error } = await supabase.rpc('get_business_inbox', {
+        p_business_id: businessId,
+        p_filter_type: type === 'all' ? null : type
+      });
+      if (error) throw error;
+      setBusinessConversations(data || []);
+    } catch (err) {
+      console.error('Error fetching business inbox:', err);
+      setBusinessConversations([]);
+    } finally {
+      setBusinessConversationsLoading(false);
+    }
+  };
+
+  // Fetch messages for a business conversation
+  const fetchBusinessMessages = async (conversationId) => {
+    if (!conversationId) return;
+    setBusinessMessagesLoading(true);
+    try {
+      const { data, error } = await supabase.rpc('get_conversation_messages', {
+        p_conversation_id: conversationId,
+        p_limit: 50
+      });
+      if (error) throw error;
+      setBusinessMessages(data || []);
+      // Mark as read by business
+      await supabase.rpc('mark_conversation_read', {
+        p_conversation_id: conversationId,
+        p_reader_type: 'business'
+      });
+    } catch (err) {
+      console.error('Error fetching business messages:', err);
+      setBusinessMessages([]);
+    } finally {
+      setBusinessMessagesLoading(false);
+    }
+  };
+
+  // Send reply from business
+  const sendBusinessReply = async () => {
+    if (!businessReplyInput.trim() || !selectedBusinessConversation) return;
+    setSendingMessage(true);
+    try {
+      const businessId = userClaimedBusinesses[0]?.id;
+      const { error } = await supabase.rpc('send_message', {
+        p_conversation_id: selectedBusinessConversation.id,
+        p_sender_id: businessId,
+        p_sender_type: 'business',
+        p_content: businessReplyInput.trim()
+      });
+      if (error) throw error;
+      setBusinessReplyInput('');
+      await fetchBusinessMessages(selectedBusinessConversation.id);
+    } catch (err) {
+      console.error('Error sending reply:', err);
+      alert('Failed to send reply. Please try again.');
+    } finally {
+      setSendingMessage(false);
+    }
+  };
+
+  // Mark conversation as resolved
+  const markConversationResolved = async (conversationId) => {
+    try {
+      await supabase
+        .from('conversations')
+        .update({ status: 'resolved' })
+        .eq('id', conversationId);
+
+      // Refresh inbox
+      if (userClaimedBusinesses[0]?.id) {
+        fetchBusinessInbox(userClaimedBusinesses[0].id, businessInboxTab === 'bookings' ? 'booking_request' : 'general_inquiry');
+      }
+      setSelectedBusinessConversation(null);
+    } catch (err) {
+      console.error('Error marking resolved:', err);
+    }
+  };
+
+  // Fetch business analytics
+  const fetchBusinessAnalytics = async (businessId, days = 30) => {
+    if (!businessId) return;
+    setAnalyticsLoading(true);
+    try {
+      const { data, error } = await supabase.rpc('get_business_analytics_summary', {
+        p_business_id: businessId,
+        p_days: days
+      });
+      if (error) throw error;
+      setBusinessAnalytics(data);
+    } catch (err) {
+      console.error('Error fetching analytics:', err);
+      setBusinessAnalytics(null);
+    } finally {
+      setAnalyticsLoading(false);
+    }
+  };
+
+  // Load business data when view changes
+  useEffect(() => {
+    if (view === 'business' && userClaimedBusinesses.length > 0) {
+      const businessId = userClaimedBusinesses[0].id;
+      fetchBusinessInbox(businessId, 'booking_request');
+      fetchBusinessAnalytics(businessId, analyticsPeriod);
+    }
+  }, [view, userClaimedBusinesses]);
+
   // Submission system state
   const [showSubmissionModal, setShowSubmissionModal] = useState(false);
   const [submissionStep, setSubmissionStep] = useState(1); // 1: type select, 2: form, 3: success
@@ -8674,6 +9161,41 @@ export default function PulseApp() {
     { label: '10-13', min: 10, max: 13 },
     { label: '13-18', min: 13, max: 18 }
   ];
+
+  // Booking & Messaging State
+  const [showBookingSheet, setShowBookingSheet] = useState(false);
+  const [bookingEvent, setBookingEvent] = useState(null);
+  const [bookingStep, setBookingStep] = useState('iframe'); // iframe, request, confirmation
+  const [iframeLoaded, setIframeLoaded] = useState(false);
+  const [iframeFailed, setIframeFailed] = useState(false);
+  const [showBookingConfirmation, setShowBookingConfirmation] = useState(false);
+  const [bookingRequestMessage, setBookingRequestMessage] = useState('');
+  const [showMessagesModal, setShowMessagesModal] = useState(false);
+  const [conversations, setConversations] = useState([]);
+  const [conversationsLoading, setConversationsLoading] = useState(true);
+  const [currentConversation, setCurrentConversation] = useState(null);
+  const [conversationMessages, setConversationMessages] = useState([]);
+  const [messagesLoading, setMessagesLoading] = useState(false);
+  const [messageInput, setMessageInput] = useState('');
+  const [sendingMessage, setSendingMessage] = useState(false);
+  const [showContactSheet, setShowContactSheet] = useState(false);
+  const [contactBusiness, setContactBusiness] = useState(null);
+  const [contactSubject, setContactSubject] = useState('');
+  const [contactMessage, setContactMessage] = useState('');
+
+  // Business Inbox State
+  const [businessInboxTab, setBusinessInboxTab] = useState('bookings'); // bookings, messages
+  const [businessConversations, setBusinessConversations] = useState([]);
+  const [businessConversationsLoading, setBusinessConversationsLoading] = useState(false);
+  const [selectedBusinessConversation, setSelectedBusinessConversation] = useState(null);
+  const [businessMessages, setBusinessMessages] = useState([]);
+  const [businessMessagesLoading, setBusinessMessagesLoading] = useState(false);
+  const [businessReplyInput, setBusinessReplyInput] = useState('');
+
+  // Business Analytics State
+  const [businessAnalytics, setBusinessAnalytics] = useState(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [analyticsPeriod, setAnalyticsPeriod] = useState(30); // days
 
   const categories = ['All', 'Music', 'Fitness', 'Arts', 'Community', 'Games', 'Wellness', 'Outdoors & Nature', 'Nightlife', 'Family', 'Food & Drink'];
 
@@ -9580,6 +10102,19 @@ export default function PulseApp() {
           </div>
         </div>
 
+        {/* Book button for classes */}
+        {event.eventType === 'class' && (
+          <button
+            className="event-book-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleBookClick(event);
+            }}
+          >
+            Book
+          </button>
+        )}
+
         <button
           className={`save-star-btn ${isSaved ? 'saved' : ''}`}
           onClick={handleSave}
@@ -9643,6 +10178,9 @@ export default function PulseApp() {
               </div>
               
               <div className="header-actions-premium">
+                <button className="header-btn-icon messages-btn" onClick={openMessages}>
+                  <MessageCircle size={20} />
+                </button>
                 <button className="header-btn-icon notification-btn">
                   <Bell size={20} />
                   <span className="notification-dot"></span>
@@ -10407,17 +10945,15 @@ export default function PulseApp() {
                 {/* Quick Actions */}
                 <div className="event-quick-actions">
                   {selectedEvent.eventType === 'class' && (
-                    <a
-                      href={selectedEvent.bookingUrl || `https://www.google.com/search?q=${encodeURIComponent(getVenueName(selectedEvent.venueId, selectedEvent) + ' Squamish book class')}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <button
                       className="quick-action-btn book-class-highlight"
+                      onClick={() => handleBookClick(selectedEvent)}
                     >
                       <div className="quick-action-icon book-class">
                         <Ticket size={20} />
                       </div>
                       <span>Book</span>
-                    </a>
+                    </button>
                   )}
                   <button
                     className={`quick-action-btn ${isItemSavedLocal(selectedEvent.eventType === 'class' ? 'class' : 'event', selectedEvent.id) ? 'saved' : ''}`}
@@ -12822,6 +13358,338 @@ export default function PulseApp() {
             </div>
           )}
 
+          {/* Booking Bottom Sheet */}
+          {showBookingSheet && bookingEvent && (
+            <div className="modal-overlay booking-sheet-overlay" onClick={closeBookingSheet}>
+              <div className={`booking-bottom-sheet ${bookingStep === 'iframe' ? 'full-height' : ''}`} onClick={(e) => e.stopPropagation()}>
+                <div className="sheet-handle" />
+                <button className="close-btn sheet-close" onClick={closeBookingSheet}>
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                    <path d="M1 1L13 13M1 13L13 1" stroke="#6b7280" strokeWidth="2" strokeLinecap="round"/>
+                  </svg>
+                </button>
+
+                {/* Header - always shown */}
+                <div className="sheet-header">
+                  <h2>{bookingStep === 'request' ? 'Request to Book' : 'Book Now'}</h2>
+                  <p className="sheet-subtitle">{getVenueName(bookingEvent.venueId, bookingEvent)}</p>
+                  <div className="sheet-event-details">
+                    <div className="event-title-row">{bookingEvent.title}</div>
+                    <div className="sheet-event-info">
+                      <Calendar size={14} />
+                      <span>{bookingEvent.start.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+                      <span className="dot">•</span>
+                      <Clock size={14} />
+                      <span>{bookingEvent.start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* External booking view - for businesses with booking URLs */}
+                {bookingStep === 'iframe' && (() => {
+                  const business = getBusinessForEvent(bookingEvent);
+                  const bookingUrl = business?.booking_url;
+                  const bookingType = business?.booking_type;
+                  const systemName = bookingType === 'mindbody' ? 'Mindbody' :
+                                    bookingType === 'wellnessliving' ? 'WellnessLiving' :
+                                    bookingType === 'janeapp' ? 'JaneApp' : 'their website';
+
+                  return (
+                    <div className="external-booking-container">
+                      <div className="booking-system-badge">
+                        {bookingType === 'mindbody' && (
+                          <img src="https://www.mindbodyonline.com/sites/default/files/public/favicon.ico" alt="" />
+                        )}
+                        {bookingType === 'wellnessliving' && (
+                          <img src="https://www.wellnessliving.com/favicon.ico" alt="" />
+                        )}
+                        {!bookingType && <ExternalLink size={20} />}
+                        <span>Book via {systemName}</span>
+                      </div>
+
+                      <p className="booking-instruction">
+                        Click below to complete your booking on {getVenueName(bookingEvent.venueId, bookingEvent)}'s booking page.
+                      </p>
+
+                      <a
+                        href={bookingUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="open-booking-btn"
+                        onClick={() => {
+                          // Track that they opened the booking page
+                          trackAnalytics('booking_click', business?.id, bookingEvent.id);
+                        }}
+                      >
+                        <Ticket size={20} />
+                        Open Booking Page
+                      </a>
+
+                      <button
+                        className="add-calendar-secondary"
+                        onClick={() => {
+                          addToCalendar(bookingEvent);
+                          setCalendarToastMessage('Added to your calendar!');
+                          setShowCalendarToast(true);
+                          setTimeout(() => setShowCalendarToast(false), 2000);
+                        }}
+                      >
+                        <Calendar size={18} />
+                        Add to Calendar
+                      </button>
+
+                      <p className="booking-note">
+                        After booking, come back and let us know so we can track it for you.
+                      </p>
+                    </div>
+                  );
+                })()}
+
+                {/* Request to book form */}
+                {bookingStep === 'request' && (
+                  <div className="booking-request-form">
+                    <div className="request-info-card">
+                      <Info size={18} />
+                      <p>This business doesn't have online booking. Send them a request and they'll get back to you.</p>
+                    </div>
+
+                    <div className="form-field">
+                      <label>Add a message (optional)</label>
+                      <textarea
+                        placeholder="Any special requests or questions..."
+                        value={bookingRequestMessage}
+                        onChange={(e) => setBookingRequestMessage(e.target.value)}
+                        rows={3}
+                      />
+                    </div>
+
+                    <button
+                      className="send-request-btn"
+                      onClick={submitBookingRequest}
+                      disabled={sendingMessage}
+                    >
+                      {sendingMessage ? (
+                        <>
+                          <div className="spinner-small" />
+                          Sending...
+                        </>
+                      ) : (
+                        <>
+                          <Send size={18} />
+                          Send Booking Request
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Booking Confirmation Dialog */}
+          {showBookingConfirmation && (
+            <div className="modal-overlay confirmation-overlay">
+              <div className="confirmation-dialog">
+                <div className="confirmation-icon">
+                  <CheckCircle size={48} />
+                </div>
+                <h3>Did you complete your booking?</h3>
+                <p>Let us know so we can add it to your calendar.</p>
+                <div className="confirmation-buttons">
+                  <button
+                    className="confirm-btn yes"
+                    onClick={() => handleBookingConfirmation(true)}
+                  >
+                    <Check size={18} />
+                    Yes, I booked
+                  </button>
+                  <button
+                    className="confirm-btn no"
+                    onClick={() => handleBookingConfirmation(false)}
+                  >
+                    No, just browsing
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Contact Business Sheet */}
+          {showContactSheet && contactBusiness && (
+            <div className="modal-overlay contact-sheet-overlay" onClick={() => setShowContactSheet(false)}>
+              <div className="contact-bottom-sheet" onClick={(e) => e.stopPropagation()}>
+                <div className="sheet-handle" />
+                <button className="close-btn sheet-close" onClick={() => setShowContactSheet(false)}>
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                    <path d="M1 1L13 13M1 13L13 1" stroke="#6b7280" strokeWidth="2" strokeLinecap="round"/>
+                  </svg>
+                </button>
+
+                <div className="sheet-header">
+                  <h2>Contact Business</h2>
+                  <p className="sheet-subtitle">{contactBusiness.name}</p>
+                </div>
+
+                <div className="contact-form">
+                  <div className="form-field">
+                    <label>Subject (optional)</label>
+                    <input
+                      type="text"
+                      placeholder="e.g., Class inquiry, Booking question"
+                      value={contactSubject}
+                      onChange={(e) => setContactSubject(e.target.value)}
+                    />
+                  </div>
+                  <div className="form-field">
+                    <label>Message</label>
+                    <textarea
+                      placeholder="Write your message here..."
+                      value={contactMessage}
+                      onChange={(e) => setContactMessage(e.target.value)}
+                      rows={4}
+                    />
+                  </div>
+                  <button
+                    className="send-message-btn"
+                    onClick={submitContactForm}
+                    disabled={!contactMessage.trim() || sendingMessage}
+                  >
+                    {sendingMessage ? (
+                      <>
+                        <div className="spinner-small" />
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        <Send size={18} />
+                        Send Message
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Messages Modal */}
+          {showMessagesModal && (
+            <div className="modal-overlay messages-modal-overlay" onClick={() => setShowMessagesModal(false)}>
+              <div className="messages-modal" onClick={(e) => e.stopPropagation()}>
+                <button className="close-btn messages-close" onClick={() => { setShowMessagesModal(false); setCurrentConversation(null); }}>
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                    <path d="M1 1L13 13M1 13L13 1" stroke="#374151" strokeWidth="2" strokeLinecap="round"/>
+                  </svg>
+                </button>
+
+                {!currentConversation ? (
+                  <>
+                    <div className="messages-header">
+                      <MessageCircle size={24} />
+                      <h2>Messages</h2>
+                    </div>
+
+                    <div className="conversations-list">
+                      {conversationsLoading ? (
+                        <div className="loading-state">
+                          <div className="spinner" />
+                          <p>Loading conversations...</p>
+                        </div>
+                      ) : conversations.length === 0 ? (
+                        <div className="empty-state">
+                          <MessageCircle size={48} />
+                          <h3>No messages yet</h3>
+                          <p>Start a conversation by contacting a business</p>
+                        </div>
+                      ) : (
+                        conversations.map(conv => (
+                          <div
+                            key={conv.id}
+                            className={`conversation-item ${conv.unread_count > 0 ? 'unread' : ''}`}
+                            onClick={() => {
+                              setCurrentConversation(conv);
+                              fetchMessages(conv.id);
+                            }}
+                          >
+                            <div className="conv-avatar">
+                              {conv.business_name?.charAt(0) || 'B'}
+                            </div>
+                            <div className="conv-content">
+                              <div className="conv-header">
+                                <span className="conv-name">{conv.business_name}</span>
+                                <span className="conv-time">
+                                  {conv.last_message_at ? new Date(conv.last_message_at).toLocaleDateString() : ''}
+                                </span>
+                              </div>
+                              <p className="conv-preview">
+                                {conv.last_message_preview || conv.subject || 'No messages yet'}
+                              </p>
+                            </div>
+                            {conv.unread_count > 0 && (
+                              <div className="unread-badge">{conv.unread_count}</div>
+                            )}
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="chat-header">
+                      <button className="back-btn" onClick={() => setCurrentConversation(null)}>
+                        <ChevronLeft size={20} />
+                      </button>
+                      <div className="chat-info">
+                        <h3>{currentConversation.business_name}</h3>
+                        <span className="chat-subject">{currentConversation.subject}</span>
+                      </div>
+                    </div>
+
+                    <div className="messages-container">
+                      {messagesLoading ? (
+                        <div className="loading-state">
+                          <div className="spinner" />
+                        </div>
+                      ) : conversationMessages.length === 0 ? (
+                        <div className="empty-chat">
+                          <p>No messages in this conversation yet</p>
+                        </div>
+                      ) : (
+                        conversationMessages.map(msg => (
+                          <div
+                            key={msg.id}
+                            className={`message-bubble ${msg.sender_type === 'user' ? 'sent' : 'received'}`}
+                          >
+                            <p>{msg.content}</p>
+                            <span className="message-time">
+                              {new Date(msg.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                            </span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+
+                    <div className="message-input-container">
+                      <input
+                        type="text"
+                        placeholder="Type a message..."
+                        value={messageInput}
+                        onChange={(e) => setMessageInput(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                      />
+                      <button
+                        className="send-btn"
+                        onClick={sendMessage}
+                        disabled={!messageInput.trim() || sendingMessage}
+                      >
+                        <Send size={20} />
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Admin Panel Modal */}
           {showAdminPanel && user.isAdmin && (
             <div className="modal-overlay admin-modal-overlay" onClick={() => setShowAdminPanel(false)}>
@@ -13053,7 +13921,7 @@ export default function PulseApp() {
                 </div>
               </div>
 
-              {/* Premium Stats Grid */}
+              {/* Premium Stats Grid - Real Analytics */}
               <div className="premium-stats-grid">
                 <div className="premium-stat-card views">
                   <div className="stat-header">
@@ -13061,15 +13929,20 @@ export default function PulseApp() {
                     <Eye size={20} className="stat-icon-float" />
                   </div>
                   <div className="stat-main">
-                    <div className="stat-value-large">0</div>
+                    <div className="stat-value-large">
+                      {businessAnalytics?.totals?.profile_views?.toLocaleString() || '0'}
+                    </div>
                     <div className="stat-change neutral">
-                      <span className="change-text">No data yet</span>
+                      <span className="change-text">Last {analyticsPeriod} days</span>
                     </div>
                   </div>
                   <div className="stat-chart">
                     <div className="mini-bars">
-                      {[40, 65, 45, 70, 55, 80, 75].map((h, i) => (
-                        <div key={i} className="mini-bar" style={{height: `${h}%`}}></div>
+                      {(businessAnalytics?.daily_breakdown?.slice(-7) || []).map((day, i) => (
+                        <div key={i} className="mini-bar" style={{height: `${Math.min(100, (day.profile_views || 0) * 10)}%`}}></div>
+                      ))}
+                      {!businessAnalytics?.daily_breakdown && [40, 20, 30, 25, 35, 40, 45].map((h, i) => (
+                        <div key={i} className="mini-bar" style={{height: `${h}%`, opacity: 0.3}}></div>
                       ))}
                     </div>
                   </div>
@@ -13077,60 +13950,67 @@ export default function PulseApp() {
 
                 <div className="premium-stat-card clicks">
                   <div className="stat-header">
-                    <span className="stat-label">Engagement</span>
+                    <span className="stat-label">Class/Event Views</span>
                     <Users size={20} className="stat-icon-float" />
                   </div>
                   <div className="stat-main">
-                    <div className="stat-value-large">4,382</div>
-                    <div className="stat-change positive">
-                      <span className="change-arrow">↑</span>
-                      <span className="change-text">18% vs last month</span>
+                    <div className="stat-value-large">
+                      {((businessAnalytics?.totals?.class_views || 0) + (businessAnalytics?.totals?.event_views || 0)).toLocaleString()}
+                    </div>
+                    <div className="stat-change neutral">
+                      <span className="change-text">Last {analyticsPeriod} days</span>
                     </div>
                   </div>
                   <div className="stat-submetrics">
                     <div className="submetric">
-                      <span className="submetric-value">34.1%</span>
-                      <span className="submetric-label">Click-through rate</span>
+                      <span className="submetric-value">{businessAnalytics?.totals?.class_views || 0}</span>
+                      <span className="submetric-label">Classes</span>
+                    </div>
+                    <div className="submetric">
+                      <span className="submetric-value">{businessAnalytics?.totals?.event_views || 0}</span>
+                      <span className="submetric-label">Events</span>
                     </div>
                   </div>
                 </div>
 
                 <div className="premium-stat-card bookings">
                   <div className="stat-header">
-                    <span className="stat-label">Bookings</span>
-                    <Calendar size={20} className="stat-icon-float" />
+                    <span className="stat-label">Booking Clicks</span>
+                    <Ticket size={20} className="stat-icon-float" />
                   </div>
                   <div className="stat-main">
-                    <div className="stat-value-large">286</div>
-                    <div className="stat-change positive">
-                      <span className="change-arrow">↑</span>
-                      <span className="change-text">31% vs last month</span>
+                    <div className="stat-value-large">
+                      {businessAnalytics?.totals?.booking_clicks?.toLocaleString() || '0'}
+                    </div>
+                    <div className="stat-change neutral">
+                      <span className="change-text">Last {analyticsPeriod} days</span>
                     </div>
                   </div>
                   <div className="stat-submetrics">
                     <div className="submetric">
-                      <span className="submetric-value">6.5%</span>
-                      <span className="submetric-label">Conversion rate</span>
+                      <span className="submetric-value">{businessAnalytics?.totals?.bookings_confirmed || 0}</span>
+                      <span className="submetric-label">Confirmed</span>
                     </div>
                   </div>
                 </div>
 
-                <div className="premium-stat-card revenue">
+                <div className="premium-stat-card messages">
                   <div className="stat-header">
-                    <span className="stat-label">Revenue via Pulse</span>
-                    <DollarSign size={20} className="stat-icon-float" />
+                    <span className="stat-label">Messages</span>
+                    <MessageCircle size={20} className="stat-icon-float" />
                   </div>
                   <div className="stat-main">
-                    <div className="stat-value-large">$8,925</div>
-                    <div className="stat-change positive">
-                      <span className="change-arrow">↑</span>
-                      <span className="change-text">27% vs last month</span>
+                    <div className="stat-value-large">
+                      {businessAnalytics?.totals?.messages_received?.toLocaleString() || '0'}
+                    </div>
+                    <div className="stat-change neutral">
+                      <span className="change-text">Last {analyticsPeriod} days</span>
                     </div>
                   </div>
                   <div className="stat-submetrics">
                     <div className="submetric">
-                      <span className="submetric-value">$31.20</span>
-                      <span className="submetric-label">Avg. booking value</span>
+                      <span className="submetric-value">{businessAnalytics?.totals?.total_events || 0}</span>
+                      <span className="submetric-label">Total interactions</span>
                     </div>
                   </div>
                 </div>
@@ -13564,6 +14444,148 @@ export default function PulseApp() {
                       <span className="interest-tag-sm">Happy Hour</span>
                     </div>
                   </div>
+                </div>
+              </div>
+
+              {/* Business Inbox Section */}
+              <div className="premium-section inbox-section">
+                <div className="section-header-premium">
+                  <h2>📬 Inbox</h2>
+                  <div className="inbox-tabs">
+                    <button
+                      className={`inbox-tab ${businessInboxTab === 'bookings' ? 'active' : ''}`}
+                      onClick={() => {
+                        setBusinessInboxTab('bookings');
+                        fetchBusinessInbox(userClaimedBusinesses[0]?.id, 'booking_request');
+                      }}
+                    >
+                      Booking Requests
+                      {businessConversations.filter(c => c.type === 'booking_request' && c.unread_count > 0).length > 0 && (
+                        <span className="inbox-badge">{businessConversations.filter(c => c.type === 'booking_request' && c.unread_count > 0).length}</span>
+                      )}
+                    </button>
+                    <button
+                      className={`inbox-tab ${businessInboxTab === 'messages' ? 'active' : ''}`}
+                      onClick={() => {
+                        setBusinessInboxTab('messages');
+                        fetchBusinessInbox(userClaimedBusinesses[0]?.id, 'general_inquiry');
+                      }}
+                    >
+                      Messages
+                      {businessConversations.filter(c => c.type === 'general_inquiry' && c.unread_count > 0).length > 0 && (
+                        <span className="inbox-badge">{businessConversations.filter(c => c.type === 'general_inquiry' && c.unread_count > 0).length}</span>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="inbox-content">
+                  {businessConversationsLoading ? (
+                    <div className="inbox-loading">
+                      <div className="spinner" />
+                      <p>Loading...</p>
+                    </div>
+                  ) : selectedBusinessConversation ? (
+                    <div className="inbox-thread">
+                      <div className="thread-header">
+                        <button className="back-btn" onClick={() => setSelectedBusinessConversation(null)}>
+                          <ChevronLeft size={20} />
+                        </button>
+                        <div className="thread-info">
+                          <h4>{selectedBusinessConversation.user_name || 'Customer'}</h4>
+                          <span className="thread-subject">{selectedBusinessConversation.subject}</span>
+                        </div>
+                        <button
+                          className="resolve-btn"
+                          onClick={() => markConversationResolved(selectedBusinessConversation.id)}
+                        >
+                          <Check size={16} />
+                          Resolve
+                        </button>
+                      </div>
+
+                      <div className="thread-messages">
+                        {businessMessagesLoading ? (
+                          <div className="inbox-loading">
+                            <div className="spinner" />
+                          </div>
+                        ) : businessMessages.length === 0 ? (
+                          <p className="no-messages">No messages yet</p>
+                        ) : (
+                          businessMessages.map(msg => (
+                            <div
+                              key={msg.id}
+                              className={`thread-message ${msg.sender_type === 'business' ? 'sent' : 'received'}`}
+                            >
+                              <p>{msg.content}</p>
+                              <span className="msg-time">
+                                {new Date(msg.created_at).toLocaleString('en-US', {
+                                  month: 'short',
+                                  day: 'numeric',
+                                  hour: 'numeric',
+                                  minute: '2-digit'
+                                })}
+                              </span>
+                            </div>
+                          ))
+                        )}
+                      </div>
+
+                      <div className="thread-reply">
+                        <input
+                          type="text"
+                          placeholder="Type your reply..."
+                          value={businessReplyInput}
+                          onChange={(e) => setBusinessReplyInput(e.target.value)}
+                          onKeyPress={(e) => e.key === 'Enter' && sendBusinessReply()}
+                        />
+                        <button
+                          className="send-reply-btn"
+                          onClick={sendBusinessReply}
+                          disabled={!businessReplyInput.trim() || sendingMessage}
+                        >
+                          <Send size={18} />
+                        </button>
+                      </div>
+                    </div>
+                  ) : businessConversations.length === 0 ? (
+                    <div className="inbox-empty">
+                      <MessageCircle size={48} />
+                      <h3>No {businessInboxTab === 'bookings' ? 'booking requests' : 'messages'} yet</h3>
+                      <p>When customers reach out, their messages will appear here.</p>
+                    </div>
+                  ) : (
+                    <div className="inbox-list">
+                      {businessConversations.map(conv => (
+                        <div
+                          key={conv.id}
+                          className={`inbox-item ${conv.unread_count > 0 ? 'unread' : ''}`}
+                          onClick={() => {
+                            setSelectedBusinessConversation(conv);
+                            fetchBusinessMessages(conv.id);
+                          }}
+                        >
+                          <div className="inbox-avatar">
+                            {(conv.user_name || 'C').charAt(0).toUpperCase()}
+                          </div>
+                          <div className="inbox-item-content">
+                            <div className="inbox-item-header">
+                              <span className="inbox-item-name">{conv.user_name || 'Customer'}</span>
+                              <span className="inbox-item-time">
+                                {conv.last_message_at ? new Date(conv.last_message_at).toLocaleDateString() : ''}
+                              </span>
+                            </div>
+                            <p className="inbox-item-subject">{conv.subject}</p>
+                            <p className="inbox-item-preview">{conv.last_message_preview || 'No messages yet'}</p>
+                          </div>
+                          {conv.unread_count > 0 && (
+                            <div className="inbox-unread-badge">{conv.unread_count}</div>
+                          )}
+                          <ChevronRight size={16} className="inbox-chevron" />
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -14130,8 +15152,861 @@ export default function PulseApp() {
           align-items: center;
           gap: 12px;
         }
-        
-        
+
+        .header-btn-icon {
+          width: 40px;
+          height: 40px;
+          border-radius: 50%;
+          border: none;
+          background: rgba(255,255,255,0.9);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: all 0.2s;
+          color: #374151;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .header-btn-icon:hover {
+          background: #f3f4f6;
+          transform: scale(1.05);
+        }
+
+        .messages-btn:hover {
+          color: #3b82f6;
+        }
+
+        /* Event Card Book Button */
+        .event-book-btn {
+          position: absolute;
+          bottom: 16px;
+          right: 48px;
+          padding: 8px 16px;
+          background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+          color: white;
+          font-size: 13px;
+          font-weight: 600;
+          border: none;
+          border-radius: 8px;
+          cursor: pointer;
+          transition: all 0.2s;
+          box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+        }
+
+        .event-book-btn:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+        }
+
+        /* Booking Bottom Sheet */
+        .booking-sheet-overlay,
+        .contact-sheet-overlay {
+          align-items: flex-end !important;
+          padding: 0 !important;
+        }
+
+        .booking-bottom-sheet,
+        .contact-bottom-sheet {
+          width: 100%;
+          max-height: 80vh;
+          background: white;
+          border-radius: 24px 24px 0 0;
+          padding: 24px;
+          position: relative;
+          animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+          from {
+            transform: translateY(100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0);
+            opacity: 1;
+          }
+        }
+
+        .sheet-handle {
+          width: 40px;
+          height: 4px;
+          background: #e5e7eb;
+          border-radius: 2px;
+          margin: 0 auto 20px;
+        }
+
+        .sheet-close {
+          position: absolute;
+          top: 24px;
+          right: 24px;
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          background: #f3f4f6;
+          border: none;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+        }
+
+        .sheet-header {
+          margin-bottom: 24px;
+        }
+
+        .sheet-header h2 {
+          font-size: 24px;
+          font-weight: 700;
+          color: #111827;
+          margin: 0 0 4px;
+        }
+
+        .sheet-subtitle {
+          font-size: 16px;
+          color: #6b7280;
+          margin: 0;
+        }
+
+        .sheet-event-info {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin-top: 8px;
+          font-size: 14px;
+          color: #9ca3af;
+        }
+
+        .sheet-event-info .dot {
+          font-size: 8px;
+        }
+
+        .sheet-options {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+
+        .sheet-option-btn {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          padding: 16px;
+          border: 1px solid #e5e7eb;
+          border-radius: 16px;
+          background: white;
+          cursor: pointer;
+          transition: all 0.2s;
+          text-decoration: none;
+          color: inherit;
+        }
+
+        .sheet-option-btn:hover {
+          background: #f9fafb;
+          border-color: #d1d5db;
+        }
+
+        .sheet-option-btn.primary {
+          background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+          border-color: #93c5fd;
+        }
+
+        .sheet-option-btn.primary:hover {
+          background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+        }
+
+        .option-icon {
+          width: 48px;
+          height: 48px;
+          border-radius: 12px;
+          background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: white;
+        }
+
+        .option-icon.contact {
+          background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+
+        .option-icon.calendar {
+          background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+        }
+
+        .option-content {
+          flex: 1;
+          text-align: left;
+        }
+
+        .option-title {
+          display: block;
+          font-size: 16px;
+          font-weight: 600;
+          color: #111827;
+        }
+
+        .option-desc {
+          display: block;
+          font-size: 13px;
+          color: #6b7280;
+          margin-top: 2px;
+        }
+
+        .option-arrow {
+          color: #9ca3af;
+        }
+
+        /* Contact Form */
+        .contact-form {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        }
+
+        .form-field {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+
+        .form-field label {
+          font-size: 14px;
+          font-weight: 500;
+          color: #374151;
+        }
+
+        .form-field input,
+        .form-field textarea {
+          padding: 12px 16px;
+          border: 1px solid #e5e7eb;
+          border-radius: 12px;
+          font-size: 16px;
+          transition: all 0.2s;
+        }
+
+        .form-field input:focus,
+        .form-field textarea:focus {
+          outline: none;
+          border-color: #3b82f6;
+          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .form-field textarea {
+          resize: none;
+        }
+
+        .send-message-btn {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          padding: 14px 24px;
+          background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+          color: white;
+          font-size: 16px;
+          font-weight: 600;
+          border: none;
+          border-radius: 12px;
+          cursor: pointer;
+          transition: all 0.2s;
+          margin-top: 8px;
+        }
+
+        .send-message-btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
+        .send-message-btn:not(:disabled):hover {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+        }
+
+        .spinner-small {
+          width: 18px;
+          height: 18px;
+          border: 2px solid rgba(255,255,255,0.3);
+          border-top-color: white;
+          border-radius: 50%;
+          animation: spin 0.8s linear infinite;
+        }
+
+        /* Booking Sheet */
+        .booking-bottom-sheet.full-height {
+          max-height: 90vh;
+          display: flex;
+          flex-direction: column;
+        }
+
+        /* External Booking Container */
+        .external-booking-container {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          padding: 24px 0;
+          text-align: center;
+        }
+
+        .booking-system-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          padding: 8px 16px;
+          background: #f3f4f6;
+          border-radius: 20px;
+          font-size: 13px;
+          font-weight: 500;
+          color: #6b7280;
+          margin-bottom: 16px;
+        }
+
+        .booking-system-badge img {
+          width: 16px;
+          height: 16px;
+          border-radius: 4px;
+        }
+
+        .booking-instruction {
+          color: #6b7280;
+          font-size: 14px;
+          margin: 0 0 24px;
+          line-height: 1.5;
+          max-width: 300px;
+        }
+
+        .open-booking-btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 10px;
+          width: 100%;
+          padding: 16px 32px;
+          background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+          color: white;
+          font-size: 17px;
+          font-weight: 600;
+          border-radius: 14px;
+          text-decoration: none;
+          transition: all 0.2s;
+          box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+        }
+
+        .open-booking-btn:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 20px rgba(37, 99, 235, 0.45);
+        }
+
+        .add-calendar-secondary {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          width: 100%;
+          padding: 14px 24px;
+          margin-top: 12px;
+          background: #f3f4f6;
+          color: #374151;
+          font-size: 15px;
+          font-weight: 500;
+          border: none;
+          border-radius: 12px;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .add-calendar-secondary:hover {
+          background: #e5e7eb;
+        }
+
+        .booking-note {
+          color: #9ca3af;
+          font-size: 12px;
+          margin: 20px 0 0;
+        }
+
+        .sheet-event-details {
+          margin-top: 12px;
+          padding: 12px 16px;
+          background: #f9fafb;
+          border-radius: 12px;
+        }
+
+        .event-title-row {
+          font-size: 15px;
+          font-weight: 600;
+          color: #111827;
+          margin-bottom: 6px;
+        }
+
+        .sheet-event-info svg {
+          color: #6b7280;
+        }
+
+
+        /* Booking Request Form */
+        .booking-request-form {
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+        }
+
+        .request-info-card {
+          display: flex;
+          gap: 12px;
+          padding: 16px;
+          background: #fef3c7;
+          border-radius: 12px;
+          color: #92400e;
+        }
+
+        .request-info-card svg {
+          flex-shrink: 0;
+          margin-top: 2px;
+        }
+
+        .request-info-card p {
+          margin: 0;
+          font-size: 14px;
+          line-height: 1.5;
+        }
+
+        .send-request-btn {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          padding: 16px 24px;
+          background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+          color: white;
+          font-size: 16px;
+          font-weight: 600;
+          border: none;
+          border-radius: 12px;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .send-request-btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
+        .send-request-btn:not(:disabled):hover {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+        }
+
+        /* Booking Confirmation Dialog */
+        .confirmation-overlay {
+          background: rgba(0, 0, 0, 0.6) !important;
+        }
+
+        .confirmation-dialog {
+          background: white;
+          border-radius: 24px;
+          padding: 32px;
+          max-width: 340px;
+          text-align: center;
+          animation: scaleIn 0.2s ease;
+        }
+
+        @keyframes scaleIn {
+          from {
+            transform: scale(0.9);
+            opacity: 0;
+          }
+          to {
+            transform: scale(1);
+            opacity: 1;
+          }
+        }
+
+        .confirmation-icon {
+          width: 72px;
+          height: 72px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin: 0 auto 20px;
+        }
+
+        .confirmation-icon svg {
+          color: #16a34a;
+        }
+
+        .confirmation-dialog h3 {
+          font-size: 20px;
+          font-weight: 700;
+          color: #111827;
+          margin: 0 0 8px;
+        }
+
+        .confirmation-dialog p {
+          color: #6b7280;
+          margin: 0 0 24px;
+          font-size: 14px;
+        }
+
+        .confirmation-buttons {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+
+        .confirm-btn {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          padding: 14px 24px;
+          border-radius: 12px;
+          font-size: 15px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s;
+          border: none;
+        }
+
+        .confirm-btn.yes {
+          background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+          color: white;
+        }
+
+        .confirm-btn.yes:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+        }
+
+        .confirm-btn.no {
+          background: #f3f4f6;
+          color: #6b7280;
+        }
+
+        .confirm-btn.no:hover {
+          background: #e5e7eb;
+        }
+
+        /* Messages Modal */
+        .messages-modal-overlay {
+          padding: 0 !important;
+        }
+
+        .messages-modal {
+          width: 100%;
+          height: 100%;
+          max-width: 480px;
+          max-height: 100%;
+          background: white;
+          position: relative;
+          display: flex;
+          flex-direction: column;
+        }
+
+        @media (min-width: 768px) {
+          .messages-modal {
+            max-height: 80vh;
+            border-radius: 24px;
+            margin: auto;
+          }
+        }
+
+        .messages-close {
+          position: absolute;
+          top: 16px;
+          right: 16px;
+          z-index: 10;
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          background: #f3f4f6;
+          border: none;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+        }
+
+        .messages-header {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 20px 24px;
+          border-bottom: 1px solid #f3f4f6;
+        }
+
+        .messages-header h2 {
+          font-size: 20px;
+          font-weight: 700;
+          color: #111827;
+          margin: 0;
+        }
+
+        .messages-header svg {
+          color: #3b82f6;
+        }
+
+        .conversations-list {
+          flex: 1;
+          overflow-y: auto;
+          padding: 8px 0;
+        }
+
+        .conversation-item {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 16px 24px;
+          cursor: pointer;
+          transition: background 0.2s;
+        }
+
+        .conversation-item:hover {
+          background: #f9fafb;
+        }
+
+        .conversation-item.unread {
+          background: #eff6ff;
+        }
+
+        .conv-avatar {
+          width: 48px;
+          height: 48px;
+          border-radius: 12px;
+          background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+          color: white;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: 600;
+          font-size: 18px;
+        }
+
+        .conv-content {
+          flex: 1;
+          min-width: 0;
+        }
+
+        .conv-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 4px;
+        }
+
+        .conv-name {
+          font-weight: 600;
+          color: #111827;
+        }
+
+        .conv-time {
+          font-size: 12px;
+          color: #9ca3af;
+        }
+
+        .conv-preview {
+          font-size: 14px;
+          color: #6b7280;
+          margin: 0;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .unread-badge {
+          width: 22px;
+          height: 22px;
+          border-radius: 50%;
+          background: #3b82f6;
+          color: white;
+          font-size: 12px;
+          font-weight: 600;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        /* Chat View */
+        .chat-header {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 16px 24px;
+          border-bottom: 1px solid #f3f4f6;
+        }
+
+        .back-btn {
+          width: 36px;
+          height: 36px;
+          border-radius: 50%;
+          background: #f3f4f6;
+          border: none;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+        }
+
+        .chat-info h3 {
+          font-size: 16px;
+          font-weight: 600;
+          color: #111827;
+          margin: 0;
+        }
+
+        .chat-subject {
+          font-size: 13px;
+          color: #6b7280;
+        }
+
+        .messages-container {
+          flex: 1;
+          overflow-y: auto;
+          padding: 16px 24px;
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+
+        .message-bubble {
+          max-width: 80%;
+          padding: 12px 16px;
+          border-radius: 16px;
+        }
+
+        .message-bubble.sent {
+          align-self: flex-end;
+          background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+          color: white;
+          border-bottom-right-radius: 4px;
+        }
+
+        .message-bubble.received {
+          align-self: flex-start;
+          background: #f3f4f6;
+          color: #111827;
+          border-bottom-left-radius: 4px;
+        }
+
+        .message-bubble p {
+          margin: 0;
+          font-size: 15px;
+          line-height: 1.4;
+        }
+
+        .message-time {
+          display: block;
+          font-size: 11px;
+          margin-top: 4px;
+          opacity: 0.7;
+        }
+
+        .message-input-container {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 16px 24px;
+          border-top: 1px solid #f3f4f6;
+          background: white;
+        }
+
+        .message-input-container input {
+          flex: 1;
+          padding: 12px 16px;
+          border: 1px solid #e5e7eb;
+          border-radius: 24px;
+          font-size: 15px;
+          outline: none;
+        }
+
+        .message-input-container input:focus {
+          border-color: #3b82f6;
+        }
+
+        .send-btn {
+          width: 44px;
+          height: 44px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+          border: none;
+          color: white;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .send-btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
+        .send-btn:not(:disabled):hover {
+          transform: scale(1.05);
+        }
+
+        .empty-state {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: 60px 20px;
+          text-align: center;
+          color: #6b7280;
+        }
+
+        .empty-state svg {
+          color: #d1d5db;
+          margin-bottom: 16px;
+        }
+
+        .empty-state h3 {
+          font-size: 18px;
+          font-weight: 600;
+          color: #374151;
+          margin: 0 0 8px;
+        }
+
+        .empty-state p {
+          margin: 0;
+          font-size: 14px;
+        }
+
+        .empty-chat {
+          flex: 1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: #9ca3af;
+          font-size: 14px;
+        }
+
+        .loading-state {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: 40px 20px;
+          gap: 12px;
+        }
+
+        .loading-state .spinner {
+          width: 32px;
+          height: 32px;
+          border: 3px solid #e5e7eb;
+          border-top-color: #3b82f6;
+          border-radius: 50%;
+          animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+
+
         /* Floating Action Button - Premium */
         .fab-premium {
           position: fixed;
@@ -16020,7 +17895,341 @@ export default function PulseApp() {
           margin: 0 auto 32px;
           padding: 0 40px;
         }
-        
+
+        /* Business Inbox Styles */
+        .inbox-section {
+          background: rgba(255,255,255,0.05);
+          border-radius: 16px;
+          padding: 24px;
+          margin-left: 40px;
+          margin-right: 40px;
+        }
+
+        .inbox-tabs {
+          display: flex;
+          gap: 8px;
+        }
+
+        .inbox-tab {
+          padding: 8px 16px;
+          background: rgba(255,255,255,0.1);
+          border: none;
+          border-radius: 8px;
+          color: rgba(255,255,255,0.7);
+          font-size: 13px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .inbox-tab:hover {
+          background: rgba(255,255,255,0.15);
+        }
+
+        .inbox-tab.active {
+          background: white;
+          color: #111827;
+        }
+
+        .inbox-badge {
+          background: #ef4444;
+          color: white;
+          font-size: 11px;
+          font-weight: 600;
+          padding: 2px 6px;
+          border-radius: 10px;
+          min-width: 18px;
+          text-align: center;
+        }
+
+        .inbox-content {
+          background: white;
+          border-radius: 12px;
+          margin-top: 16px;
+          min-height: 300px;
+          overflow: hidden;
+        }
+
+        .inbox-loading {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: 60px 20px;
+          color: #6b7280;
+        }
+
+        .inbox-loading .spinner {
+          width: 32px;
+          height: 32px;
+          border: 3px solid #e5e7eb;
+          border-top-color: #3b82f6;
+          border-radius: 50%;
+          animation: spin 0.8s linear infinite;
+        }
+
+        .inbox-empty {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: 60px 20px;
+          text-align: center;
+          color: #6b7280;
+        }
+
+        .inbox-empty svg {
+          color: #d1d5db;
+          margin-bottom: 16px;
+        }
+
+        .inbox-empty h3 {
+          font-size: 16px;
+          font-weight: 600;
+          color: #374151;
+          margin: 0 0 8px;
+        }
+
+        .inbox-empty p {
+          margin: 0;
+          font-size: 14px;
+        }
+
+        .inbox-list {
+          max-height: 400px;
+          overflow-y: auto;
+        }
+
+        .inbox-item {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 16px 20px;
+          border-bottom: 1px solid #f3f4f6;
+          cursor: pointer;
+          transition: background 0.2s;
+        }
+
+        .inbox-item:hover {
+          background: #f9fafb;
+        }
+
+        .inbox-item.unread {
+          background: #eff6ff;
+        }
+
+        .inbox-avatar {
+          width: 44px;
+          height: 44px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+          color: white;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: 600;
+          font-size: 16px;
+          flex-shrink: 0;
+        }
+
+        .inbox-item-content {
+          flex: 1;
+          min-width: 0;
+        }
+
+        .inbox-item-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 4px;
+        }
+
+        .inbox-item-name {
+          font-weight: 600;
+          color: #111827;
+          font-size: 14px;
+        }
+
+        .inbox-item-time {
+          font-size: 12px;
+          color: #9ca3af;
+        }
+
+        .inbox-item-subject {
+          font-size: 13px;
+          font-weight: 500;
+          color: #374151;
+          margin: 0 0 4px;
+        }
+
+        .inbox-item-preview {
+          font-size: 13px;
+          color: #6b7280;
+          margin: 0;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .inbox-unread-badge {
+          background: #3b82f6;
+          color: white;
+          font-size: 11px;
+          font-weight: 600;
+          width: 20px;
+          height: 20px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .inbox-chevron {
+          color: #9ca3af;
+        }
+
+        /* Thread View */
+        .inbox-thread {
+          display: flex;
+          flex-direction: column;
+          height: 400px;
+        }
+
+        .thread-header {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 16px 20px;
+          border-bottom: 1px solid #f3f4f6;
+        }
+
+        .thread-header .back-btn {
+          width: 36px;
+          height: 36px;
+          border-radius: 50%;
+          background: #f3f4f6;
+          border: none;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          color: #374151;
+        }
+
+        .thread-info {
+          flex: 1;
+        }
+
+        .thread-info h4 {
+          font-size: 15px;
+          font-weight: 600;
+          color: #111827;
+          margin: 0;
+        }
+
+        .thread-subject {
+          font-size: 13px;
+          color: #6b7280;
+        }
+
+        .resolve-btn {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 8px 16px;
+          background: #10b981;
+          color: white;
+          border: none;
+          border-radius: 8px;
+          font-size: 13px;
+          font-weight: 500;
+          cursor: pointer;
+        }
+
+        .thread-messages {
+          flex: 1;
+          overflow-y: auto;
+          padding: 16px 20px;
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+
+        .thread-message {
+          max-width: 80%;
+          padding: 12px 16px;
+          border-radius: 16px;
+        }
+
+        .thread-message.sent {
+          align-self: flex-end;
+          background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+          color: white;
+          border-bottom-right-radius: 4px;
+        }
+
+        .thread-message.received {
+          align-self: flex-start;
+          background: #f3f4f6;
+          color: #111827;
+          border-bottom-left-radius: 4px;
+        }
+
+        .thread-message p {
+          margin: 0;
+          font-size: 14px;
+          line-height: 1.4;
+        }
+
+        .msg-time {
+          display: block;
+          font-size: 11px;
+          margin-top: 4px;
+          opacity: 0.7;
+        }
+
+        .thread-reply {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 16px 20px;
+          border-top: 1px solid #f3f4f6;
+        }
+
+        .thread-reply input {
+          flex: 1;
+          padding: 12px 16px;
+          border: 1px solid #e5e7eb;
+          border-radius: 24px;
+          font-size: 14px;
+          outline: none;
+        }
+
+        .thread-reply input:focus {
+          border-color: #3b82f6;
+        }
+
+        .send-reply-btn {
+          width: 44px;
+          height: 44px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+          border: none;
+          color: white;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+        }
+
+        .send-reply-btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
         .section-header-premium {
           display: flex;
           justify-content: space-between;
