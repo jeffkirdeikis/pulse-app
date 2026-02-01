@@ -8283,6 +8283,70 @@ const getDealTier = (deal) => {
   return null;
 };
 
+// Get prominent savings text for deal cards (e.g., "40% OFF", "SAVE $50")
+const getDealSavingsDisplay = (deal) => {
+  const discountValue = deal.discountValue || deal.discount_value || 0;
+  const discountType = deal.discountType || deal.discount_type || '';
+  const savingsPercent = deal.savingsPercent || 0;
+  const originalPrice = deal.originalPrice || deal.original_price || 0;
+  const dealPrice = deal.dealPrice || deal.deal_price || 0;
+  const title = (deal.title || '').toLowerCase();
+  const discount = (deal.discount || '').toLowerCase();
+
+  // Check for percentage discount
+  if (discountType === 'percent' && discountValue > 0) {
+    return { text: `${Math.round(discountValue)}% OFF`, type: 'percent' };
+  }
+  if (savingsPercent > 0) {
+    return { text: `${savingsPercent}% OFF`, type: 'percent' };
+  }
+
+  // Check for dollar savings
+  if (discountType === 'fixed' && discountValue > 0) {
+    return { text: `SAVE $${Math.round(discountValue)}`, type: 'dollar' };
+  }
+  if (originalPrice && dealPrice && originalPrice > dealPrice) {
+    const savings = Math.round(originalPrice - dealPrice);
+    return { text: `SAVE $${savings}`, type: 'dollar' };
+  }
+
+  // Parse from title
+  const percentMatch = (title + ' ' + discount).match(/(\d+)\s*%/);
+  if (percentMatch && parseInt(percentMatch[1]) >= 10) {
+    return { text: `${percentMatch[1]}% OFF`, type: 'percent' };
+  }
+
+  const dollarMatch = title.match(/save\s*\$(\d+)/i) || title.match(/\$(\d+)\s*off/i);
+  if (dollarMatch && parseInt(dollarMatch[1]) >= 10) {
+    return { text: `SAVE $${dollarMatch[1]}`, type: 'dollar' };
+  }
+
+  // Check for special deal types
+  if (discountType === 'free_item' || title.includes('free')) {
+    return { text: 'FREE', type: 'free' };
+  }
+  if (title.includes('bogo') || title.includes('buy one get one')) {
+    return { text: 'BOGO', type: 'bogo' };
+  }
+  if (title.includes('half price') || title.includes('1/2 price')) {
+    return { text: '50% OFF', type: 'percent' };
+  }
+
+  // Show price if available
+  if (dealPrice > 0) {
+    return { text: `$${dealPrice}`, type: 'price' };
+  }
+
+  return null;
+};
+
+// Check if a deal has real value (filter out vague "specials")
+const isRealDeal = (deal) => {
+  const score = calculateDealScore(deal);
+  // Only show deals with a minimum score (has some concrete value)
+  return score >= 15;
+};
+
 // Helper to get related deals from the same business
 const getRelatedDeals = (currentDeal, allDeals) => {
   if (!currentDeal) return [];
@@ -9144,6 +9208,9 @@ export default function PulseApp() {
     // Combine hardcoded deals with database deals
     let filtered = [...REAL_DATA.deals, ...dbDeals];
 
+    // Filter out vague deals with no real value
+    filtered = filtered.filter(deal => isRealDeal(deal));
+
     if (searchQuery) {
       filtered = filtered.filter(d =>
         d.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -9841,6 +9908,13 @@ export default function PulseApp() {
                     onClick={() => setSelectedDeal(deal)}
                     ref={(el) => dealCardRefs.current[index] = el}
                   >
+                    {/* Prominent savings badge at top */}
+                    {getDealSavingsDisplay(deal) && (
+                      <div className={`deal-savings-badge savings-${getDealSavingsDisplay(deal).type}`}>
+                        {getDealSavingsDisplay(deal).text}
+                      </div>
+                    )}
+
                     <div className="deal-card-header-new">
                       <div className="deal-title-section">
                         <h3>{generateSmartDealTitle(deal, getVenueName(deal.venueId, deal))}</h3>
@@ -9854,9 +9928,6 @@ export default function PulseApp() {
                           </div>
                         )}
                       </div>
-                      {deal.savingsPercent > 0 && (
-                        <div className="savings-badge-new">{deal.savingsPercent}% OFF</div>
-                      )}
                     </div>
 
                     <div className="deal-card-body-new">
@@ -9869,14 +9940,16 @@ export default function PulseApp() {
                         </div>
                       </div>
 
-                      <div className="deal-detail-row">
-                        <div className="deal-detail-item full-width">
-                          <div className="detail-icon clock-icon">
-                            <Clock size={16} />
+                      {deal.schedule && (
+                        <div className="deal-detail-row">
+                          <div className="deal-detail-item full-width">
+                            <div className="detail-icon clock-icon">
+                              <Clock size={16} />
+                            </div>
+                            <span className="detail-text">{deal.schedule}</span>
                           </div>
-                          <span className="detail-text">{deal.schedule}</span>
                         </div>
-                      </div>
+                      )}
 
                       {deal.description && deal.description.toLowerCase() !== deal.title.toLowerCase() && (
                         <p className="deal-description-new">{deal.description.length > 80 ? deal.description.substring(0, 77) + '...' : deal.description}</p>
@@ -15048,6 +15121,39 @@ export default function PulseApp() {
         .featured-badge.large { position: static; display: inline-block; margin-bottom: 12px; font-size: 12px; padding: 6px 14px; }
         .verified-badge { position: absolute; top: 12px; left: 12px; background: #d1fae5; border: 1px solid #10b981; color: #047857; padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; display: flex; align-items: center; gap: 4px; }
         .verified-badge.large { position: static; margin-bottom: 12px; padding: 6px 14px; font-size: 13px; }
+
+        /* Deal Savings Badge - prominent display of discount */
+        .deal-savings-badge {
+          display: inline-block;
+          padding: 6px 14px;
+          border-radius: 8px;
+          font-size: 14px;
+          font-weight: 800;
+          letter-spacing: 0.5px;
+          width: fit-content;
+        }
+
+        .deal-savings-badge.savings-percent {
+          background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+          color: white;
+        }
+
+        .deal-savings-badge.savings-dollar {
+          background: linear-gradient(135deg, #059669 0%, #047857 100%);
+          color: white;
+        }
+
+        .deal-savings-badge.savings-free,
+        .deal-savings-badge.savings-bogo {
+          background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+          color: white;
+        }
+
+        .deal-savings-badge.savings-price {
+          background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+          color: white;
+        }
+
         /* Premium Deals Grid */
         .deals-grid { 
           display: grid; 
