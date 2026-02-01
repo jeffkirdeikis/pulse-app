@@ -8214,6 +8214,75 @@ const normalizeDealCategory = (category) => {
   return DEAL_CATEGORY_MAP[category] || 'Other';
 };
 
+// Deal Quality Scorer - ranks deals by actual value to surface the best ones
+const calculateDealScore = (deal) => {
+  let score = 0;
+
+  // Extract discount info from various fields
+  const discountValue = deal.discountValue || deal.discount_value || 0;
+  const discountType = deal.discountType || deal.discount_type || '';
+  const savingsPercent = deal.savingsPercent || 0;
+  const originalPrice = deal.originalPrice || deal.original_price || 0;
+  const dealPrice = deal.dealPrice || deal.deal_price || 0;
+  const title = (deal.title || '').toLowerCase();
+  const discount = (deal.discount || '').toLowerCase();
+
+  // Parse percentage from title or discount string (e.g., "40% off", "Save 20%")
+  const percentMatch = (title + ' ' + discount).match(/(\d+)\s*%/);
+  const parsedPercent = percentMatch ? parseInt(percentMatch[1]) : 0;
+  const effectivePercent = discountValue > 0 && discountType === 'percent' ? discountValue :
+                          savingsPercent > 0 ? savingsPercent : parsedPercent;
+
+  // Parse dollar amount from title (e.g., "$50 off", "Save $20")
+  const dollarMatch = (title + ' ' + discount).match(/\$(\d+)/);
+  const parsedDollar = dollarMatch ? parseInt(dollarMatch[1]) : 0;
+  const effectiveDollar = discountValue > 0 && discountType === 'fixed' ? discountValue : parsedDollar;
+
+  // Calculate actual savings if we have prices
+  const actualSavings = originalPrice && dealPrice ? originalPrice - dealPrice : 0;
+
+  // Score based on percentage discount
+  if (effectivePercent >= 50) score += 100;
+  else if (effectivePercent >= 40) score += 85;
+  else if (effectivePercent >= 30) score += 70;
+  else if (effectivePercent >= 20) score += 55;
+  else if (effectivePercent >= 10) score += 40;
+
+  // Score based on dollar savings
+  if (effectiveDollar >= 100 || actualSavings >= 100) score += 90;
+  else if (effectiveDollar >= 50 || actualSavings >= 50) score += 70;
+  else if (effectiveDollar >= 25 || actualSavings >= 25) score += 50;
+  else if (effectiveDollar >= 10 || actualSavings >= 10) score += 30;
+
+  // Bonus for specific deal types
+  if (title.includes('free') || discountType === 'free_item') score += 45;
+  if (title.includes('bogo') || title.includes('buy one get one')) score += 60;
+  if (title.includes('half price') || title.includes('1/2 price')) score += 55;
+
+  // Bonus for having concrete pricing info
+  if (dealPrice > 0) score += 10;
+  if (originalPrice > 0 && dealPrice > 0) score += 15;
+
+  // Featured deals get a boost
+  if (deal.featured) score += 25;
+
+  // Penalty for vague deals with no real value
+  if (discountType === 'special' && !effectivePercent && !effectiveDollar && score < 20) {
+    score = Math.max(5, score - 20);
+  }
+
+  return score;
+};
+
+// Get deal tier for visual badges
+const getDealTier = (deal) => {
+  const score = calculateDealScore(deal);
+  if (score >= 80) return { tier: 'hot', label: '🔥 Hot Deal', color: '#ef4444' };
+  if (score >= 50) return { tier: 'great', label: '💎 Great Value', color: '#8b5cf6' };
+  if (score >= 30) return { tier: 'good', label: '✓ Good Deal', color: '#10b981' };
+  return null;
+};
+
 // Helper to get related deals from the same business
 const getRelatedDeals = (currentDeal, allDeals) => {
   if (!currentDeal) return [];
@@ -9086,10 +9155,11 @@ export default function PulseApp() {
       filtered = filtered.filter(d => d.category === filters.category);
     }
 
+    // Sort by deal score (best deals first)
     return filtered.sort((a, b) => {
-      if (a.featured && !b.featured) return -1;
-      if (!a.featured && b.featured) return 1;
-      return 0;
+      const scoreA = calculateDealScore(a);
+      const scoreB = calculateDealScore(b);
+      return scoreB - scoreA; // Higher score = better deal = first
     });
   };
 
@@ -9765,12 +9835,17 @@ export default function PulseApp() {
                       return normalizeDealCategory(deal.category) === dealCategoryFilter;
                     })
                     .map((deal, index) => (
-                  <div 
-                    key={deal.id} 
-                    className="deal-card" 
+                  <div
+                    key={deal.id}
+                    className={`deal-card ${getDealTier(deal)?.tier ? 'deal-card-' + getDealTier(deal).tier : ''}`}
                     onClick={() => setSelectedDeal(deal)}
                     ref={(el) => dealCardRefs.current[index] = el}
                   >
+                    {getDealTier(deal) && (
+                      <div className="deal-tier-badge" style={{ background: getDealTier(deal).color }}>
+                        {getDealTier(deal).label}
+                      </div>
+                    )}
                     <div className="deal-card-header-new">
                       <div className="deal-title-section">
                         <h3>{generateSmartDealTitle(deal, getVenueName(deal.venueId, deal))}</h3>
@@ -15037,11 +15112,54 @@ export default function PulseApp() {
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
             border-color: #e5e7eb;
           }
-          
+
           .deal-card:active {
             transform: scale(0.98);
             background: #f9fafb;
           }
+        }
+
+        /* Deal Tier Badges - for hot/great/good deals */
+        .deal-tier-badge {
+          display: inline-flex;
+          align-items: center;
+          padding: 4px 10px;
+          border-radius: 6px;
+          font-size: 11px;
+          font-weight: 700;
+          color: white;
+          margin-bottom: 10px;
+          letter-spacing: 0.02em;
+        }
+
+        .deal-card-hot {
+          border-color: #fecaca;
+          background: linear-gradient(135deg, #fff5f5 0%, #fef2f2 100%);
+        }
+
+        .deal-card-hot:hover {
+          border-color: #ef4444;
+          box-shadow: 0 8px 24px rgba(239, 68, 68, 0.15);
+        }
+
+        .deal-card-great {
+          border-color: #ddd6fe;
+          background: linear-gradient(135deg, #faf5ff 0%, #f5f3ff 100%);
+        }
+
+        .deal-card-great:hover {
+          border-color: #8b5cf6;
+          box-shadow: 0 8px 24px rgba(139, 92, 246, 0.15);
+        }
+
+        .deal-card-good {
+          border-color: #d1fae5;
+          background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+        }
+
+        .deal-card-good:hover {
+          border-color: #10b981;
+          box-shadow: 0 8px 24px rgba(16, 185, 129, 0.15);
         }
 
         .deal-card-header-new {
