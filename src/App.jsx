@@ -8198,11 +8198,15 @@ export default function PulseApp() {
   useEffect(() => {
     async function fetchEvents() {
       setEventsLoading(true);
+      // Use local date (not UTC) to avoid timezone issues
+      const today = new Date();
+      const localDateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
       const { data, error } = await supabase
         .from('events')
         .select('*')
         .eq('status', 'active')
-        .gte('start_date', new Date().toISOString().split('T')[0])
+        .gte('start_date', localDateStr)
         .order('start_date', { ascending: true });
 
       if (error) {

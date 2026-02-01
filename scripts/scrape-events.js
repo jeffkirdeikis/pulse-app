@@ -9,8 +9,9 @@ const FIRECRAWL_API_KEY = process.env.FIRECRAWL_API_KEY || 'REDACTED_FIRECRAWL_K
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://ygpfklhjwwqwrfpsfhue.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_KEY || 'REDACTED_SERVICE_KEY';
 
-// Squamish event sources
+// Squamish event sources - aggregators and community sites
 const EVENT_SOURCES = [
+  // === PRIMARY AGGREGATORS ===
   {
     name: 'Together Nest - Activities',
     url: 'https://together-nest.com/discover?category=activities',
@@ -24,6 +25,44 @@ const EVENT_SOURCES = [
     type: 'events'
   },
   {
+    name: 'Sea to Sky Kids - Directory',
+    url: 'https://seatoskykids.ca/directory/',
+    category: 'Family',
+    type: 'activities'
+  },
+  {
+    name: 'Explore Squamish - Event Calendar',
+    url: 'https://www.exploresquamish.com/festivals-events/event-calendar/',
+    category: 'Community',
+    type: 'events'
+  },
+  {
+    name: 'Meetup Squamish',
+    url: 'https://www.meetup.com/find/?location=ca--bc--squamish&source=EVENTS',
+    category: 'Community',
+    type: 'events'
+  },
+  {
+    name: 'Eventbrite Squamish',
+    url: 'https://www.eventbrite.com/d/canada--squamish/events/',
+    category: 'Community',
+    type: 'events'
+  },
+  // === RECREATION & CLASSES ===
+  {
+    name: 'District of Squamish Recreation',
+    url: 'https://squamish.ca/rec/',
+    category: 'Recreation',
+    type: 'activities'
+  },
+  {
+    name: 'Downtown Squamish Directory',
+    url: 'https://www.downtownsquamish.com/listings/',
+    category: 'Community',
+    type: 'activities'
+  },
+  // === LOCAL NEWS & COMMUNITY ===
+  {
     name: 'Tourism Squamish',
     url: 'https://www.tourismsquamish.com/events/',
     category: 'Community',
@@ -31,12 +70,12 @@ const EVENT_SOURCES = [
   },
   {
     name: 'Squamish Chief',
-    url: 'https://www.squamishchief.com/local-news/events',
+    url: 'https://www.squamishchief.com/local-events',
     category: 'Community',
     type: 'events'
   },
   {
-    name: 'District of Squamish',
+    name: 'District of Squamish Events',
     url: 'https://squamish.ca/events/',
     category: 'Community',
     type: 'events'
@@ -50,6 +89,18 @@ const EVENT_SOURCES = [
   {
     name: 'Sea to Sky Community Services',
     url: 'https://www.sscs.ca/events/',
+    category: 'Community',
+    type: 'events'
+  },
+  {
+    name: 'The Wilder Events',
+    url: 'https://www.thewilder.ca/events',
+    category: 'Arts & Culture',
+    type: 'events'
+  },
+  {
+    name: 'Squamish Nation Events',
+    url: 'https://www.squamish.net/events-gatherings/calendar/',
     category: 'Community',
     type: 'events'
   }

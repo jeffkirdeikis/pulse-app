@@ -9,12 +9,44 @@ const FIRECRAWL_API_KEY = process.env.FIRECRAWL_API_KEY || 'REDACTED_FIRECRAWL_K
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://ygpfklhjwwqwrfpsfhue.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_KEY || 'REDACTED_SERVICE_KEY';
 
-// Deal sources
+// Deal sources - aggregators and local deal sites
 const DEAL_SOURCES = [
+  // === PRIMARY DEAL AGGREGATORS ===
+  {
+    name: 'Squamish Adventure - Local Deals',
+    url: 'https://squamishadventure.com/local-squamish-deals/',
+    type: 'deals'
+  },
+  {
+    name: 'The Locals Board - Sea to Sky',
+    url: 'https://thelocalsboard.com/sea-to-sky-business-directory/',
+    type: 'directory'
+  },
+  {
+    name: 'BC Buy Local - Squamish',
+    url: 'https://bcbuylocal.com/communities/squamish/',
+    type: 'directory'
+  },
+  // === TOURISM & LOCAL NEWS ===
   {
     name: 'Tourism Squamish Deals',
     url: 'https://www.tourismsquamish.com/deals/',
     type: 'tourism'
+  },
+  {
+    name: 'Explore Squamish Business Directory',
+    url: 'https://www.exploresquamish.com/business/',
+    type: 'directory'
+  },
+  {
+    name: 'Squamish Chamber - Member Directory',
+    url: 'https://www.squamishchamber.com/explore/',
+    type: 'directory'
+  },
+  {
+    name: 'Downtown Squamish Listings',
+    url: 'https://www.downtownsquamish.com/listings/',
+    type: 'directory'
   },
   {
     name: 'Squamish Chief Classifieds',
