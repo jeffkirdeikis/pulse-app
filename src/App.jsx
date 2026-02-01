@@ -8089,66 +8089,53 @@ const generateSmartDealTitle = (deal, venueName = '') => {
 // Enhanced Deal Description Generator - creates rich, informative descriptions
 const generateEnhancedDealDescription = (deal, venueName = '') => {
   const { title = '', description = '', category = '', discount = '', schedule = '', terms = '' } = deal;
-
-  // If there's already a good description (> 50 chars), use it
-  if (description && description.length > 50 && description.toLowerCase() !== title.toLowerCase()) {
-    return description;
-  }
-
-  // Build an enhanced description based on available data
-  const parts = [];
   const businessName = venueName || deal.venueName || 'this local business';
 
-  // Category-specific openers
-  const categoryOpeners = {
-    'Food & Drink': `Treat yourself to something delicious at ${businessName}.`,
-    'Retail': `Shop local and save at ${businessName}.`,
-    'Health & Wellness': `Take care of yourself with this special offer from ${businessName}.`,
-    'Entertainment': `Experience something fun at ${businessName}.`,
-    'Services': `Get professional service at a great price from ${businessName}.`,
-    'Beauty': `Look and feel your best with this deal from ${businessName}.`,
-    'Fitness': `Get moving and save with this offer from ${businessName}.`,
-    'Other': `Don't miss this special offer from ${businessName}.`
+  // If there's already a UNIQUE good description (different from title, > 80 chars), use it enhanced
+  if (description && description.length > 80 && description.toLowerCase() !== title.toLowerCase()) {
+    return `${description} Available at ${businessName}. Stop by to take advantage of this offer!`;
+  }
+
+  // Build a rich, informative description
+  const parts = [];
+
+  // Start with what the deal IS (the key offer)
+  const dealOffer = title || description || 'Special offer';
+
+  // Category-specific context
+  const categoryContext = {
+    'Food & Drink': `Hungry? ${businessName} has you covered with this deal: ${dealOffer}.`,
+    'Retail': `Looking to save? Check out this offer from ${businessName}: ${dealOffer}.`,
+    'Health & Wellness': `Invest in yourself with this special from ${businessName}: ${dealOffer}.`,
+    'Entertainment': `Fun awaits at ${businessName}! ${dealOffer}.`,
+    'Services': `${businessName} is offering: ${dealOffer}.`,
+    'Beauty': `Treat yourself at ${businessName}: ${dealOffer}.`,
+    'Fitness': `Get active and save at ${businessName}: ${dealOffer}.`,
+    'Other': `${businessName} presents: ${dealOffer}.`
   };
 
-  parts.push(categoryOpeners[category] || categoryOpeners['Other']);
+  parts.push(categoryContext[category] || categoryContext['Other']);
 
-  // Add discount details
-  if (discount) {
-    if (discount.toLowerCase().includes('%')) {
-      parts.push(`Enjoy ${discount} your purchase.`);
-    } else if (discount.toLowerCase().includes('bogo') || discount.toLowerCase().includes('buy one')) {
-      parts.push(`Take advantage of this buy-one-get-one deal.`);
-    } else if (discount.toLowerCase().includes('free')) {
-      parts.push(`Get a free item with your visit.`);
-    } else if (discount.includes('$')) {
-      parts.push(`Save ${discount} on your next visit.`);
-    }
-  }
-
-  // Add schedule info if available
+  // Add schedule prominently
   if (schedule && schedule.toLowerCase() !== 'anytime') {
-    parts.push(`Available ${schedule.toLowerCase()}.`);
+    parts.push(`This deal is available ${schedule}.`);
   }
 
-  // Add any original description content that's useful
+  // Add discount info if different from title
+  if (discount && !title.toLowerCase().includes(discount.toLowerCase())) {
+    parts.push(`Save ${discount}!`);
+  }
+
+  // Add extra detail if description has more info than title
   if (description && description.length > 10 && description.toLowerCase() !== title.toLowerCase()) {
-    // Clean up and add if it provides value
     const cleanDesc = description.replace(/\.$/, '');
-    if (!parts.some(p => p.toLowerCase().includes(cleanDesc.toLowerCase()))) {
+    if (!parts[0].toLowerCase().includes(cleanDesc.toLowerCase())) {
       parts.push(cleanDesc + '.');
     }
   }
 
-  // Add a call to action
-  const ctas = [
-    'Stop by today and save!',
-    'Visit soon to redeem this offer.',
-    'Limited time offer—don\'t miss out!',
-    'Show this deal to redeem.',
-    'A great way to support local!'
-  ];
-  parts.push(ctas[Math.floor(title.length % ctas.length)]);
+  // Closing call to action
+  parts.push(`Don't miss out—visit ${businessName} and mention this deal!`);
 
   return parts.join(' ');
 };
