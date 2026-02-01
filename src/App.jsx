@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Calendar, MapPin, Clock, Star, Check, Bell, Search, Filter, ChevronRight, X, Plus, Edit2, Trash2, Eye, Users, DollarSign, AlertCircle, CheckCircle, XCircle, SlidersHorizontal, Building, Wrench, TrendingUp, Phone, Globe, Navigation, Mail, Share2, Ticket, Percent, Tag, Repeat, ExternalLink, Heart, Copy, Info, Gift, Sparkles, Zap, Camera } from 'lucide-react';
+import { Calendar, CalendarPlus, MapPin, Clock, Star, Check, Bell, Search, Filter, ChevronRight, X, Plus, Edit2, Trash2, Eye, Users, DollarSign, AlertCircle, CheckCircle, XCircle, SlidersHorizontal, Building, Wrench, TrendingUp, Phone, Globe, Navigation, Mail, Share2, Ticket, Percent, Tag, Repeat, ExternalLink, Heart, Copy, Info, Gift, Sparkles, Zap, Camera } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import { useUserData } from './hooks/useUserData';
 import { addUserXP, getLevelProgress, getLevelTitle } from './lib/gamification';
@@ -8383,6 +8383,8 @@ export default function PulseApp() {
   const venueCardRefs = useRef([]);
   const [showAddEventModal, setShowAddEventModal] = useState(false);
   const [showClaimBusinessModal, setShowClaimBusinessModal] = useState(false);
+  const [claimFormData, setClaimFormData] = useState({ businessName: '', ownerName: '', email: '', phone: '', role: 'owner', address: '' });
+  const [claimSubmitting, setClaimSubmitting] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showCalendarToast, setShowCalendarToast] = useState(false);
   const [calendarToastMessage, setCalendarToastMessage] = useState('');
@@ -8967,7 +8969,11 @@ export default function PulseApp() {
     return Array.from(slots).sort((a, b) => {
       const [aHour, aMin] = a.split(':').map(Number);
       const [bHour, bMin] = b.split(':').map(Number);
-      const handleGoogleSignIn = () => {
+      return (aHour * 60 + aMin) - (bHour * 60 + bMin);
+    });
+  };
+
+  const handleGoogleSignIn = () => {
     setUser({
       name: 'John Doe',
       isGuest: false,
@@ -8981,8 +8987,41 @@ export default function PulseApp() {
     setShowProfileMenu(false);
   };
 
-    return (aHour * 60 + aMin) - (bHour * 60 + bMin);
-    });
+  const handleClaimBusiness = async () => {
+    if (!claimFormData.businessName || !claimFormData.ownerName || !claimFormData.email) {
+      setCalendarToastMessage('Please fill in all required fields');
+      setShowCalendarToast(true);
+      setTimeout(() => setShowCalendarToast(false), 3000);
+      return;
+    }
+    if (!session?.user?.id) {
+      setCalendarToastMessage('Please sign in to claim a business');
+      setShowCalendarToast(true);
+      setTimeout(() => setShowCalendarToast(false), 3000);
+      return;
+    }
+    setClaimSubmitting(true);
+    try {
+      const { error } = await supabase.from('business_claims').insert({
+        user_id: session.user.id,
+        business_name: claimFormData.businessName,
+        business_address: claimFormData.address || null,
+        status: 'pending'
+      });
+      if (error) throw error;
+      setShowClaimBusinessModal(false);
+      setClaimFormData({ businessName: '', ownerName: '', email: '', phone: '', role: 'owner', address: '' });
+      setCalendarToastMessage('Claim submitted successfully!');
+      setShowCalendarToast(true);
+      setTimeout(() => setShowCalendarToast(false), 5000);
+    } catch (error) {
+      console.error('Error submitting claim:', error);
+      setCalendarToastMessage('Error submitting claim. Please try again.');
+      setShowCalendarToast(true);
+      setTimeout(() => setShowCalendarToast(false), 3000);
+    } finally {
+      setClaimSubmitting(false);
+    }
   };
 
   const getVenueName = (venueId, event) => {
@@ -9148,6 +9187,15 @@ export default function PulseApp() {
 
   // Render events with date dividers
   const renderEventsWithDividers = () => {
+    // Show loading state while fetching database events
+    if (eventsLoading) {
+      return (
+        <div className="loading-state" style={{padding: '40px 20px', textAlign: 'center'}}>
+          <div style={{fontSize: '14px', color: '#6b7280'}}>Loading classes...</div>
+        </div>
+      );
+    }
+
     const events = filterEvents();
     if (events.length === 0) {
       return (
@@ -9854,24 +9902,28 @@ export default function PulseApp() {
 
           <div className="content">
             <div className="results-count">
-              {currentSection === 'deals' ? filterDeals().filter(d => dealCategoryFilter === 'All' || normalizeDealCategory(d.category) === dealCategoryFilter).length : 
-               currentSection === 'services' ? REAL_DATA.services.filter(s => {
-                 if (serviceCategoryFilter === 'All') return true;
-                 const normalizedCategory = s.category.toLowerCase();
-                 const filterLower = serviceCategoryFilter.toLowerCase();
-                 if (filterLower.includes('construction')) return normalizedCategory.includes('construction') || normalizedCategory.includes('contractor') || normalizedCategory.includes('home builder');
-                 if (filterLower.includes('electrical')) return normalizedCategory.includes('electric');
-                 if (filterLower.includes('plumbing')) return normalizedCategory.includes('plumb') || normalizedCategory.includes('hvac') || normalizedCategory.includes('heating');
-                 if (filterLower.includes('landscaping')) return normalizedCategory.includes('landscap') || normalizedCategory.includes('lawn');
-                 if (filterLower.includes('painting')) return normalizedCategory.includes('paint');
-                 if (filterLower.includes('roofing')) return normalizedCategory.includes('roof');
-                 if (filterLower.includes('flooring')) return normalizedCategory.includes('floor');
-                 if (filterLower.includes('cleaning')) return normalizedCategory.includes('clean');
-                 if (filterLower.includes('tree')) return normalizedCategory.includes('tree');
-                 if (serviceCategoryFilter === 'Other') return !normalizedCategory.includes('construction') && !normalizedCategory.includes('electric') && !normalizedCategory.includes('plumb') && !normalizedCategory.includes('hvac') && !normalizedCategory.includes('landscap') && !normalizedCategory.includes('paint') && !normalizedCategory.includes('roof') && !normalizedCategory.includes('floor') && !normalizedCategory.includes('clean') && !normalizedCategory.includes('tree');
-                 return normalizedCategory.includes(filterLower);
-               }).length :
-               filterEvents().length} results
+              {currentSection === 'deals' ? (
+                dealsLoading ? 'Loading...' : `${filterDeals().filter(d => dealCategoryFilter === 'All' || normalizeDealCategory(d.category) === dealCategoryFilter).length} results`
+              ) : currentSection === 'services' ? (
+                `${REAL_DATA.services.filter(s => {
+                  if (serviceCategoryFilter === 'All') return true;
+                  const normalizedCategory = s.category.toLowerCase();
+                  const filterLower = serviceCategoryFilter.toLowerCase();
+                  if (filterLower.includes('construction')) return normalizedCategory.includes('construction') || normalizedCategory.includes('contractor') || normalizedCategory.includes('home builder');
+                  if (filterLower.includes('electrical')) return normalizedCategory.includes('electric');
+                  if (filterLower.includes('plumbing')) return normalizedCategory.includes('plumb') || normalizedCategory.includes('hvac') || normalizedCategory.includes('heating');
+                  if (filterLower.includes('landscaping')) return normalizedCategory.includes('landscap') || normalizedCategory.includes('lawn');
+                  if (filterLower.includes('painting')) return normalizedCategory.includes('paint');
+                  if (filterLower.includes('roofing')) return normalizedCategory.includes('roof');
+                  if (filterLower.includes('flooring')) return normalizedCategory.includes('floor');
+                  if (filterLower.includes('cleaning')) return normalizedCategory.includes('clean');
+                  if (filterLower.includes('tree')) return normalizedCategory.includes('tree');
+                  if (serviceCategoryFilter === 'Other') return !normalizedCategory.includes('construction') && !normalizedCategory.includes('electric') && !normalizedCategory.includes('plumb') && !normalizedCategory.includes('hvac') && !normalizedCategory.includes('landscap') && !normalizedCategory.includes('paint') && !normalizedCategory.includes('roof') && !normalizedCategory.includes('floor') && !normalizedCategory.includes('clean') && !normalizedCategory.includes('tree');
+                  return normalizedCategory.includes(filterLower);
+                }).length} results`
+              ) : (
+                eventsLoading ? 'Loading...' : `${filterEvents().length} results`
+              )}
             </div>
             
             {currentSection === 'deals' ? (
@@ -10249,7 +10301,11 @@ export default function PulseApp() {
           {selectedEvent && (
             <div className="modal-overlay event-modal-overlay" onClick={() => setSelectedEvent(null)}>
               <div className="event-detail-modal" onClick={(e) => e.stopPropagation()}>
-                <button className="close-btn event-close" onClick={() => setSelectedEvent(null)}><X size={24} /></button>
+                <button className="close-btn event-close" onClick={() => setSelectedEvent(null)}>
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                    <path d="M1 1L13 13M1 13L13 1" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+                  </svg>
+                </button>
                 
                 {/* Hero Section */}
                 <div className={`event-hero ${selectedEvent.eventType === 'class' ? 'class-hero' : ''}`}>
@@ -10299,16 +10355,53 @@ export default function PulseApp() {
                       {selectedEvent.start.toLocaleString('en-US', { hour: 'numeric', minute: '2-digit' })} - {selectedEvent.end.toLocaleString('en-US', { hour: 'numeric', minute: '2-digit' })}
                     </div>
                   </div>
-                  <button 
+                  <button
                     className={`add-calendar-btn ${isInMyCalendar(selectedEvent.id) ? 'added' : ''}`}
                     onClick={() => addToCalendar(selectedEvent)}
+                    style={{
+                      width: '44px',
+                      height: '44px',
+                      minWidth: '44px',
+                      background: isInMyCalendar(selectedEvent.id)
+                        ? 'linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%)'
+                        : 'linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%)',
+                      border: 'none',
+                      borderRadius: '12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      flexShrink: 0,
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
+                    }}
                   >
-                    {isInMyCalendar(selectedEvent.id) ? <Check size={18} /> : <Plus size={18} />}
+                    {isInMyCalendar(selectedEvent.id) ? (
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                        <path d="M20 6L9 17L4 12" stroke="#16a34a" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    ) : (
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                        <path d="M12 5V19M5 12H19" stroke="#7c3aed" strokeWidth="2.5" strokeLinecap="round"/>
+                      </svg>
+                    )}
                   </button>
                 </div>
 
                 {/* Quick Actions */}
                 <div className="event-quick-actions">
+                  {selectedEvent.eventType === 'class' && (
+                    <a
+                      href={selectedEvent.bookingUrl || `https://www.google.com/search?q=${encodeURIComponent(getVenueName(selectedEvent.venueId, selectedEvent) + ' Squamish book class')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="quick-action-btn book-class-highlight"
+                    >
+                      <div className="quick-action-icon book-class">
+                        <Ticket size={20} />
+                      </div>
+                      <span>Book</span>
+                    </a>
+                  )}
                   <button
                     className={`quick-action-btn ${isItemSavedLocal(selectedEvent.eventType === 'class' ? 'class' : 'event', selectedEvent.id) ? 'saved' : ''}`}
                     onClick={() => toggleSave(selectedEvent.id, selectedEvent.eventType === 'class' ? 'class' : 'event', selectedEvent.title, { venue: selectedEvent.venue, date: selectedEvent.date })}
@@ -10406,8 +10499,19 @@ export default function PulseApp() {
 
                 {/* CTA Section */}
                 <div className="event-cta-section">
-                  <button 
-                    className={`event-cta-btn primary ${isInMyCalendar(selectedEvent.id) ? 'added' : ''}`}
+                  {selectedEvent.eventType === 'class' && (
+                    <a
+                      href={selectedEvent.bookingUrl || `https://www.google.com/search?q=${encodeURIComponent(getVenueName(selectedEvent.venueId, selectedEvent) + ' Squamish book class')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="event-cta-btn primary book-class-btn"
+                    >
+                      <ExternalLink size={18} />
+                      Book Class
+                    </a>
+                  )}
+                  <button
+                    className={`event-cta-btn ${selectedEvent.eventType === 'class' ? 'secondary' : 'primary'} ${isInMyCalendar(selectedEvent.id) ? 'added' : ''}`}
                     onClick={() => addToCalendar(selectedEvent)}
                   >
                     {isInMyCalendar(selectedEvent.id) ? (
@@ -10445,7 +10549,11 @@ export default function PulseApp() {
           {selectedDeal && (
             <div className="modal-overlay deal-modal-overlay" onClick={() => setSelectedDeal(null)}>
               <div className="deal-detail-modal" onClick={(e) => e.stopPropagation()}>
-                <button className="close-btn deal-close" onClick={() => setSelectedDeal(null)}><X size={24} /></button>
+                <button className="close-btn deal-close" onClick={() => setSelectedDeal(null)}>
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{display: 'block'}}>
+                    <path d="M1 1L13 13M1 13L13 1" stroke="#374151" strokeWidth="2" strokeLinecap="round"/>
+                  </svg>
+                </button>
                 
                 {/* Hero Section */}
                 <div className="deal-hero">
@@ -10945,7 +11053,7 @@ export default function PulseApp() {
                   </button>
                 </div>
                 <div className="profile-menu-divider"></div>
-                <button className="profile-menu-item logout">
+                <button className="profile-menu-item logout" onClick={handleSignOut}>
                   <span>Sign Out</span>
                 </button>
               </div>
@@ -11052,40 +11160,31 @@ export default function PulseApp() {
                   <div className="form-grid">
                     <div className="form-group full-width">
                       <label>Business Name *</label>
-                      <input type="text" placeholder="e.g., The Sound Martial Arts" className="form-input" />
+                      <input type="text" placeholder="e.g., The Sound Martial Arts" className="form-input" value={claimFormData.businessName} onChange={(e) => setClaimFormData({...claimFormData, businessName: e.target.value})} />
                     </div>
                     <div className="form-group">
                       <label>Your Name *</label>
-                      <input type="text" placeholder="Full name" className="form-input" />
+                      <input type="text" placeholder="Full name" className="form-input" value={claimFormData.ownerName} onChange={(e) => setClaimFormData({...claimFormData, ownerName: e.target.value})} />
                     </div>
                     <div className="form-group">
                       <label>Email *</label>
-                      <input type="email" placeholder="your@email.com" className="form-input" />
+                      <input type="email" placeholder="your@email.com" className="form-input" value={claimFormData.email} onChange={(e) => setClaimFormData({...claimFormData, email: e.target.value})} />
                     </div>
                     <div className="form-group">
-                      <label>Phone *</label>
-                      <input type="tel" placeholder="(604) 555-1234" className="form-input" />
+                      <label>Phone</label>
+                      <input type="tel" placeholder="(604) 555-1234" className="form-input" value={claimFormData.phone} onChange={(e) => setClaimFormData({...claimFormData, phone: e.target.value})} />
                     </div>
                     <div className="form-group">
-                      <label>Role *</label>
-                      <select className="form-input">
-                        <option>Select your role...</option>
-                        <option>Owner</option>
-                        <option>Manager</option>
-                        <option>Authorized Representative</option>
+                      <label>Role</label>
+                      <select className="form-input" value={claimFormData.role} onChange={(e) => setClaimFormData({...claimFormData, role: e.target.value})}>
+                        <option value="owner">Owner</option>
+                        <option value="manager">Manager</option>
+                        <option value="representative">Authorized Representative</option>
                       </select>
                     </div>
                     <div className="form-group full-width">
-                      <label>Business Address *</label>
-                      <input type="text" placeholder="Street address" className="form-input" />
-                    </div>
-                    <div className="form-group full-width">
-                      <label>Verification Document</label>
-                      <div className="file-upload-area">
-                        <Plus size={24} />
-                        <p>Upload business license or proof of ownership</p>
-                        <input type="file" style={{display: 'none'}} />
-                      </div>
+                      <label>Business Address</label>
+                      <input type="text" placeholder="Street address" className="form-input" value={claimFormData.address} onChange={(e) => setClaimFormData({...claimFormData, address: e.target.value})} />
                     </div>
                   </div>
                   <div className="benefits-grid">
@@ -11107,8 +11206,8 @@ export default function PulseApp() {
                     </div>
                   </div>
                   <div className="modal-actions">
-                    <button className="btn-secondary" onClick={() => setShowClaimBusinessModal(false)}>Cancel</button>
-                    <button className="btn-primary">Submit Claim</button>
+                    <button className="btn-secondary" onClick={() => { setShowClaimBusinessModal(false); setClaimFormData({ businessName: '', ownerName: '', email: '', phone: '', role: 'owner', address: '' }); }}>Cancel</button>
+                    <button className="btn-primary" onClick={handleClaimBusiness} disabled={claimSubmitting}>{claimSubmitting ? 'Submitting...' : 'Submit Claim'}</button>
                   </div>
                 </div>
               </div>
@@ -18580,27 +18679,41 @@ export default function PulseApp() {
 
         .event-close {
           position: absolute;
-          top: 20px;
-          right: 20px;
-          background: rgba(255,255,255,0.95);
-          backdrop-filter: blur(10px);
-          border: 1px solid rgba(0,0,0,0.1);
-          width: 40px;
-          height: 40px;
+          top: 16px;
+          right: 16px;
+          background: rgba(0,0,0,0.25);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
+          border: none;
+          width: 32px;
+          height: 32px;
+          min-width: 32px;
+          min-height: 32px;
+          max-width: 32px;
+          max-height: 32px;
           border-radius: 50%;
           display: flex;
           align-items: center;
           justify-content: center;
-          color: #374151;
           cursor: pointer;
           transition: all 0.2s ease;
           z-index: 20;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+          box-shadow: none;
+          padding: 0;
+          flex-shrink: 0;
         }
 
         .event-close:hover {
-          background: #fff;
+          background: rgba(0,0,0,0.4);
           transform: scale(1.05);
+        }
+
+        .event-close svg {
+          width: 14px;
+          height: 14px;
+          stroke: #fff !important;
+          stroke-width: 1.5 !important;
+          fill: none !important;
         }
 
         /* Event Hero */
@@ -18754,6 +18867,8 @@ export default function PulseApp() {
         .add-calendar-btn {
           width: 40px;
           height: 40px;
+          min-width: 40px;
+          min-height: 40px;
           background: #f3f4f6;
           border: none;
           border-radius: 10px;
@@ -18763,11 +18878,18 @@ export default function PulseApp() {
           color: #374151;
           cursor: pointer;
           transition: all 0.2s ease;
+          flex-shrink: 0;
         }
 
         .add-calendar-btn:hover {
           background: #e5e7eb;
           transform: scale(1.05);
+        }
+
+        .add-calendar-btn svg {
+          width: 22px;
+          height: 22px;
+          fill: none;
         }
 
         /* Event Quick Actions */
@@ -23737,6 +23859,33 @@ export default function PulseApp() {
           color: #fff;
         }
 
+        .quick-action-icon.book-class {
+          background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+          color: #fff;
+          box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+        }
+
+        .quick-action-btn.book-class-highlight {
+          position: relative;
+        }
+
+        .quick-action-btn.book-class-highlight span {
+          color: #059669;
+          font-weight: 600;
+        }
+
+        .quick-action-btn.book-class-highlight::after {
+          content: '';
+          position: absolute;
+          top: -4px;
+          right: -4px;
+          width: 12px;
+          height: 12px;
+          background: #ef4444;
+          border-radius: 50%;
+          border: 2px solid #fff;
+        }
+
         .quick-action-btn:hover .quick-action-icon {
           transform: scale(1.08);
           box-shadow: 0 4px 12px rgba(0,0,0,0.1);
@@ -24154,11 +24303,12 @@ export default function PulseApp() {
           .deal-close {
             top: 12px;
             right: 12px;
-            width: 36px;
-            height: 36px;
-            background: rgba(0,0,0,0.3);
-            border: none;
-            color: #fff;
+            width: 32px;
+            height: 32px;
+            min-width: 32px;
+            min-height: 32px;
+            max-width: 32px;
+            max-height: 32px;
           }
 
           .event-hero,
