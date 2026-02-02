@@ -21466,6 +21466,14 @@ export default function PulseApp() {
           background: #fff !important;
         }
         .modal-overlay select { cursor: pointer; }
+
+        /* Global fix: Ensure ALL buttons in modals are clickable */
+        .modal-overlay button {
+          position: relative !important;
+          z-index: 200 !important;
+          pointer-events: auto !important;
+          cursor: pointer !important;
+        }
         .modal-content { background: #fff; border-radius: 20px; max-width: 500px; width: 100%; max-height: 90vh; overflow-y: auto; position: relative; border: 1px solid #e5e7eb; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
         .close-btn { position: absolute; top: 16px; right: 16px; background: #f3f4f6; border: none; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #374151; cursor: pointer; transition: 0.2s; z-index: 10; }
         .close-btn:hover { background: #e5e7eb; color: #111827; }

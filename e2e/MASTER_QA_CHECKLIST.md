@@ -126,6 +126,19 @@ This section tracks bugs that made it past QA and the lessons learned.
   - After ANY database write, VERIFY the data actually changed
   - Supabase RLS can silently block operations
 
+### Bug #10: Save button not clickable (z-index regression)
+- **Date**: 2026-02-01
+- **Symptom**: Save Changes button couldn't be clicked in Edit Business modal
+- **Root Cause**: Added `z-index: 100` to inputs but buttons had no z-index, so inputs covered buttons
+- **Why Missed**: Deployed without testing entire modal flow - only tested input visibility
+- **Fix**: Added global CSS for modal buttons: `z-index: 200 !important; pointer-events: auto !important`
+- **CRITICAL LESSON**: After ANY deployment, test:
+  1. The specific feature changed
+  2. ALL related features (modals, forms, buttons)
+  3. The ENTIRE user flow (open → interact → submit → close)
+  4. Check browser console
+  5. CLICK every button, TYPE in every input
+
 **KEY LESSON**: Many buttons in the app have NO onClick handlers or use alert() as placeholders. Before marking any feature complete, search for these patterns.
 
 ---

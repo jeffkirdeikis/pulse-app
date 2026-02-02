@@ -170,6 +170,20 @@ On February 1, 2026, UI bugs were reported SEVEN separate times:
 - **After ANY database write, VERIFY the data changed** - query it back or check the response
 - Supabase RLS can silently block operations without throwing errors
 
+### BUG #10: Save button not clickable (z-index issue AGAIN)
+- **What happened**: Save Changes button couldn't be clicked after previous "fix"
+- **Root cause**: I added `z-index: 100` to modal inputs but forgot buttons need higher z-index
+- **Why I missed it**: I deployed without testing the ENTIRE modal flow, only tested input visibility
+- **Fix**: Added global CSS rule for modal buttons with `z-index: 200 !important`
+
+**CRITICAL LESSON - QA AFTER EVERY DEPLOYMENT:**
+After ANY code push, you MUST test:
+1. The specific feature you changed
+2. ALL related features that could be affected
+3. The ENTIRE user flow (open → interact → submit → close)
+4. Check browser console for errors
+5. Actually CLICK every button, TYPE in every input
+
 ### MANDATORY INPUT TEST
 
 After ANY change involving forms or modals:
