@@ -66,18 +66,26 @@ export function useUserData() {
   // Listen to auth changes
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('[Auth] Initial getSession:', session ? 'Session exists' : 'No session');
+      if (session?.user) {
+        console.log('[Auth] Initial session user:', session.user.id, session.user.email);
+      }
       setSession(session);
       if (session?.user) {
-        fetchUserData(session.user.id);
+        fetchUserData(session.user.id, session.user);
       } else {
         setLoading(false);
       }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('[Auth] Auth state changed:', event, 'Session:', session ? 'exists' : 'null');
+      if (session?.user) {
+        console.log('[Auth] User from session:', session.user.id, session.user.email);
+      }
       setSession(session);
       if (session?.user) {
-        fetchUserData(session.user.id);
+        fetchUserData(session.user.id, session.user);
       } else {
         resetUserData();
       }
@@ -87,7 +95,7 @@ export function useUserData() {
   }, []);
 
   // Fetch all user data
-  const fetchUserData = async (userId) => {
+  const fetchUserData = async (userId, authUser = null) => {
     setLoading(true);
     try {
       // Fetch profile with stats
@@ -95,13 +103,46 @@ export function useUserData() {
         .rpc('get_user_profile', { p_user_id: userId });
 
       if (profileError) {
-        console.error('Error fetching profile:', profileError);
+        console.log('[Auth] RPC get_user_profile failed (expected if function not created):', profileError.message);
         // If function doesn't exist yet, fetch basic profile
-        const { data: basicProfile } = await supabase
+        let { data: basicProfile, error: fetchError } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', userId)
           .single();
+
+        if (fetchError) {
+          console.log('[Auth] Profile fetch result:', fetchError.code === 'PGRST116' ? 'No profile found (will create)' : fetchError.message);
+        }
+
+        // If no profile exists and we have auth user data, create one
+        if (!basicProfile && authUser) {
+          const userMeta = authUser.user_metadata || {};
+          console.log('[Auth] Creating new profile for user:', userId);
+          console.log('[Auth] User metadata from Google:', { name: userMeta.full_name || userMeta.name, email: authUser.email });
+
+          const newProfile = {
+            id: userId,
+            email: authUser.email || '',
+            full_name: userMeta.full_name || userMeta.name || '',
+            avatar_url: userMeta.avatar_url || userMeta.picture || null,
+            location: 'Squamish, BC',
+            created_at: new Date().toISOString()
+          };
+
+          const { data: createdProfile, error: createError } = await supabase
+            .from('profiles')
+            .upsert(newProfile, { onConflict: 'id' })
+            .select()
+            .single();
+
+          if (createError) {
+            console.error('[Auth] ERROR creating profile:', createError.message, createError.details, createError.hint);
+          } else {
+            console.log('[Auth] Profile created successfully:', createdProfile.id);
+            basicProfile = createdProfile;
+          }
+        }
 
         if (basicProfile) {
           setUser({
@@ -116,7 +157,7 @@ export function useUserData() {
             memberSince: basicProfile.created_at,
             interests: basicProfile.interests || [],
             isGuest: false,
-            isAdmin: false,
+            isAdmin: basicProfile.is_admin || false,
             socialLinks: {
               instagram: basicProfile.instagram || '',
               facebook: basicProfile.facebook || '',
@@ -143,6 +184,27 @@ export function useUserData() {
             longestStreak: basicProfile.longest_streak || 0,
             localHeroScore: basicProfile.hero_score || 0
           }));
+        } else if (authUser) {
+          // Fallback: Even if profile doesn't exist in DB, still authenticate the user
+          // using the auth user metadata so they're not stuck as a guest
+          const userMeta = authUser.user_metadata || {};
+          setUser({
+            id: userId,
+            name: userMeta.full_name || userMeta.name || '',
+            email: authUser.email || '',
+            avatar: userMeta.avatar_url || userMeta.picture || null,
+            coverPhoto: null,
+            phone: '',
+            bio: '',
+            location: 'Squamish, BC',
+            memberSince: new Date().toISOString(),
+            interests: [],
+            isGuest: false,
+            isAdmin: userMeta.is_admin || false,
+            socialLinks: { instagram: '', facebook: '', website: '' },
+            notifications: { eventReminders: true, newDeals: true, weeklyDigest: true, businessUpdates: false },
+            privacy: { showActivity: true, showSavedItems: false, showAttendance: true }
+          });
         }
       } else if (profileData) {
         // Set user from RPC response
@@ -158,7 +220,7 @@ export function useUserData() {
           memberSince: profileData.memberSince,
           interests: profileData.interests || [],
           isGuest: false,
-          isAdmin: false,
+          isAdmin: profileData.isAdmin || profileData.is_admin || false,
           socialLinks: profileData.socialLinks || { instagram: '', facebook: '', website: '' },
           notifications: profileData.notifications || { eventReminders: true, newDeals: true, weeklyDigest: true, businessUpdates: false },
           privacy: profileData.privacy || { showActivity: true, showSavedItems: false, showAttendance: true }
@@ -453,8 +515,15 @@ export function useUserData() {
   // Refresh all data
   const refreshUserData = () => {
     if (session?.user) {
-      fetchUserData(session.user.id);
+      fetchUserData(session.user.id, session.user);
     }
+  };
+
+  // Sign out
+  const signOut = async () => {
+    await supabase.auth.signOut();
+    resetUserData();
+    setSession(null);
   };
 
   return {
@@ -488,7 +557,8 @@ export function useUserData() {
     toggleSaveItem,
     isItemSaved,
     registerForEvent,
-    refreshUserData
+    refreshUserData,
+    signOut
   };
 }
 

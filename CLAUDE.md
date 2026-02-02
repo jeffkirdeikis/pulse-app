@@ -97,6 +97,172 @@ When you see a syntax error:
 
 ---
 
+## 🔴 CRITICAL: INPUT TESTING (REPEATED FAILURE)
+
+### THIS BUG HAS HAPPENED 7 TIMES
+
+On February 1, 2026, UI bugs were reported SEVEN separate times:
+1. Claim Business form inputs (z-index blocking)
+2. Admin view showing nothing (isAdmin issue)
+3. Edit button doing nothing (modal in wrong context)
+4. Edit Business modal inputs not accepting text (pointer-events)
+5. Edit Business modal text invisible (white text on white background)
+6. **Eye (view) button does nothing** (placeholder alert() code)
+7. **Save Changes button doesn't update UI** (updates DB but UI shows static data)
+
+**PATTERNS IDENTIFIED:**
+- Buttons have placeholder code (alert/console.log) instead of real functionality
+- UI doesn't refresh after database updates
+- Testing element existence instead of functionality
+
+### BUG #5: Text Invisible in Input Fields
+- **Root cause**: CSS rules didn't specify `color` property
+- **Fix**: Added `color: #1f2937 !important;` to all modal input rules
+
+### BUG #6: Eye (View) Button Does Nothing
+- **What happened**: Clicking eye button just shows `alert()` - placeholder code
+- **Root cause**: Button had `onClick={() => alert(...)}` instead of real functionality
+- **Why I missed it**: I never clicked the button. Tests checked existence, not function.
+- **Fix**: Changed to `onClick={() => setSelectedService(venue)}` to open detail modal
+
+### BUG #7: Save Changes Doesn't Update UI
+- **What happened**: Save appeared to work but UI showed old data
+- **Root cause**: Admin panel used static `REAL_DATA.venues` instead of `services` from Supabase
+- **Fix**: Changed admin panel to use `services` from Supabase, added `fetchServices()` after save
+
+### COMPREHENSIVE QA AUDIT (2026-02-01)
+5 QA agents tested the entire app and found these additional non-functional buttons:
+
+| Button | Issue | Fix Applied |
+|--------|-------|-------------|
+| Delete venue (admin) | `confirm()` ignored result | Added actual delete logic |
+| Submit Event | No onClick handler | Redirects to submission modal |
+| Delete Account | No onClick handler | Added confirmation + toast |
+| Create Deal | No onClick handler | Opens submission modal |
+| Edit Profile | No onClick handler | Opens edit venue modal |
+| Admin tabs | No onClick handlers | Still needs fix |
+| Time period buttons | No onClick handlers | Still needs fix |
+| Logo upload | Shows alert() | Still needs fix |
+
+**KEY LESSON**: Buttons without onClick handlers or with alert() are NOT working - they're placeholders
+
+### BUG #8: showToast is not defined
+- **What happened**: Save Changes button clicked, Supabase update succeeded, but then `showToast is not defined` error
+- **Root cause**: `showToast()` function was USED throughout the app but NEVER DEFINED
+- **Why I missed it**: The code looked correct, I assumed showToast existed because it was used everywhere
+- **Fix**: Added `showToast` helper function that wraps `setCalendarToastMessage`
+
+**LESSON**: When using a function, verify it's actually defined - not just that it's used elsewhere
+
+### BUG #9: Supabase update returns empty array (RLS blocking)
+- **What happened**: Save Changes clicked, no error thrown, but data didn't update
+- **Root cause**: Supabase RLS (Row Level Security) silently blocked the update - `data: []` with `error: null`
+- **Why I missed it**:
+  1. I saw `error: null` and assumed success
+  2. I didn't verify the data ACTUALLY CHANGED in the database
+  3. I didn't check if `data` array was empty
+- **Fix**:
+  1. Added check: `if (!data || data.length === 0)` = update was blocked
+  2. Need to add RLS policy in Supabase to allow admin updates
+
+**LESSON**:
+- `error: null` does NOT mean success - check if `data` array has items
+- **After ANY database write, VERIFY the data changed** - query it back or check the response
+- Supabase RLS can silently block operations without throwing errors
+
+### MANDATORY INPUT TEST
+
+After ANY change involving forms or modals:
+
+```
+1. Open the modal/form
+2. Click into EVERY input field
+3. TYPE actual text: "test123"
+4. VERIFY the text appears in the field
+5. VERIFY the text is VISIBLE (readable color)
+6. If text doesn't appear or is invisible → NOT FIXED
+```
+
+### NEVER SKIP QA
+
+If you cannot test something:
+1. **Do NOT claim it's fixed**
+2. **Document what you cannot test** and WHY
+3. **Tell the user** so we can test it together
+4. **Ideally, find a way to test it yourself** (create test script, screenshot, etc.)
+
+### MANDATORY BUTTON TEST
+
+After ANY change involving buttons:
+
+```
+1. CLICK every button
+2. VERIFY an action happens (not just alert/console.log)
+3. VERIFY the action is CORRECT (right modal, right data, right result)
+4. If button shows alert() or console.log → PLACEHOLDER CODE, NOT WORKING
+```
+
+### SEARCH FOR PLACEHOLDER CODE AND NON-FUNCTIONAL BUTTONS
+
+Before marking ANY feature complete, run these checks:
+
+```bash
+# Find alert() placeholders (NOT real error handling)
+grep -n "onClick.*alert\|alert('" src/App.jsx | grep -v "Failed\|Error"
+
+# Find buttons without onClick handlers
+grep -n "<button.*>" src/App.jsx | grep -v "onClick"
+
+# Find confirm() that doesn't use the result
+grep -n "confirm(" src/App.jsx
+
+# Find TODO/FIXME comments
+grep -n "TODO\|FIXME" src/App.jsx
+
+# CRITICAL: Verify functions are DEFINED, not just USED
+grep -n "const showToast\|function showToast" src/App.jsx
+# If a function is used but this returns nothing = BUG
+```
+
+**RED FLAGS:**
+- `alert('...')` in onClick = PLACEHOLDER, not working
+- `<button>` without onClick = DOES NOTHING
+- `confirm()` without if/else = CONFIRMATION IGNORED
+- Function used but never defined = WILL CRASH AT RUNTIME
+
+### WHY THIS KEEPS HAPPENING
+
+- I verify the element exists (`.toBeVisible()`)
+- I verify the modal opens
+- I DON'T actually type in the inputs
+- CSS z-index/pointer-events blocks the input
+- User reports it's broken
+
+### THE FIX PATTERN
+
+When inputs don't work, add to CSS:
+```css
+position: relative;
+z-index: 100;
+pointer-events: auto !important;
+user-select: text;
+```
+
+### WHEN FIXING ONE MODAL'S INPUTS
+
+Check ALL modals:
+- Auth modal inputs
+- Claim business modal inputs
+- Edit venue modal inputs
+- Profile settings inputs
+- Submit event form inputs
+- Contact/message form inputs
+- Any other modal with inputs
+
+**ONE BROKEN = CHECK ALL**
+
+---
+
 ## 🖼️ MANDATORY VISUAL QA WITH SCREENSHOTS
 
 ### WHY THIS MATTERS
@@ -329,3 +495,176 @@ RIGHT: Confirm the code is in the file, build succeeds, describe exactly what ch
 5. DO fix it
 6. DO run full QA protocol
 7. DO show proof it's fixed (database query results)
+
+---
+
+## 🔴 MANDATORY BUG ANALYSIS PROTOCOL
+
+### WHEN A BUG IS REPORTED
+
+Every time a user reports a bug, you MUST:
+
+1. **Fix the bug** - First priority
+2. **Root cause analysis** - Why did QA miss it?
+3. **Update CLAUDE.md** - Add the lesson learned HERE
+4. **Update MASTER_QA_CHECKLIST.md** - Add the SAME lesson there (keep them in sync!)
+5. **Create/update e2e test** - Automate the test if possible
+6. **Report what was learned** - Document for future reference
+
+### ⚠️ CRITICAL: KEEP DOCUMENTS IN SYNC
+
+**Every lesson learned MUST be added to BOTH:**
+- `CLAUDE.md` (this file)
+- `e2e/MASTER_QA_CHECKLIST.md`
+
+These documents must always contain the same QA rules and lessons. When you add a lesson to one, immediately add it to the other.
+
+### ROOT CAUSE CATEGORIES
+
+When analyzing why a bug slipped through, classify it:
+
+| Category | Example | Prevention |
+|----------|---------|------------|
+| **Existence ≠ Function** | Button exists but onClick is missing | Test that clicking produces expected result |
+| **Placeholder Code** | onClick={() => alert('TODO')} | Search for alert/console.log/TODO in code |
+| **Missing State** | isAdmin hardcoded to false | Test with all user states (guest, auth, admin) |
+| **Auth-Required** | Feature only works when logged in | Test authenticated flows |
+| **Data-Dependent** | Works only if data exists | Test empty state AND populated state |
+| **CSS Blocking** | Input exists but z-index blocks typing | Actually TYPE in inputs, don't just check visibility |
+| **Wrong Context** | Modal inside view A, button inside view B | Verify component is rendered in the context where it's triggered |
+| **Claimed Fixed Without Testing** | "I added the handler" but never clicked it | ALWAYS test in browser before claiming fixed |
+| **Same Bug, Different Place** | Input blocking fixed in one modal but not others | When fixing a bug pattern, check ALL instances across the app |
+| **Partial Testing** | Modal opens but didn't test if inputs work | Test the ENTIRE feature, not just one aspect |
+
+### BUG REPORT TEMPLATE
+
+After fixing any reported bug:
+
+```
+## BUG ANALYSIS
+
+### What Was Broken
+[Describe the bug]
+
+### Root Cause
+[Why did the code not work]
+
+### Why QA Missed It
+[Which test category was missing]
+
+### Fix Applied
+[What code changed]
+
+### Test Added
+[What test now catches this]
+
+### Lesson Learned
+[What to check in the future]
+```
+
+---
+
+## 🧪 COMPREHENSIVE QA BEFORE ANY CODE PUSH
+
+### PRE-PUSH CHECKLIST
+
+Before pushing ANY code, verify:
+
+#### 1. Build Passes
+```bash
+npm run build
+```
+
+#### 2. All Buttons Work
+For every button added/modified:
+- [ ] Button has onClick handler (not empty or alert)
+- [ ] Clicking button produces visible result
+- [ ] Result is the correct/intended action
+
+#### 3. All Inputs Accept Text
+For every input added/modified:
+- [ ] Click into input
+- [ ] Type text
+- [ ] Verify text appears
+- [ ] Verify onChange handler updates state
+
+#### 4. All Modals Open AND Close
+For every modal:
+- [ ] Trigger opens the modal
+- [ ] X button closes it
+- [ ] Overlay click closes it (if applicable)
+- [ ] ESC key closes it (if applicable)
+- [ ] Modal content is populated (not empty)
+
+#### 5. All User States Tested
+For features with access control:
+- [ ] Guest user sees appropriate state
+- [ ] Authenticated user sees correct state
+- [ ] Admin user (if applicable) sees correct state
+
+#### 6. No Placeholder Code
+Search for and remove:
+```bash
+grep -n "alert\|TODO\|FIXME\|console.log" src/App.jsx | head -20
+```
+
+### VISUAL QA FLOW
+
+1. Take screenshot: `node screenshot.cjs`
+2. View screenshot: Read the PNG file
+3. Verify change is visible
+4. Test interaction works
+5. Only THEN report complete
+
+---
+
+## 📋 MASTER QA DOCUMENT
+
+The comprehensive test checklist is at:
+`e2e/MASTER_QA_CHECKLIST.md`
+
+This document contains:
+- 185+ individual test cases
+- All user states to test
+- Complete flow tests
+- Button functionality tests
+- Input functionality tests
+
+**When a bug is found, update this document with the missing test case.**
+
+---
+
+## 🚫 NEVER MARK A TASK COMPLETE IF:
+
+- Any button has no onClick handler
+- Any input doesn't accept typing
+- Any modal is empty when opened
+- Any feature only works for one user state
+- Code contains alert() or console.log() as "functionality"
+- You haven't actually tested the feature
+- You're assuming it works based on code review only
+
+---
+
+## ✅ MINIMUM TESTING FOR ANY CHANGE
+
+| Change Type | Minimum Tests |
+|-------------|---------------|
+| New button | Click it, verify action happens |
+| New input | Type in it, verify text appears AND is visible (readable color) |
+| New modal | Open it, verify content visible, close it |
+| New feature | Test guest + auth user flows |
+| Bug fix | Reproduce original bug, verify fixed |
+| Styling change | Take screenshot, visually verify |
+| Form change | Type in ALL inputs, verify text visible, submit works |
+| New function | Verify it's DEFINED with `grep "const funcName"` |
+| Any change | **CHECK BROWSER CONSOLE** for runtime errors after testing |
+
+### ALWAYS CHECK BROWSER CONSOLE
+
+After ANY action in the app:
+1. Open DevTools (F12)
+2. Go to Console tab
+3. Look for red errors
+4. **ReferenceError: X is not defined** = function/variable doesn't exist
+5. Fix before marking complete

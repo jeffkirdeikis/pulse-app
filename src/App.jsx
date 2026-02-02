@@ -8492,6 +8492,13 @@ export default function PulseApp() {
   const [calendarToastMessage, setCalendarToastMessage] = useState('');
   const [newEventCategories, setNewEventCategories] = useState([]);
 
+  // Helper function to show toast messages
+  const showToast = (message, type = 'info') => {
+    setCalendarToastMessage(message);
+    setShowCalendarToast(true);
+    setTimeout(() => setShowCalendarToast(false), 3000);
+  };
+
   // User data from Supabase (replaces all hardcoded dummy data)
   const {
     session,
@@ -8511,7 +8518,8 @@ export default function PulseApp() {
     toggleSaveItem,
     isItemSaved,
     registerForEvent,
-    refreshUserData
+    refreshUserData,
+    signOut
   } = useUserData();
 
   // Profile modal state
@@ -8520,7 +8528,7 @@ export default function PulseApp() {
   const [editingProfile, setEditingProfile] = useState(false);
   const [profileForm, setProfileForm] = useState({});
 
-  const [showSavedModal, setShowSavedModal] = useState(false);
+  const [savedItemsFilter, setSavedItemsFilter] = useState('event');
   const [localSavedItems, setLocalSavedItems] = useState(() => {
     // Initialize from localStorage for persistence without login
     try {
@@ -8542,40 +8550,66 @@ export default function PulseApp() {
   const [dbEvents, setDbEvents] = useState([]);
   const [eventsLoading, setEventsLoading] = useState(true);
 
-  // Fetch services from Supabase on mount
-  useEffect(() => {
-    async function fetchServices() {
-      setServicesLoading(true);
-      const { data, error } = await supabase
-        .from('businesses')
-        .select('id, name, category, address, google_rating, google_reviews, phone, website, email')
-        .eq('status', 'active')
-        .order('google_rating', { ascending: false, nullsFirst: false });
+  // Fetch services from Supabase - extracted to be reusable
+  const fetchServices = async () => {
+    setServicesLoading(true);
+    const { data, error } = await supabase
+      .from('businesses')
+      .select('id, name, category, address, google_rating, google_reviews, phone, website, email')
+      .eq('status', 'active')
+      .order('google_rating', { ascending: false, nullsFirst: false });
 
-      if (error) {
-        console.error('Error fetching services:', error);
-        setServicesLoading(false);
-        return;
-      }
-
-      // Map Supabase fields to expected UI fields
-      const mappedServices = data.map(business => ({
-        id: business.id,
-        name: business.name,
-        category: business.category || 'Other',
-        address: business.address || '',
-        rating: business.google_rating,
-        reviews: business.google_reviews,
-        phone: business.phone || '',
-        website: business.website || '',
-        email: business.email || ''
-      }));
-
-      setServices(mappedServices);
+    if (error) {
+      console.error('Error fetching services:', error);
       setServicesLoading(false);
+      return;
     }
 
+    // Map Supabase fields to expected UI fields
+    const mappedServices = data.map(business => ({
+      id: business.id,
+      name: business.name,
+      category: business.category || 'Other',
+      address: business.address || '',
+      rating: business.google_rating,
+      reviews: business.google_reviews,
+      phone: business.phone || '',
+      website: business.website || '',
+      email: business.email || ''
+    }));
+
+    setServices(mappedServices);
+    setServicesLoading(false);
+  };
+
+  // Fetch services on mount
+  useEffect(() => {
     fetchServices();
+  }, []);
+
+  // ESC key handler to close modals
+  useEffect(() => {
+    const handleEsc = (e) => {
+      if (e.key === 'Escape') {
+        // Close any open modal
+        setSelectedEvent(null);
+        setSelectedDeal(null);
+        setSelectedService(null);
+        setShowAuthModal(false);
+        setShowClaimBusinessModal(false);
+        setShowSubmissionModal(false);
+        setShowProfileModal(false);
+        setShowAdminPanel(false);
+        setShowEditVenueModal(false);
+        setShowMessagesModal(false);
+        setShowAddEventModal(false);
+        setShowMyCalendar(false);
+        setShowBookingSheet(false);
+        setShowContactSheet(false);
+      }
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
   }, []);
 
   // Fetch events from Supabase on mount
@@ -8756,7 +8790,7 @@ export default function PulseApp() {
 
   // Send a message
   const sendMessage = async () => {
-    if (!messageInput.trim() || !currentConversation || sendingMessage) return;
+    if (!messageInput.trim() || !currentConversation || sendingMessage || !user?.id) return;
     setSendingMessage(true);
     try {
       const { data, error } = await supabase.rpc('send_message', {
@@ -8770,7 +8804,7 @@ export default function PulseApp() {
       await fetchMessages(currentConversation.id);
     } catch (err) {
       console.error('Error sending message:', err);
-      alert('Failed to send message. Please try again.');
+      showToast('Failed to send message. Please try again.', 'error');
     } finally {
       setSendingMessage(false);
     }
@@ -8914,7 +8948,7 @@ export default function PulseApp() {
       }
     } catch (err) {
       console.error('Error submitting booking request:', err);
-      alert('Failed to send request. Please try again.');
+      showToast('Failed to send request. Please try again.', 'error');
     } finally {
       setSendingMessage(false);
     }
@@ -8966,7 +9000,7 @@ export default function PulseApp() {
       }
     } catch (err) {
       console.error('Error submitting contact form:', err);
-      alert('Failed to send message. Please try again.');
+      showToast('Failed to send message. Please try again.', 'error');
     } finally {
       setSendingMessage(false);
     }
@@ -9043,7 +9077,7 @@ export default function PulseApp() {
       await fetchBusinessMessages(selectedBusinessConversation.id);
     } catch (err) {
       console.error('Error sending reply:', err);
-      alert('Failed to send reply. Please try again.');
+      showToast('Failed to send reply. Please try again.', 'error');
     } finally {
       setSendingMessage(false);
     }
@@ -9135,10 +9169,17 @@ export default function PulseApp() {
   
   const [pendingSubmissions, setPendingSubmissions] = useState([]);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
-  
+  const [adminTab, setAdminTab] = useState('pending'); // 'pending', 'approved', 'rejected'
+
   // User authentication state
   const [showAuthModal, setShowAuthModal] = useState(false);
-  
+  const [authMode, setAuthMode] = useState('signin'); // 'signin' or 'signup'
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [authName, setAuthName] = useState('');
+  const [authError, setAuthError] = useState('');
+  const [authLoading, setAuthLoading] = useState(false);
+
   // Filter states - all dropdowns
   const [filters, setFilters] = useState({
     day: 'today', // today, tomorrow, thisWeekend, nextWeek, anytime
@@ -9171,6 +9212,9 @@ export default function PulseApp() {
   const [showBookingConfirmation, setShowBookingConfirmation] = useState(false);
   const [bookingRequestMessage, setBookingRequestMessage] = useState('');
   const [showMessagesModal, setShowMessagesModal] = useState(false);
+  const [showEditVenueModal, setShowEditVenueModal] = useState(false);
+  const [editingVenue, setEditingVenue] = useState(null);
+  const [editVenueForm, setEditVenueForm] = useState({ name: '', address: '', phone: '', website: '', email: '', category: '' });
   const [conversations, setConversations] = useState([]);
   const [conversationsLoading, setConversationsLoading] = useState(true);
   const [currentConversation, setCurrentConversation] = useState(null);
@@ -9226,10 +9270,10 @@ export default function PulseApp() {
         id: event.id,
         eventType: event.eventType || 'event',
         title: event.title,
-        date: event.date,
-        time: event.time,
-        venue: event.venue,
-        address: event.address || '',
+        date: event.start ? event.start.toISOString().split('T')[0] : event.date,
+        time: event.start ? event.start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : event.time,
+        venue: getVenueName(event.venueId, event),
+        address: event.location || event.address || '',
         ...event
       });
       setCalendarToastMessage(`"${event.title}" added to My Calendar!`);
@@ -9375,7 +9419,7 @@ export default function PulseApp() {
   };
 
   // Handle crop completion with canvas
-  const handleCropComplete = () => {
+  const handleCropComplete = async () => {
     // Save the image with crop metadata
     // In production, server would use position/zoom to create actual crop
     const cropData = {
@@ -9398,15 +9442,35 @@ export default function PulseApp() {
         bannerImagePreview: cropperImage
       }));
     } else if (cropperType === 'profileAvatar') {
-      setUser(prev => ({
-        ...prev,
-        avatar: cropperImage
-      }));
+      // Convert base64 to File and upload to Supabase Storage
+      const response = await fetch(cropperImage);
+      const blob = await response.blob();
+      const file = new File([blob], 'avatar.jpg', { type: 'image/jpeg' });
+      const { error, url } = await updateAvatar(file);
+      if (error) {
+        setCalendarToastMessage('Error uploading avatar. Please try again.');
+        setShowCalendarToast(true);
+        setTimeout(() => setShowCalendarToast(false), 3000);
+      } else {
+        setCalendarToastMessage('Profile photo updated!');
+        setShowCalendarToast(true);
+        setTimeout(() => setShowCalendarToast(false), 3000);
+      }
     } else if (cropperType === 'profileCover') {
-      setUser(prev => ({
-        ...prev,
-        coverPhoto: cropperImage
-      }));
+      // Convert base64 to File and upload to Supabase Storage
+      const response = await fetch(cropperImage);
+      const blob = await response.blob();
+      const file = new File([blob], 'cover.jpg', { type: 'image/jpeg' });
+      const { error, url } = await updateCoverPhoto(file);
+      if (error) {
+        setCalendarToastMessage('Error uploading cover photo. Please try again.');
+        setShowCalendarToast(true);
+        setTimeout(() => setShowCalendarToast(false), 3000);
+      } else {
+        setCalendarToastMessage('Cover photo updated!');
+        setShowCalendarToast(true);
+        setTimeout(() => setShowCalendarToast(false), 3000);
+      }
     }
     
     setShowImageCropper(false);
@@ -9513,18 +9577,79 @@ export default function PulseApp() {
     });
   };
 
-  const handleGoogleSignIn = () => {
-    setUser({
-      name: 'John Doe',
-      isGuest: false,
-      avatar: 'https://ui-avatars.com/api/?name=John+Doe&background=3b82f6&color=fff'
-    });
+  const handleSignOut = async () => {
+    await signOut();
     setShowProfileMenu(false);
   };
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    setShowProfileMenu(false);
+  const handleEmailSignIn = async (e) => {
+    e.preventDefault();
+    setAuthError('');
+    setAuthLoading(true);
+
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: authEmail,
+        password: authPassword
+      });
+
+      if (error) {
+        setAuthError(error.message);
+      } else {
+        setShowAuthModal(false);
+        setAuthEmail('');
+        setAuthPassword('');
+        setAuthMode('signin');
+      }
+    } catch (err) {
+      setAuthError('An unexpected error occurred');
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleEmailSignUp = async (e) => {
+    e.preventDefault();
+    setAuthError('');
+    setAuthLoading(true);
+
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: authEmail,
+        password: authPassword,
+        options: {
+          data: {
+            full_name: authName,
+            name: authName
+          }
+        }
+      });
+
+      if (error) {
+        setAuthError(error.message);
+      } else {
+        setAuthError('');
+        // Check if email confirmation is required (no session returned) or user is auto-logged in
+        if (data?.session) {
+          // Email confirmation disabled - user is logged in
+          setCalendarToastMessage('Account created! Welcome to Pulse!');
+        } else {
+          // Email confirmation required
+          setCalendarToastMessage('Check your email to confirm your account!');
+        }
+        setShowCalendarToast(true);
+        setTimeout(() => setShowCalendarToast(false), 5000);
+        setShowAuthModal(false);
+        setAuthEmail('');
+        setAuthPassword('');
+        setAuthName('');
+        setAuthMode('signin');
+      }
+    } catch (err) {
+      setAuthError('An unexpected error occurred');
+    } finally {
+      setAuthLoading(false);
+    }
   };
 
   const handleClaimBusiness = async () => {
@@ -9546,6 +9671,10 @@ export default function PulseApp() {
         user_id: session.user.id,
         business_name: claimFormData.businessName,
         business_address: claimFormData.address || null,
+        owner_name: claimFormData.ownerName,
+        contact_email: claimFormData.email,
+        contact_phone: claimFormData.phone || null,
+        owner_role: claimFormData.role,
         status: 'pending'
       });
       if (error) throw error;
@@ -9625,12 +9754,13 @@ export default function PulseApp() {
     // 'anytime' shows all future events
 
     // Search query
-    if (searchQuery) {
+    if (searchQuery?.trim()) {
+      const query = searchQuery.trim().toLowerCase();
       filtered = filtered.filter(e =>
-        e.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        e.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        getVenueName(e.venueId, e).toLowerCase().includes(searchQuery.toLowerCase()) ||
-        e.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
+        e.title?.toLowerCase().includes(query) ||
+        e.description?.toLowerCase().includes(query) ||
+        getVenueName(e.venueId, e).toLowerCase().includes(query) ||
+        e.tags?.some(tag => tag.toLowerCase().includes(query))
       );
     }
 
@@ -9730,7 +9860,7 @@ export default function PulseApp() {
     if (eventsLoading) {
       return (
         <div className="loading-state" style={{padding: '40px 20px', textAlign: 'center'}}>
-          <div style={{fontSize: '14px', color: '#6b7280'}}>Loading classes...</div>
+          <div style={{fontSize: '14px', color: '#6b7280'}}>Loading {currentSection}...</div>
         </div>
       );
     }
@@ -9803,10 +9933,11 @@ export default function PulseApp() {
     // Filter out vague deals with no real value
     filtered = filtered.filter(deal => isRealDeal(deal));
 
-    if (searchQuery) {
+    if (searchQuery?.trim()) {
+      const query = searchQuery.trim().toLowerCase();
       filtered = filtered.filter(d =>
-        d.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        d.description.toLowerCase().includes(searchQuery.toLowerCase())
+        d.title?.toLowerCase().includes(query) ||
+        d.description?.toLowerCase().includes(query)
       );
     }
 
@@ -10050,7 +10181,7 @@ export default function PulseApp() {
 
     const handleSave = async (e) => {
       e.stopPropagation();
-      await toggleSave(event.id, itemType, event.title, { venue: event.venue, date: event.date });
+      await toggleSave(event.id, itemType, event.title, { venue: getVenueName(event.venueId, event), date: event.start ? event.start.toISOString() : event.date });
     };
 
     return (
@@ -10132,7 +10263,9 @@ export default function PulseApp() {
       <div className="view-switcher">
         <button className={view === 'consumer' ? 'active' : ''} onClick={() => setView('consumer')}>Consumer</button>
         <button className={view === 'business' ? 'active' : ''} onClick={() => setView('business')}>Business</button>
-        <button className={view === 'admin' ? 'active' : ''} onClick={() => setView('admin')}>Admin</button>
+        {user.isAdmin && (
+          <button className={view === 'admin' ? 'active' : ''} onClick={() => setView('admin')}>Admin</button>
+        )}
       </div>
 
       {view === 'consumer' && (
@@ -10185,8 +10318,8 @@ export default function PulseApp() {
                   <Bell size={20} />
                   <span className="notification-dot"></span>
                 </button>
-                <div className="profile-btn" onClick={() => setShowProfileMenu(!showProfileMenu)}>
-                  <div className="profile-avatar">{user.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'U'}</div>
+                <div className="profile-btn" onClick={() => user.isGuest ? setShowAuthModal(true) : setShowProfileMenu(!showProfileMenu)}>
+                  <div className="profile-avatar">{user.avatar ? <img src={user.avatar} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} /> : (user.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'U')}</div>
                 </div>
               </div>
             </div>
@@ -11286,10 +11419,30 @@ export default function PulseApp() {
                 <div className="deal-cta-section">
                   <button
                     className="deal-cta-btn primary"
-                    onClick={() => {
-                      setCalendarToastMessage(`Deal saved! Show this to ${getVenueName(selectedDeal.venueId, selectedDeal)} to redeem.`);
+                    onClick={async () => {
+                      if (!session?.user) {
+                        setShowAuthModal(true);
+                        return;
+                      }
+                      // Generate redemption code
+                      const redemptionCode = `PULSE-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+                      // Track redemption in database
+                      const { error } = await supabase.from('deal_redemptions').insert({
+                        user_id: session.user.id,
+                        deal_id: selectedDeal.id,
+                        business_id: selectedDeal.businessId || null,
+                        redemption_code: redemptionCode,
+                        status: 'pending',
+                        savings_amount: selectedDeal.savingsPercent || null
+                      });
+                      if (error) {
+                        console.error('Error tracking redemption:', error);
+                        setCalendarToastMessage(`Deal saved! Show this to ${getVenueName(selectedDeal.venueId, selectedDeal)} to redeem.`);
+                      } else {
+                        setCalendarToastMessage(`Redemption code: ${redemptionCode} - Show this to ${getVenueName(selectedDeal.venueId, selectedDeal)}!`);
+                      }
                       setShowCalendarToast(true);
-                      setTimeout(() => setShowCalendarToast(false), 3000);
+                      setTimeout(() => setShowCalendarToast(false), 5000);
                     }}
                   >
                     <Ticket size={18} />
@@ -11594,10 +11747,10 @@ export default function PulseApp() {
             <div className="profile-menu-overlay" onClick={() => setShowProfileMenu(false)}>
               <div className="profile-menu-dropdown" onClick={(e) => e.stopPropagation()}>
                 <div className="profile-menu-header">
-                  <div className="profile-avatar large">{user.avatar ? <img src={user.avatar} alt="" /> : user.name.split(' ').map(n => n[0]).join('')}</div>
+                  <div className="profile-avatar large">{user.avatar ? <img src={user.avatar} alt="" /> : (user.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'U')}</div>
                   <div className="profile-menu-info">
-                    <h3>{user.name}</h3>
-                    <p>{user.email}</p>
+                    <h3>{user.name || 'Guest'}</h3>
+                    <p>{user.email || 'Not signed in'}</p>
                   </div>
                 </div>
                 <div className="profile-menu-divider"></div>
@@ -11729,7 +11882,12 @@ export default function PulseApp() {
                   </div>
                   <div className="modal-actions">
                     <button className="btn-secondary" onClick={closeAddEventModal}>Cancel</button>
-                    <button className="btn-primary">Submit Event</button>
+                    <button className="btn-primary" onClick={() => {
+                      closeAddEventModal();
+                      setShowSubmissionModal(true);
+                      setSubmissionStep(1);
+                      setSubmissionType('event');
+                    }}>Submit Event</button>
                   </div>
                 </div>
               </div>
@@ -11738,9 +11896,9 @@ export default function PulseApp() {
 
           {/* Claim Business Modal - Premium Purple Theme */}
           {showClaimBusinessModal && (
-            <div className="modal-overlay" onClick={() => setShowClaimBusinessModal(false)}>
+            <div className="modal-overlay" onClick={() => { setShowClaimBusinessModal(false); setClaimFormData({ businessName: '', ownerName: '', email: '', phone: '', role: 'owner', address: '' }); }}>
               <div className="claim-modal-premium" onClick={(e) => e.stopPropagation()}>
-                <button className="claim-modal-close" onClick={() => setShowClaimBusinessModal(false)}><X size={24} /></button>
+                <button className="claim-modal-close" onClick={() => { setShowClaimBusinessModal(false); setClaimFormData({ businessName: '', ownerName: '', email: '', phone: '', role: 'owner', address: '' }); }}><X size={24} /></button>
 
                 {/* Purple Gradient Header */}
                 <div className="claim-modal-header">
@@ -11830,7 +11988,7 @@ export default function PulseApp() {
           {showMyCalendarModal && (
             <div className="modal-overlay calendar-modal-overlay" onClick={() => setShowMyCalendarModal(false)}>
               <div className="calendar-modal" onClick={(e) => e.stopPropagation()}>
-                <button className="close-btn calendar-close" onClick={() => setShowMyCalendarModal(null)}><X size={24} /></button>
+                <button className="close-btn calendar-close" onClick={() => setShowMyCalendarModal(false)}><X size={24} /></button>
                 
                 {/* Calendar Header */}
                 <div className="calendar-header">
@@ -12381,8 +12539,8 @@ export default function PulseApp() {
                   </>
                 )}
 
-                {/* Image Cropper Modal */}
-                {showImageCropper && cropperImage && (
+                {/* Image Cropper Modal - DISABLED: Using global cropper at end of file instead */}
+                {false && showImageCropper && cropperImage && (
                   <div className="cropper-overlay" onClick={() => { setShowImageCropper(false); setCropPosition({ x: 0, y: 0 }); setCropZoom(1); }}>
                     <div className="cropper-modal" onClick={(e) => e.stopPropagation()}>
                       <div className="cropper-header">
@@ -12622,7 +12780,7 @@ export default function PulseApp() {
                   <div className="profile-hero-body">
                     <div className="profile-avatar-wrapper">
                       <div className="profile-avatar-large">
-                        {user.avatar ? <img src={user.avatar} alt="" /> : user.name.split(' ').map(n => n[0]).join('')}
+                        {user.avatar ? <img src={user.avatar} alt="" /> : (user.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'U')}
                         <button className="avatar-edit-btn" onClick={() => document.getElementById('profile-avatar-input').click()}>
                           <Camera size={14} />
                         </button>
@@ -12630,9 +12788,9 @@ export default function PulseApp() {
                     </div>
                     <div className="profile-hero-details">
                       <div className="profile-hero-info">
-                        <h1>{user.name}</h1>
+                        <h1>{user.name || 'Guest User'}</h1>
                         <p className="profile-location"><MapPin size={14} /> {user.location}</p>
-                        <p className="profile-member-since">Member since {new Date(user.memberSince).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</p>
+                        <p className="profile-member-since">Member since {user.memberSince ? new Date(user.memberSince).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'Today'}</p>
                       </div>
                       <div className="profile-hero-stats">
                         <div className="hero-stat">
@@ -12895,61 +13053,60 @@ export default function PulseApp() {
                   {profileTab === 'saved' && (
                     <div className="profile-saved">
                       <div className="saved-tabs">
-                        <button className="saved-tab active">
+                        <button className={`saved-tab ${!savedItemsFilter || savedItemsFilter === 'event' ? 'active' : ''}`} onClick={() => setSavedItemsFilter('event')}>
                           <Calendar size={14} />
                           Events
-                          <span className="saved-count">12</span>
+                          <span className="saved-count">{savedItems.filter(s => s.type === 'event').length + localSavedItems.filter(s => s.type === 'event').length}</span>
                         </button>
-                        <button className="saved-tab">
+                        <button className={`saved-tab ${savedItemsFilter === 'class' ? 'active' : ''}`} onClick={() => setSavedItemsFilter('class')}>
                           <Sparkles size={14} />
                           Classes
-                          <span className="saved-count">5</span>
+                          <span className="saved-count">{savedItems.filter(s => s.type === 'class').length + localSavedItems.filter(s => s.type === 'class').length}</span>
                         </button>
-                        <button className="saved-tab">
+                        <button className={`saved-tab ${savedItemsFilter === 'deal' ? 'active' : ''}`} onClick={() => setSavedItemsFilter('deal')}>
                           <Percent size={14} />
                           Deals
-                          <span className="saved-count">8</span>
+                          <span className="saved-count">{savedItems.filter(s => s.type === 'deal').length + localSavedItems.filter(s => s.type === 'deal').length}</span>
                         </button>
-                        <button className="saved-tab">
+                        <button className={`saved-tab ${savedItemsFilter === 'business' ? 'active' : ''}`} onClick={() => setSavedItemsFilter('business')}>
                           <Building size={14} />
                           Businesses
-                          <span className="saved-count">15</span>
+                          <span className="saved-count">{savedItems.filter(s => s.type === 'business').length + localSavedItems.filter(s => s.type === 'business').length}</span>
                         </button>
                       </div>
                       <div className="saved-items-grid">
-                        <div className="saved-item-card">
-                          <div className="saved-item-image" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
-                            <span className="saved-item-date">Feb 14</span>
+                        {[...savedItems, ...localSavedItems]
+                          .filter(item => !savedItemsFilter || savedItemsFilter === 'event' ? item.type === 'event' : item.type === savedItemsFilter)
+                          .map((item, idx) => (
+                          <div key={item.itemId || idx} className="saved-item-card">
+                            <div className="saved-item-image" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
+                              <span className="saved-item-date">{item.type}</span>
+                            </div>
+                            <div className="saved-item-content">
+                              <h4>{item.name || item.itemName || 'Saved Item'}</h4>
+                              <p><MapPin size={12} /> {item.data?.venue || item.venue || 'Squamish'}</p>
+                            </div>
+                            <button
+                              className="saved-item-remove"
+                              onClick={async () => {
+                                if (session?.user) {
+                                  await toggleSaveItem(item.type, item.itemId, item.name);
+                                } else {
+                                  setLocalSavedItems(prev => prev.filter(s => s.itemId !== item.itemId));
+                                }
+                              }}
+                            >
+                              <X size={14} />
+                            </button>
                           </div>
-                          <div className="saved-item-content">
-                            <h4>Valentine's Jazz Night</h4>
-                            <p><MapPin size={12} /> Howe Sound Brewing</p>
-                            <span className="saved-item-time"><Clock size={12} /> 7:00 PM</span>
+                        ))}
+                        {[...savedItems, ...localSavedItems].filter(item => !savedItemsFilter || savedItemsFilter === 'event' ? item.type === 'event' : item.type === savedItemsFilter).length === 0 && (
+                          <div className="no-saved-items" style={{ textAlign: 'center', padding: '40px 20px', color: '#6b7280' }}>
+                            <Star size={48} style={{ opacity: 0.3, marginBottom: '16px' }} />
+                            <h4>No saved items yet</h4>
+                            <p>Tap the star icon on any event, class, or deal to save it here!</p>
                           </div>
-                          <button className="saved-item-remove"><X size={14} /></button>
-                        </div>
-                        <div className="saved-item-card">
-                          <div className="saved-item-image" style={{ background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' }}>
-                            <span className="saved-item-date">Feb 20</span>
-                          </div>
-                          <div className="saved-item-content">
-                            <h4>Winter Wine Festival</h4>
-                            <p><MapPin size={12} /> Downtown Squamish</p>
-                            <span className="saved-item-time"><Clock size={12} /> 5:00 PM</span>
-                          </div>
-                          <button className="saved-item-remove"><X size={14} /></button>
-                        </div>
-                        <div className="saved-item-card">
-                          <div className="saved-item-image" style={{ background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' }}>
-                            <span className="saved-item-date">Mar 1</span>
-                          </div>
-                          <div className="saved-item-content">
-                            <h4>Community Art Walk</h4>
-                            <p><MapPin size={12} /> Squamish Arts Council</p>
-                            <span className="saved-item-time"><Clock size={12} /> 2:00 PM</span>
-                          </div>
-                          <button className="saved-item-remove"><X size={14} /></button>
-                        </div>
+                        )}
                       </div>
                     </div>
                   )}
@@ -13214,12 +13371,32 @@ export default function PulseApp() {
                               <div className="insight-card hot">
                                 <div className="insight-badge">Get Started</div>
                                 <p>Post your first <strong>deal or event</strong> to start attracting customers on Pulse.</p>
-                                <button className="insight-action">Create Deal</button>
+                                <button className="insight-action" onClick={() => {
+                                  setShowSubmissionModal(true);
+                                  setSubmissionStep(1);
+                                  setSubmissionType('deal');
+                                }}>Create Deal</button>
                               </div>
                               <div className="insight-card">
                                 <div className="insight-badge">Tip</div>
                                 <p>Complete your business profile to <strong>build trust</strong> with potential customers.</p>
-                                <button className="insight-action">Edit Profile</button>
+                                <button className="insight-action" onClick={() => {
+                                  if (userClaimedBusinesses.length > 0) {
+                                    const biz = userClaimedBusinesses[0];
+                                    setEditingVenue(biz);
+                                    setEditVenueForm({
+                                      name: biz.name || '',
+                                      address: biz.address || '',
+                                      phone: biz.phone || '',
+                                      website: biz.website || '',
+                                      email: biz.email || '',
+                                      category: biz.category || ''
+                                    });
+                                    setShowEditVenueModal(true);
+                                  } else {
+                                    showToast('No business to edit', 'error');
+                                  }
+                                }}>Edit Profile</button>
                               </div>
                               <div className="insight-card">
                                 <div className="insight-badge">Tip</div>
@@ -13400,11 +13577,55 @@ export default function PulseApp() {
                         </div>
                       </div>
 
+                      {/* Save Button */}
+                      <div className="settings-section">
+                        <button
+                          className="save-profile-btn"
+                          onClick={async () => {
+                            const { error } = await updateProfile({
+                              name: user.name,
+                              phone: user.phone,
+                              bio: user.bio,
+                              location: user.location,
+                              interests: user.interests,
+                              socialLinks: user.socialLinks,
+                              notifications: user.notifications,
+                              privacy: user.privacy
+                            });
+                            if (error) {
+                              setCalendarToastMessage('Error saving profile. Please try again.');
+                            } else {
+                              setCalendarToastMessage('Profile saved successfully!');
+                            }
+                            setShowCalendarToast(true);
+                            setTimeout(() => setShowCalendarToast(false), 3000);
+                          }}
+                          style={{
+                            width: '100%',
+                            padding: '14px 24px',
+                            background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '12px',
+                            fontSize: '16px',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                            marginBottom: '24px'
+                          }}
+                        >
+                          Save Profile
+                        </button>
+                      </div>
+
                       {/* Danger Zone */}
                       <div className="settings-section danger">
                         <h3>Danger Zone</h3>
                         <div className="danger-actions">
-                          <button className="danger-btn">
+                          <button className="danger-btn" onClick={() => {
+                            if (confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
+                              showToast('Please contact support to delete your account', 'info');
+                            }
+                          }}>
                             <Trash2 size={16} />
                             Delete Account
                           </button>
@@ -13769,25 +13990,35 @@ export default function PulseApp() {
 
                 <div className="admin-content">
                   <div className="admin-tabs">
-                    <button className="admin-tab active">
+                    <button className={`admin-tab ${adminTab === 'pending' ? 'active' : ''}`} onClick={() => setAdminTab('pending')}>
                       Pending
                       {pendingSubmissions.filter(s => s.status === 'pending').length > 0 && (
                         <span className="tab-badge">{pendingSubmissions.filter(s => s.status === 'pending').length}</span>
                       )}
                     </button>
-                    <button className="admin-tab">Approved</button>
-                    <button className="admin-tab">Rejected</button>
+                    <button className={`admin-tab ${adminTab === 'approved' ? 'active' : ''}`} onClick={() => setAdminTab('approved')}>
+                      Approved
+                      {pendingSubmissions.filter(s => s.status === 'approved').length > 0 && (
+                        <span className="tab-badge">{pendingSubmissions.filter(s => s.status === 'approved').length}</span>
+                      )}
+                    </button>
+                    <button className={`admin-tab ${adminTab === 'rejected' ? 'active' : ''}`} onClick={() => setAdminTab('rejected')}>
+                      Rejected
+                      {pendingSubmissions.filter(s => s.status === 'rejected').length > 0 && (
+                        <span className="tab-badge">{pendingSubmissions.filter(s => s.status === 'rejected').length}</span>
+                      )}
+                    </button>
                   </div>
 
                   <div className="admin-submissions">
-                    {pendingSubmissions.filter(s => s.status === 'pending').length === 0 ? (
+                    {pendingSubmissions.filter(s => s.status === adminTab).length === 0 ? (
                       <div className="admin-empty">
                         <CheckCircle size={48} />
-                        <h3>All caught up!</h3>
-                        <p>No pending submissions to review</p>
+                        <h3>{adminTab === 'pending' ? 'All caught up!' : `No ${adminTab} submissions`}</h3>
+                        <p>{adminTab === 'pending' ? 'No pending submissions to review' : `There are no ${adminTab} submissions yet`}</p>
                       </div>
                     ) : (
-                      pendingSubmissions.filter(s => s.status === 'pending').map(submission => (
+                      pendingSubmissions.filter(s => s.status === adminTab).map(submission => (
                         <div key={submission.id} className="admin-submission-card">
                           <div className="submission-card-header">
                             <div className={`submission-type-badge ${submission.type}`}>
@@ -13840,8 +14071,21 @@ export default function PulseApp() {
 
       {view === 'business' && (
         <div className="business-view-premium">
-          {/* Check if user has claimed businesses */}
-          {userClaimedBusinesses.length === 0 ? (
+          {/* Check if user is authenticated first */}
+          {user.isGuest ? (
+            <div className="no-business-view">
+              <div className="no-biz-content">
+                <div className="no-biz-icon">
+                  <Building size={64} />
+                </div>
+                <h2>Sign In Required</h2>
+                <p>Sign in to access the Business Dashboard and manage your business on Pulse.</p>
+                <button className="claim-biz-btn-large" onClick={() => setShowAuthModal(true)}>
+                  Sign In
+                </button>
+              </div>
+            </div>
+          ) : userClaimedBusinesses.length === 0 ? (
             <div className="no-business-view">
               <div className="no-biz-content">
                 <div className="no-biz-icon">
@@ -13886,7 +14130,7 @@ export default function PulseApp() {
               <div className="premium-header">
                 <div className="premium-header-content">
                   <div className="header-left">
-                    <div className="venue-avatar-upload" onClick={() => alert('Logo upload functionality')}>
+                    <div className="venue-avatar-upload" onClick={() => showToast('Logo upload coming soon!', 'info')}>
                       <div className="venue-avatar">
                         <span className="venue-initial">{userClaimedBusinesses[0].name.charAt(0)}</span>
                       </div>
@@ -13973,10 +14217,10 @@ export default function PulseApp() {
               {/* Time Period Selector */}
               <div className="analytics-controls">
                 <div className="time-selector">
-                  <button className="time-btn active">Last 30 Days</button>
-                  <button className="time-btn">Last 90 Days</button>
-                  <button className="time-btn">This Year</button>
-                  <button className="time-btn">All Time</button>
+                  <button className={`time-btn ${analyticsPeriod === 30 ? 'active' : ''}`} onClick={() => setAnalyticsPeriod(30)}>Last 30 Days</button>
+                  <button className={`time-btn ${analyticsPeriod === 90 ? 'active' : ''}`} onClick={() => setAnalyticsPeriod(90)}>Last 90 Days</button>
+                  <button className={`time-btn ${analyticsPeriod === 365 ? 'active' : ''}`} onClick={() => setAnalyticsPeriod(365)}>This Year</button>
+                  <button className={`time-btn ${analyticsPeriod === 9999 ? 'active' : ''}`} onClick={() => setAnalyticsPeriod(9999)}>All Time</button>
                 </div>
               </div>
 
@@ -14180,12 +14424,32 @@ export default function PulseApp() {
                   <div className="insight-item hot">
                     <div className="insight-tag">Get Started</div>
                     <p>Post your first <strong>deal or event</strong> to start attracting customers on Pulse.</p>
-                    <button className="insight-btn">Create Deal</button>
+                    <button className="insight-btn" onClick={() => {
+                      setShowSubmissionModal(true);
+                      setSubmissionStep(1);
+                      setSubmissionType('deal');
+                    }}>Create Deal</button>
                   </div>
                   <div className="insight-item">
                     <div className="insight-tag">Tip</div>
                     <p>Complete your business profile to <strong>build trust</strong> with potential customers.</p>
-                    <button className="insight-btn">Edit Profile</button>
+                    <button className="insight-btn" onClick={() => {
+                      if (userClaimedBusinesses.length > 0) {
+                        const biz = userClaimedBusinesses[0];
+                        setEditingVenue(biz);
+                        setEditVenueForm({
+                          name: biz.name || '',
+                          address: biz.address || '',
+                          phone: biz.phone || '',
+                          website: biz.website || '',
+                          email: biz.email || '',
+                          category: biz.category || ''
+                        });
+                        setShowEditVenueModal(true);
+                      } else {
+                        showToast('No business to edit', 'error');
+                      }
+                    }}>Edit Profile</button>
                   </div>
                   <div className="insight-item">
                     <div className="insight-tag">Tip</div>
@@ -14697,6 +14961,22 @@ export default function PulseApp() {
       )}
       {view === 'admin' && (
         <div className="admin-view-premium">
+          {/* Check if user is authenticated and admin */}
+          {!user.isAdmin ? (
+            <div className="no-business-view">
+              <div className="no-biz-content">
+                <div className="no-biz-icon">
+                  <AlertCircle size={64} />
+                </div>
+                <h2>Access Restricted</h2>
+                <p>You need admin privileges to access this dashboard.</p>
+                <button className="claim-biz-btn-large" onClick={() => setView('consumer')}>
+                  Go Back
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
           {/* Premium Admin Header */}
           <div className="admin-header-premium">
             <div className="admin-header-content">
@@ -14879,8 +15159,8 @@ export default function PulseApp() {
             </div>
 
             <div className="venues-grid-admin">
-              {REAL_DATA.venues.slice(0, 9).map((venue, idx) => {
-                const classCount = Math.floor(REAL_DATA.events.filter(e => e.venueId === venue.id).length / 7);
+              {services.slice(0, 12).map((venue, idx) => {
+                const classCount = dbEvents.filter(e => e.venueId === venue.id).length;
                 return (
                   <div key={venue.id} className="venue-card-admin" ref={(el) => venueCardRefs.current[idx] = el}>
                     <div className="venue-card-header">
@@ -14905,9 +15185,38 @@ export default function PulseApp() {
                     </div>
                     {/* Stats will be populated from real analytics data */}
                     <div className="venue-card-actions">
-                      <button className="action-btn-mini" onClick={() => alert(`Edit venue: ${venue.name}\n\nThis would open an edit modal with venue details.`)}><Edit2 size={14} /></button>
-                      <button className="action-btn-mini" onClick={() => alert(`View full details for: ${venue.name}`)}><Eye size={14} /></button>
-                      <button className="action-btn-mini danger" onClick={() => confirm(`Delete ${venue.name}? This cannot be undone.`)}><Trash2 size={14} /></button>
+                      <button className="action-btn-mini" onClick={() => {
+                        console.log('EDIT BUTTON CLICKED for venue:', venue.name);
+                        console.log('Setting editingVenue and showEditVenueModal...');
+                        setEditingVenue(venue);
+                        setEditVenueForm({
+                          name: venue.name || '',
+                          address: venue.address || '',
+                          phone: venue.phone || '',
+                          website: venue.website || '',
+                          email: venue.email || '',
+                          category: venue.category || ''
+                        });
+                        setShowEditVenueModal(true);
+                        console.log('showEditVenueModal set to true');
+                      }}><Edit2 size={14} /></button>
+                      <button className="action-btn-mini" onClick={() => setSelectedService(venue)}><Eye size={14} /></button>
+                      <button className="action-btn-mini danger" onClick={async () => {
+                        if (confirm(`Delete ${venue.name}? This cannot be undone.`)) {
+                          try {
+                            const { error } = await supabase
+                              .from('businesses')
+                              .update({ status: 'inactive' })
+                              .eq('id', venue.id);
+                            if (error) throw error;
+                            showToast(`${venue.name} deleted`, 'success');
+                            await fetchServices();
+                          } catch (err) {
+                            console.error('Error deleting:', err);
+                            showToast('Failed to delete business', 'error');
+                          }
+                        }
+                      }}><Trash2 size={14} /></button>
                     </div>
                   </div>
                 );
@@ -14965,6 +15274,135 @@ export default function PulseApp() {
               <button className="btn-primary-gradient btn-large-admin">
                 <Plus size={20} /> Add Class
               </button>
+            </div>
+          </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Edit Venue Modal - Global (works from any view) */}
+      {showEditVenueModal && editingVenue && (
+        <div className="modal-overlay" onClick={() => { setShowEditVenueModal(false); setEditingVenue(null); }}>
+          <div className="claim-modal-premium" onClick={(e) => e.stopPropagation()}>
+            <button className="claim-modal-close" onClick={() => { setShowEditVenueModal(false); setEditingVenue(null); }}><X size={24} /></button>
+
+            <div className="claim-modal-header">
+              <div className="claim-modal-icon">
+                <Edit2 size={32} />
+              </div>
+              <h2>Edit Business</h2>
+              <p>Update information for {editingVenue.name}</p>
+            </div>
+
+            <div className="claim-modal-body">
+              <div className="claim-form-grid">
+                <div className="claim-form-group full">
+                  <label>Business Name</label>
+                  <input
+                    type="text"
+                    placeholder="Business name"
+                    value={editVenueForm.name}
+                    onChange={(e) => setEditVenueForm({...editVenueForm, name: e.target.value})}
+                  />
+                </div>
+                <div className="claim-form-group full">
+                  <label>Address</label>
+                  <input
+                    type="text"
+                    placeholder="Street address"
+                    value={editVenueForm.address}
+                    onChange={(e) => setEditVenueForm({...editVenueForm, address: e.target.value})}
+                  />
+                </div>
+                <div className="claim-form-group">
+                  <label>Phone</label>
+                  <input
+                    type="tel"
+                    placeholder="(604) 555-1234"
+                    value={editVenueForm.phone}
+                    onChange={(e) => setEditVenueForm({...editVenueForm, phone: e.target.value})}
+                  />
+                </div>
+                <div className="claim-form-group">
+                  <label>Email</label>
+                  <input
+                    type="email"
+                    placeholder="contact@business.com"
+                    value={editVenueForm.email}
+                    onChange={(e) => setEditVenueForm({...editVenueForm, email: e.target.value})}
+                  />
+                </div>
+                <div className="claim-form-group">
+                  <label>Website</label>
+                  <input
+                    type="url"
+                    placeholder="https://..."
+                    value={editVenueForm.website}
+                    onChange={(e) => setEditVenueForm({...editVenueForm, website: e.target.value})}
+                  />
+                </div>
+                <div className="claim-form-group">
+                  <label>Category</label>
+                  <input
+                    type="text"
+                    placeholder="e.g., Fitness, Restaurant"
+                    value={editVenueForm.category}
+                    onChange={(e) => setEditVenueForm({...editVenueForm, category: e.target.value})}
+                  />
+                </div>
+              </div>
+
+              <div className="claim-modal-actions">
+                <button className="claim-cancel-btn" onClick={() => { setShowEditVenueModal(false); setEditingVenue(null); }}>Cancel</button>
+                <button className="claim-submit-btn" onClick={async () => {
+                  console.log('SAVE CHANGES CLICKED');
+                  console.log('editingVenue:', editingVenue);
+                  console.log('editingVenue.id:', editingVenue?.id);
+                  console.log('editVenueForm:', editVenueForm);
+
+                  if (!editingVenue?.id) {
+                    showToast('Error: No venue ID found', 'error');
+                    return;
+                  }
+
+                  try {
+                    console.log('Updating business with ID:', editingVenue.id);
+                    const { data, error } = await supabase
+                      .from('businesses')
+                      .update({
+                        name: editVenueForm.name,
+                        address: editVenueForm.address,
+                        phone: editVenueForm.phone,
+                        email: editVenueForm.email,
+                        website: editVenueForm.website,
+                        category: editVenueForm.category
+                      })
+                      .eq('id', editingVenue.id)
+                      .select();
+
+                    console.log('Supabase update response - data:', data, 'error:', error);
+
+                    if (error) throw error;
+
+                    // Check if any rows were actually updated
+                    if (!data || data.length === 0) {
+                      console.error('No rows updated - likely RLS policy blocking update');
+                      showToast('Update blocked - check database permissions', 'error');
+                      return;
+                    }
+
+                    showToast('Business updated successfully!', 'success');
+                    setShowEditVenueModal(false);
+                    setEditingVenue(null);
+                    // Refetch services to show updated data
+                    await fetchServices();
+                  } catch (err) {
+                    console.error('Error updating business:', err);
+                    showToast('Failed to update business', 'error');
+                  }
+                }}>Save Changes</button>
+              </div>
             </div>
           </div>
         </div>
@@ -15134,15 +15572,15 @@ export default function PulseApp() {
 
       {/* Auth Modal */}
       {showAuthModal && (
-        <div className="modal-overlay" onClick={() => setShowAuthModal(false)}>
+        <div className="modal-overlay" onClick={() => { setShowAuthModal(false); setAuthError(''); setAuthEmail(''); setAuthPassword(''); setAuthName(''); }}>
           <div className="auth-modal" onClick={(e) => e.stopPropagation()}>
-            <button className="auth-modal-close" onClick={() => setShowAuthModal(false)}><X size={24} /></button>
+            <button className="auth-modal-close" onClick={() => { setShowAuthModal(false); setAuthError(''); setAuthEmail(''); setAuthPassword(''); setAuthName(''); }}><X size={24} /></button>
             <div className="auth-modal-header">
               <div className="auth-logo">
                 <MapPin size={32} />
               </div>
-              <h2>Welcome to Pulse</h2>
-              <p>Sign in to save events, claim your business, and connect with the Squamish community</p>
+              <h2>{authMode === 'signin' ? 'Welcome Back' : 'Create Account'}</h2>
+              <p>{authMode === 'signin' ? 'Sign in to save events and connect with Squamish' : 'Join the Squamish community today'}</p>
             </div>
             <div className="auth-modal-body">
               <button className="auth-btn google" onClick={async () => {
@@ -15155,92 +15593,61 @@ export default function PulseApp() {
               <div className="auth-divider">
                 <span>or</span>
               </div>
-              <button className="auth-btn email" onClick={() => {
-                const email = prompt('Enter your email:');
-                if (email) {
-                  supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.origin } })
-                    .then(() => alert('Check your email for a sign-in link!'))
-                    .catch(err => alert('Error: ' + err.message));
-                }
-              }}>
-                <Mail size={20} />
-                Continue with Email
-              </button>
+              <form onSubmit={authMode === 'signin' ? handleEmailSignIn : handleEmailSignUp} className="auth-form">
+                {authMode === 'signup' && (
+                  <div className="auth-form-group">
+                    <label>Full Name</label>
+                    <input
+                      type="text"
+                      placeholder="Your name"
+                      value={authName}
+                      onChange={(e) => setAuthName(e.target.value)}
+                      required
+                    />
+                  </div>
+                )}
+                <div className="auth-form-group">
+                  <label>Email</label>
+                  <input
+                    type="email"
+                    placeholder="you@example.com"
+                    value={authEmail}
+                    onChange={(e) => setAuthEmail(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="auth-form-group">
+                  <label>Password</label>
+                  <input
+                    type="password"
+                    placeholder={authMode === 'signup' ? 'Create a password (min 6 chars)' : 'Your password'}
+                    value={authPassword}
+                    onChange={(e) => setAuthPassword(e.target.value)}
+                    minLength={6}
+                    required
+                  />
+                </div>
+                {authError && (
+                  <div className="auth-error">
+                    <AlertCircle size={16} />
+                    <span>{authError}</span>
+                  </div>
+                )}
+                <button type="submit" className="auth-btn email" disabled={authLoading}>
+                  <Mail size={20} />
+                  {authLoading ? 'Please wait...' : (authMode === 'signin' ? 'Sign In' : 'Create Account')}
+                </button>
+              </form>
+              <div className="auth-switch">
+                {authMode === 'signin' ? (
+                  <p>Don't have an account? <button onClick={() => { setAuthMode('signup'); setAuthError(''); }}>Sign Up</button></p>
+                ) : (
+                  <p>Already have an account? <button onClick={() => { setAuthMode('signin'); setAuthError(''); }}>Sign In</button></p>
+                )}
+              </div>
             </div>
             <div className="auth-modal-footer">
               <p>By continuing, you agree to our Terms of Service and Privacy Policy</p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Global Claim Business Modal */}
-      {showClaimBusinessModal && (
-        <div className="modal-overlay" onClick={() => setShowClaimBusinessModal(false)}>
-          <div className="claim-modal-premium" onClick={(e) => e.stopPropagation()}>
-            <button className="claim-modal-close" onClick={() => setShowClaimBusinessModal(false)}><X size={24} /></button>
-            <div className="claim-modal-header">
-              <div className="claim-modal-icon">
-                <Building size={32} />
-              </div>
-              <h2>Claim Your Business</h2>
-              <p>Get access to analytics, manage your listings, and connect with customers</p>
-            </div>
-            <div className="claim-modal-body">
-              {!session?.user ? (
-                <div className="claim-signin-prompt">
-                  <div className="signin-message">
-                    <AlertCircle size={24} />
-                    <p>Please sign in to claim your business</p>
-                  </div>
-                  <button className="claim-signin-btn" onClick={() => { setShowClaimBusinessModal(false); setShowAuthModal(true); }}>
-                    Sign In to Continue
-                  </button>
-                </div>
-              ) : (
-                <>
-                  <div className="claim-form-grid">
-                    <div className="claim-form-group full">
-                      <label>Business Name *</label>
-                      <input type="text" placeholder="e.g., The Sound Martial Arts" value={claimFormData.businessName} onChange={(e) => setClaimFormData({...claimFormData, businessName: e.target.value})} />
-                    </div>
-                    <div className="claim-form-group">
-                      <label>Your Name *</label>
-                      <input type="text" placeholder="Full name" value={claimFormData.ownerName} onChange={(e) => setClaimFormData({...claimFormData, ownerName: e.target.value})} />
-                    </div>
-                    <div className="claim-form-group">
-                      <label>Email *</label>
-                      <input type="email" placeholder="your@email.com" value={claimFormData.email} onChange={(e) => setClaimFormData({...claimFormData, email: e.target.value})} />
-                    </div>
-                    <div className="claim-form-group">
-                      <label>Phone</label>
-                      <input type="tel" placeholder="(604) 555-1234" value={claimFormData.phone} onChange={(e) => setClaimFormData({...claimFormData, phone: e.target.value})} />
-                    </div>
-                    <div className="claim-form-group">
-                      <label>Role</label>
-                      <select value={claimFormData.role} onChange={(e) => setClaimFormData({...claimFormData, role: e.target.value})}>
-                        <option value="owner">Owner</option>
-                        <option value="manager">Manager</option>
-                        <option value="representative">Authorized Representative</option>
-                      </select>
-                    </div>
-                    <div className="claim-form-group full">
-                      <label>Business Address</label>
-                      <input type="text" placeholder="Street address in Squamish" value={claimFormData.address} onChange={(e) => setClaimFormData({...claimFormData, address: e.target.value})} />
-                    </div>
-                  </div>
-                  <div className="claim-benefits">
-                    <div className="claim-benefit"><CheckCircle size={18} /><span>Manage your business profile</span></div>
-                    <div className="claim-benefit"><CheckCircle size={18} /><span>View analytics & insights</span></div>
-                    <div className="claim-benefit"><CheckCircle size={18} /><span>Respond to reviews</span></div>
-                    <div className="claim-benefit"><CheckCircle size={18} /><span>Create deals & promotions</span></div>
-                  </div>
-                  <div className="claim-modal-actions">
-                    <button className="claim-cancel-btn" onClick={() => { setShowClaimBusinessModal(false); setClaimFormData({ businessName: '', ownerName: '', email: '', phone: '', role: 'owner', address: '' }); }}>Cancel</button>
-                    <button className="claim-submit-btn" onClick={handleClaimBusiness} disabled={claimSubmitting}>{claimSubmitting ? 'Submitting...' : 'Submit Claim'}</button>
-                  </div>
-                </>
-              )}
             </div>
           </div>
         </div>
@@ -15558,6 +15965,11 @@ export default function PulseApp() {
           border-radius: 12px;
           font-size: 16px;
           transition: all 0.2s;
+          position: relative;
+          z-index: 100;
+          pointer-events: auto !important;
+          -webkit-user-select: text;
+          user-select: text;
         }
 
         .form-field input:focus,
@@ -20496,6 +20908,11 @@ export default function PulseApp() {
           border-radius: 8px;
           font-size: 14px;
           color: #111827;
+          position: relative;
+          z-index: 100;
+          pointer-events: auto !important;
+          -webkit-user-select: text;
+          user-select: text;
         }
         
         .btn-large-admin {
@@ -21034,6 +21451,21 @@ export default function PulseApp() {
         }
         
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
+
+        /* Global fix: Ensure ALL inputs in modals are interactable AND visible */
+        .modal-overlay input,
+        .modal-overlay textarea,
+        .modal-overlay select {
+          position: relative !important;
+          z-index: 100 !important;
+          pointer-events: auto !important;
+          -webkit-user-select: text !important;
+          user-select: text !important;
+          cursor: text;
+          color: #1f2937 !important;
+          background: #fff !important;
+        }
+        .modal-overlay select { cursor: pointer; }
         .modal-content { background: #fff; border-radius: 20px; max-width: 500px; width: 100%; max-height: 90vh; overflow-y: auto; position: relative; border: 1px solid #e5e7eb; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
         .close-btn { position: absolute; top: 16px; right: 16px; background: #f3f4f6; border: none; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #374151; cursor: pointer; transition: 0.2s; z-index: 10; }
         .close-btn:hover { background: #e5e7eb; color: #111827; }
@@ -21202,6 +21634,87 @@ export default function PulseApp() {
           margin: 0;
         }
 
+        .auth-form {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        }
+
+        .auth-form-group {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+
+        .auth-form-group label {
+          font-size: 13px;
+          font-weight: 500;
+          color: #374151;
+        }
+
+        .auth-form-group input {
+          padding: 12px 16px;
+          border: 1px solid #e5e7eb;
+          border-radius: 10px;
+          font-size: 15px;
+          color: #1f2937;
+          background: #fff;
+          transition: all 0.2s;
+          position: relative;
+          z-index: 100;
+          pointer-events: auto !important;
+          -webkit-user-select: text;
+          user-select: text;
+        }
+
+        .auth-form-group input:focus {
+          outline: none;
+          border-color: #3b82f6;
+          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .auth-error {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 10px 14px;
+          background: #fef2f2;
+          border: 1px solid #fecaca;
+          border-radius: 8px;
+          color: #dc2626;
+          font-size: 13px;
+        }
+
+        .auth-switch {
+          text-align: center;
+          margin-top: 8px;
+        }
+
+        .auth-switch p {
+          font-size: 14px;
+          color: #6b7280;
+          margin: 0;
+        }
+
+        .auth-switch button {
+          background: none;
+          border: none;
+          color: #3b82f6;
+          font-weight: 600;
+          cursor: pointer;
+          padding: 0;
+          font-size: 14px;
+        }
+
+        .auth-switch button:hover {
+          text-decoration: underline;
+        }
+
+        .auth-btn:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
         /* Premium Claim Business Modal */
         .claim-modal-premium {
           background: #fff;
@@ -21271,6 +21784,8 @@ export default function PulseApp() {
 
         .claim-modal-body {
           padding: 28px;
+          position: relative;
+          z-index: 5;
         }
 
         .claim-signin-prompt {
@@ -21338,7 +21853,14 @@ export default function PulseApp() {
           border-radius: 10px;
           font-size: 14px;
           background: #f9fafb;
+          color: #1f2937 !important;
           transition: all 0.2s;
+          position: relative;
+          z-index: 100;
+          cursor: text;
+          pointer-events: auto !important;
+          -webkit-user-select: text;
+          user-select: text;
         }
 
         .claim-form-group input:focus,
@@ -21425,6 +21947,15 @@ export default function PulseApp() {
           }
           .claim-benefits {
             grid-template-columns: 1fr;
+          }
+          /* Fix view switcher overlap on mobile */
+          .view-switcher {
+            position: fixed;
+            top: auto;
+            bottom: 20px;
+            right: 50%;
+            transform: translateX(50%);
+            z-index: 999;
           }
         }
 
@@ -25161,6 +25692,11 @@ export default function PulseApp() {
           font-size: 14px;
           color: #111827;
           transition: all 0.2s ease;
+          position: relative;
+          z-index: 100;
+          pointer-events: auto !important;
+          -webkit-user-select: text;
+          user-select: text;
         }
 
         .setting-info input:focus,
