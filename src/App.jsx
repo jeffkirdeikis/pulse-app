@@ -2,8 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Calendar, CalendarPlus, MapPin, Clock, Star, Check, Bell, Search, Filter, ChevronRight, ChevronLeft, X, Plus, Edit2, Trash2, Eye, Users, DollarSign, AlertCircle, CheckCircle, XCircle, SlidersHorizontal, Building, Wrench, TrendingUp, Phone, Globe, Navigation, Mail, Share2, Ticket, Percent, Tag, Repeat, ExternalLink, Heart, Copy, Info, Gift, Sparkles, Zap, Camera, MessageCircle, Send } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import { useUserData } from './hooks/useUserData';
-import { addUserXP, getLevelProgress, getLevelTitle } from './lib/gamification';
-import { trackBusinessView, getBusinessSocialProof, getBusinessAnalytics, generateSocialProofText, formatResponseTime } from './lib/businessAnalytics';
+import { formatResponseTime } from './lib/businessAnalytics';
 
 // Booking systems lookup - maps venue names to their booking URLs
 // Sources: Mindbody, WellnessLiving, JaneApp scrapers
@@ -8152,12 +8151,12 @@ const expandRecurringEvents = (baseEvents) => {
   return expanded;
 };
 
-// Expand the events
-REAL_DATA.events = expandRecurringEvents(REAL_DATA.events);
+// NOTE: Don't call expandRecurringEvents here - it's already called in realData.js
+// Calling it twice causes 4x duplication (see CLAUDE-ARCHIVE.md)
 
 // Smart Deal Title Generator - creates clean, compelling titles (max ~50 chars)
 const generateSmartDealTitle = (deal, venueName = '') => {
-  const { title = '', description = '' } = deal;
+  const { title = '' } = deal;
 
   // Generic titles that need enhancement
   const genericTitles = ['happy hour', 'family night', 'date night', 'special', 'deal', 'promo', 'offer'];
@@ -8190,7 +8189,7 @@ const generateSmartDealTitle = (deal, venueName = '') => {
 
 // Enhanced Deal Description Generator - creates rich, informative descriptions
 const generateEnhancedDealDescription = (deal, venueName = '') => {
-  const { title = '', description = '', category = '', discount = '', schedule = '', terms = '' } = deal;
+  const { title = '', description = '', category = '', discount = '', schedule = '' } = deal;
   const businessName = venueName || deal.venueName || 'this local business';
 
   // If there's already a UNIQUE good description (different from title, > 80 chars), use it enhanced
@@ -8377,7 +8376,7 @@ const calculateDealScore = (deal) => {
 };
 
 // Get deal tier for visual badges
-const getDealTier = (deal) => {
+const _getDealTier = (deal) => {
   const score = calculateDealScore(deal);
   if (score >= 80) return { tier: 'hot', label: '🔥 Hot Deal', color: '#ef4444' };
   if (score >= 50) return { tier: 'great', label: '💎 Great Value', color: '#8b5cf6' };
@@ -8493,17 +8492,17 @@ export default function PulseApp() {
   const [newEventCategories, setNewEventCategories] = useState([]);
 
   // Helper function to show toast messages
-  const showToast = (message, type = 'info') => {
+  const showToast = useCallback((message, _type = 'info') => {
     setCalendarToastMessage(message);
     setShowCalendarToast(true);
     setTimeout(() => setShowCalendarToast(false), 3000);
-  };
+  }, []);
 
   // User data from Supabase (replaces all hardcoded dummy data)
   const {
     session,
     isAuthenticated,
-    loading: userLoading,
+    loading: _userLoading,
     user,
     userStats,
     userAchievements,
@@ -8525,8 +8524,8 @@ export default function PulseApp() {
   // Profile modal state
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [profileTab, setProfileTab] = useState('overview'); // overview, activity, saved, businesses, settings
-  const [editingProfile, setEditingProfile] = useState(false);
-  const [profileForm, setProfileForm] = useState({});
+  const [_editingProfile, _setEditingProfile] = useState(false);
+  const [_profileForm, _setProfileForm] = useState({});
 
   const [savedItemsFilter, setSavedItemsFilter] = useState('event');
   const [localSavedItems, setLocalSavedItems] = useState(() => {
@@ -8603,7 +8602,7 @@ export default function PulseApp() {
         setShowEditVenueModal(false);
         setShowMessagesModal(false);
         setShowAddEventModal(false);
-        setShowMyCalendar(false);
+        setShowMyCalendarModal(false);
         setShowBookingSheet(false);
         setShowContactSheet(false);
       }
@@ -8793,7 +8792,7 @@ export default function PulseApp() {
     if (!messageInput.trim() || !currentConversation || sendingMessage || !user?.id) return;
     setSendingMessage(true);
     try {
-      const { data, error } = await supabase.rpc('send_message', {
+      const { error } = await supabase.rpc('send_message', {
         p_conversation_id: currentConversation.id,
         p_sender_id: user.id,
         p_sender_type: 'user',
@@ -8954,17 +8953,17 @@ export default function PulseApp() {
     }
   };
 
-  // Handle iframe load/error
-  const handleIframeLoad = () => {
+  // Handle iframe load/error - kept for future use
+  const _handleIframeLoad = () => {
     setIframeLoaded(true);
   };
 
-  const handleIframeError = () => {
+  const _handleIframeError = () => {
     setIframeFailed(true);
   };
 
-  // Handle contact business
-  const handleContactBusiness = (business) => {
+  // Handle contact business - kept for future use
+  const _handleContactBusiness = (business) => {
     if (user.isGuest) {
       setShowAuthModal(true);
       return;
@@ -9101,6 +9100,11 @@ export default function PulseApp() {
     }
   };
 
+  // Business Analytics State
+  const [businessAnalytics, setBusinessAnalytics] = useState(null);
+  const [_analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [analyticsPeriod, setAnalyticsPeriod] = useState(30); // days
+
   // Fetch business analytics
   const fetchBusinessAnalytics = async (businessId, days = 30) => {
     if (!businessId) return;
@@ -9127,7 +9131,19 @@ export default function PulseApp() {
       fetchBusinessInbox(businessId, 'booking_request');
       fetchBusinessAnalytics(businessId, analyticsPeriod);
     }
-  }, [view, userClaimedBusinesses]);
+  }, [view, userClaimedBusinesses, analyticsPeriod]);
+
+  // Admin panel state (must be declared before useEffect that uses it)
+  const [pendingSubmissions, setPendingSubmissions] = useState([]);
+  const [showAdminPanel, setShowAdminPanel] = useState(false);
+  const [adminTab, setAdminTab] = useState('pending'); // 'pending', 'approved', 'rejected'
+
+  // Load pending submissions when admin panel opens
+  useEffect(() => {
+    if (showAdminPanel && user?.isAdmin) {
+      loadPendingSubmissions();
+    }
+  }, [showAdminPanel, user?.isAdmin]);
 
   // Submission system state
   const [showSubmissionModal, setShowSubmissionModal] = useState(false);
@@ -9163,13 +9179,9 @@ export default function PulseApp() {
   const [cropperImage, setCropperImage] = useState(null);
   const [cropPosition, setCropPosition] = useState({ x: 0, y: 0 });
   const [cropZoom, setCropZoom] = useState(1);
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-  const cropperRef = useRef(null);
-  
-  const [pendingSubmissions, setPendingSubmissions] = useState([]);
-  const [showAdminPanel, setShowAdminPanel] = useState(false);
-  const [adminTab, setAdminTab] = useState('pending'); // 'pending', 'approved', 'rejected'
+  const [_isDragging, _setIsDragging] = useState(false);
+  const [_dragStart, _setDragStart] = useState({ x: 0, y: 0 });
+  const _cropperRef = useRef(null);
 
   // User authentication state
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -9207,8 +9219,8 @@ export default function PulseApp() {
   const [showBookingSheet, setShowBookingSheet] = useState(false);
   const [bookingEvent, setBookingEvent] = useState(null);
   const [bookingStep, setBookingStep] = useState('iframe'); // iframe, request, confirmation
-  const [iframeLoaded, setIframeLoaded] = useState(false);
-  const [iframeFailed, setIframeFailed] = useState(false);
+  const [_iframeLoaded, setIframeLoaded] = useState(false);
+  const [_iframeFailed, setIframeFailed] = useState(false);
   const [showBookingConfirmation, setShowBookingConfirmation] = useState(false);
   const [bookingRequestMessage, setBookingRequestMessage] = useState('');
   const [showMessagesModal, setShowMessagesModal] = useState(false);
@@ -9235,11 +9247,6 @@ export default function PulseApp() {
   const [businessMessages, setBusinessMessages] = useState([]);
   const [businessMessagesLoading, setBusinessMessagesLoading] = useState(false);
   const [businessReplyInput, setBusinessReplyInput] = useState('');
-
-  // Business Analytics State
-  const [businessAnalytics, setBusinessAnalytics] = useState(null);
-  const [analyticsLoading, setAnalyticsLoading] = useState(false);
-  const [analyticsPeriod, setAnalyticsPeriod] = useState(30); // days
 
   const categories = ['All', 'Music', 'Fitness', 'Arts', 'Community', 'Games', 'Wellness', 'Outdoors & Nature', 'Nightlife', 'Family', 'Food & Drink'];
 
@@ -9291,7 +9298,7 @@ export default function PulseApp() {
   };
 
   // Remove event from My Calendar
-  const removeFromCalendar = async (eventId) => {
+  const removeFromCalendar = async (_eventId) => {
     if (!isAuthenticated) return;
     // For now, just show toast - full removal would need a Supabase function
     setCalendarToastMessage('Event removed from My Calendar');
@@ -9446,7 +9453,7 @@ export default function PulseApp() {
       const response = await fetch(cropperImage);
       const blob = await response.blob();
       const file = new File([blob], 'avatar.jpg', { type: 'image/jpeg' });
-      const { error, url } = await updateAvatar(file);
+      const { error } = await updateAvatar(file);
       if (error) {
         setCalendarToastMessage('Error uploading avatar. Please try again.');
         setShowCalendarToast(true);
@@ -9461,7 +9468,7 @@ export default function PulseApp() {
       const response = await fetch(cropperImage);
       const blob = await response.blob();
       const file = new File([blob], 'cover.jpg', { type: 'image/jpeg' });
-      const { error, url } = await updateCoverPhoto(file);
+      const { error } = await updateCoverPhoto(file);
       if (error) {
         setCalendarToastMessage('Error uploading cover photo. Please try again.');
         setShowCalendarToast(true);
@@ -9504,47 +9511,175 @@ export default function PulseApp() {
     return null;
   };
 
-  // Submit for admin approval
-  const submitForApproval = () => {
+  // Submit for admin approval - persists to database
+  const submitForApproval = async () => {
     const selectedBusiness = getSelectedBusinessInfo();
-    const submission = {
-      id: `submission-${Date.now()}`,
-      type: submissionType,
-      status: 'pending',
-      submittedAt: new Date(),
-      submittedBy: {
-        name: user.name,
-        email: user.email
-      },
-      business: {
-        type: submissionForm.businessType,
-        name: submissionForm.businessName,
-        address: submissionForm.businessAddress,
-        verified: selectedBusiness?.verified || false
-      },
-      data: { ...submissionForm },
-      images: {
-        square: submissionForm.squareImagePreview,
-        banner: submissionForm.bannerImagePreview
+
+    try {
+      const submissionData = {
+        item_type: submissionType,
+        action: 'create',
+        data: {
+          ...submissionForm,
+          submittedBy: { name: user.name, email: user.email },
+          business: {
+            type: submissionForm.businessType,
+            name: submissionForm.businessName || selectedBusiness?.name,
+            address: submissionForm.businessAddress,
+            verified: selectedBusiness?.verified || false
+          },
+          images: {
+            square: submissionForm.squareImagePreview,
+            banner: submissionForm.bannerImagePreview
+          }
+        },
+        source: 'web_app',
+        business_id: selectedBusiness?.id || null,
+        submitted_by: user.id || null,
+        status: 'pending'
+      };
+
+      const { data, error } = await supabase
+        .from('pending_items')
+        .insert(submissionData)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Update local state with the new submission
+      setPendingSubmissions(prev => [...prev, {
+        id: data.id,
+        type: data.item_type,
+        status: data.status,
+        submittedAt: new Date(data.created_at),
+        submittedBy: { name: user.name, email: user.email },
+        business: submissionData.data.business,
+        data: data.data,
+        images: submissionData.data.images
+      }]);
+
+      setSubmissionStep(3); // Success step
+      showToast('Submission sent for review!', 'success');
+    } catch (err) {
+      console.error('Submission error:', err);
+      showToast('Failed to submit. Please try again.', 'error');
+    }
+  };
+
+  // Admin: Approve submission - updates database and creates the item
+  const approveSubmission = async (submissionId) => {
+    try {
+      // Get the submission data
+      const submission = pendingSubmissions.find(s => s.id === submissionId);
+      if (!submission) return;
+
+      // Update pending_items status
+      const { error: updateError } = await supabase
+        .from('pending_items')
+        .update({
+          status: 'approved',
+          reviewed_by: user.id,
+          reviewed_at: new Date().toISOString()
+        })
+        .eq('id', submissionId);
+
+      if (updateError) throw updateError;
+
+      // Create the actual event/class/deal in the events table
+      if (submission.type === 'event' || submission.type === 'class') {
+        const eventData = {
+          title: submission.data.title,
+          description: submission.data.description,
+          start_date: submission.data.date,
+          start_time: submission.data.startTime,
+          end_time: submission.data.endTime,
+          venue_name: submission.data.businessName || submission.business?.name,
+          venue_id: submission.business_id,
+          event_type: submission.type,
+          category: submission.data.category,
+          price: submission.data.price,
+          recurrence: submission.data.recurrence,
+          tags: ['user-submitted'],
+          status: 'active'
+        };
+
+        const { error: insertError } = await supabase
+          .from('events')
+          .insert(eventData);
+
+        if (insertError) throw insertError;
       }
-    };
-    
-    setPendingSubmissions(prev => [...prev, submission]);
-    setSubmissionStep(3); // Success step
+
+      // Update local state
+      setPendingSubmissions(prev =>
+        prev.map(s => s.id === submissionId ? { ...s, status: 'approved', approvedAt: new Date() } : s)
+      );
+
+      showToast('Submission approved and published!', 'success');
+
+      // Refresh events to show the new item - trigger a page reload for simplicity
+      if (submission.type === 'event' || submission.type === 'class') {
+        // The useEffect will refetch events on next render
+        showToast('Submission approved! Refresh to see the new item.', 'success');
+      }
+    } catch (_err) {
+      showToast('Failed to approve. Please try again.', 'error');
+    }
   };
 
-  // Admin: Approve submission
-  const approveSubmission = (submissionId) => {
-    setPendingSubmissions(prev => 
-      prev.map(s => s.id === submissionId ? { ...s, status: 'approved', approvedAt: new Date() } : s)
-    );
+  // Admin: Reject submission - updates database
+  const rejectSubmission = async (submissionId, reason) => {
+    try {
+      const { error } = await supabase
+        .from('pending_items')
+        .update({
+          status: 'rejected',
+          reviewed_by: user.id,
+          reviewed_at: new Date().toISOString(),
+          review_notes: reason
+        })
+        .eq('id', submissionId);
+
+      if (error) throw error;
+
+      setPendingSubmissions(prev =>
+        prev.map(s => s.id === submissionId ? { ...s, status: 'rejected', rejectedAt: new Date(), rejectReason: reason } : s)
+      );
+
+      showToast('Submission rejected.', 'info');
+    } catch (err) {
+      console.error('Rejection error:', err);
+      showToast('Failed to reject. Please try again.', 'error');
+    }
   };
 
-  // Admin: Reject submission
-  const rejectSubmission = (submissionId, reason) => {
-    setPendingSubmissions(prev => 
-      prev.map(s => s.id === submissionId ? { ...s, status: 'rejected', rejectedAt: new Date(), rejectReason: reason } : s)
-    );
+  // Load pending submissions from database
+  const loadPendingSubmissions = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('pending_items')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      if (data) {
+        setPendingSubmissions(data.map(item => ({
+          id: item.id,
+          type: item.item_type,
+          status: item.status,
+          submittedAt: new Date(item.created_at),
+          submittedBy: item.data?.submittedBy || { name: 'Unknown', email: '' },
+          business: item.data?.business || {},
+          data: item.data || {},
+          images: item.data?.images || {},
+          rejectReason: item.review_notes
+        })));
+      }
+    } catch (err) {
+      console.error('Failed to load submissions:', err);
+    }
   };
 
   // Get available time slots from actual events (30-min intervals)
@@ -9601,7 +9736,7 @@ export default function PulseApp() {
         setAuthPassword('');
         setAuthMode('signin');
       }
-    } catch (err) {
+    } catch {
       setAuthError('An unexpected error occurred');
     } finally {
       setAuthLoading(false);
@@ -9645,7 +9780,7 @@ export default function PulseApp() {
         setAuthName('');
         setAuthMode('signin');
       }
-    } catch (err) {
+    } catch {
       setAuthError('An unexpected error occurred');
     } finally {
       setAuthLoading(false);
@@ -9701,7 +9836,7 @@ export default function PulseApp() {
   };
   const isVerified = (venueId) => REAL_DATA.venues.find(v => v.id === venueId)?.verified || false;
   
-  const getTimeUntil = (date) => {
+  const _getTimeUntil = (date) => {
     const hours = Math.floor((date - new Date()) / (1000 * 60 * 60));
     if (hours < 0) return 'Past';
     if (hours < 1) return 'Soon';
@@ -9713,6 +9848,16 @@ export default function PulseApp() {
     const now = new Date();
     // Combine hardcoded events with database events
     let filtered = [...REAL_DATA.events, ...dbEvents];
+
+    // Filter out bad data - titles that are just booking status, not actual class names
+    filtered = filtered.filter(e => {
+      const title = e.title || '';
+      // Skip entries where title is just booking status like "(8 Reserved, 2 Open)"
+      if (/^\(\d+\s+Reserved,\s+\d+\s+Open\)$/.test(title)) return false;
+      // Skip entries with no meaningful title
+      if (title.length < 3) return false;
+      return true;
+    });
 
     // Filter by section (events vs classes)
     if (currentSection === 'events') {
@@ -9970,13 +10115,25 @@ export default function PulseApp() {
     }
 
     // Optimistic update for logged-in users
+    const wasIncluded = localSavedItems.includes(itemKey);
     setLocalSavedItems(prev => {
       const exists = prev.includes(itemKey);
       return exists ? prev.filter(k => k !== itemKey) : [...prev, itemKey];
     });
 
-    await toggleSaveItem(type, String(id), name, data);
-  }, [isAuthenticated, toggleSaveItem]);
+    try {
+      const result = await toggleSaveItem(type, String(id), name, data);
+      if (result?.error) {
+        // Revert optimistic update on error
+        setLocalSavedItems(prev => wasIncluded ? [...prev, itemKey] : prev.filter(k => k !== itemKey));
+        showToast('Failed to save. Please try again.', 'error');
+      }
+    } catch {
+      // Revert optimistic update on error
+      setLocalSavedItems(prev => wasIncluded ? [...prev, itemKey] : prev.filter(k => k !== itemKey));
+      showToast('Failed to save. Please try again.', 'error');
+    }
+  }, [isAuthenticated, toggleSaveItem, localSavedItems, showToast]);
 
   // Combined check for saved items (local + database)
   const isItemSavedLocal = useCallback((type, id) => {
@@ -10311,16 +10468,24 @@ export default function PulseApp() {
               </div>
               
               <div className="header-actions-premium">
-                <button className="header-btn-icon messages-btn" onClick={openMessages}>
-                  <MessageCircle size={20} />
-                </button>
-                <button className="header-btn-icon notification-btn">
-                  <Bell size={20} />
-                  <span className="notification-dot"></span>
-                </button>
-                <div className="profile-btn" onClick={() => user.isGuest ? setShowAuthModal(true) : setShowProfileMenu(!showProfileMenu)}>
-                  <div className="profile-avatar">{user.avatar ? <img src={user.avatar} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} /> : (user.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'U')}</div>
-                </div>
+                {user.isGuest ? (
+                  <button className="sign-in-btn" onClick={() => setShowAuthModal(true)}>
+                    Sign In
+                  </button>
+                ) : (
+                  <>
+                    <button className="header-btn-icon messages-btn" onClick={openMessages}>
+                      <MessageCircle size={20} color="#374151" strokeWidth={2} />
+                    </button>
+                    <button className="header-btn-icon notification-btn">
+                      <Bell size={20} color="#374151" strokeWidth={2} />
+                      <span className="notification-dot"></span>
+                    </button>
+                    <div className="profile-btn" onClick={() => setShowProfileMenu(!showProfileMenu)}>
+                      <div className="profile-avatar">{user.avatar ? <img src={user.avatar} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} /> : (user.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'U')}</div>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </header>
@@ -11064,13 +11229,9 @@ export default function PulseApp() {
                     }}
                   >
                     {isInMyCalendar(selectedEvent.id) ? (
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                        <path d="M20 6L9 17L4 12" stroke="#16a34a" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
+                      <Check size={22} color="#16a34a" strokeWidth={3} />
                     ) : (
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                        <path d="M12 5V19M5 12H19" stroke="#7c3aed" strokeWidth="2.5" strokeLinecap="round"/>
-                      </svg>
+                      <CalendarPlus size={22} color="#7c3aed" strokeWidth={2} />
                     )}
                   </button>
                 </div>
@@ -12539,8 +12700,9 @@ export default function PulseApp() {
                   </>
                 )}
 
-                {/* Image Cropper Modal - DISABLED: Using global cropper at end of file instead */}
-                {false && showImageCropper && cropperImage && (
+                {/* Image Cropper Modal - Using global cropper at end of file instead
+                   This duplicate is kept for reference but controlled by showImageCropper */}
+                {showImageCropper && cropperImage && (
                   <div className="cropper-overlay" onClick={() => { setShowImageCropper(false); setCropPosition({ x: 0, y: 0 }); setCropZoom(1); }}>
                     <div className="cropper-modal" onClick={(e) => e.stopPropagation()}>
                       <div className="cropper-header">
@@ -15757,6 +15919,25 @@ export default function PulseApp() {
 
         .messages-btn:hover {
           color: #3b82f6;
+        }
+
+        .sign-in-btn {
+          background: #2563eb;
+          color: white;
+          border: none;
+          padding: 10px 20px;
+          border-radius: 10px;
+          font-weight: 600;
+          font-size: 14px;
+          cursor: pointer;
+          transition: all 0.2s;
+          box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+        }
+
+        .sign-in-btn:hover {
+          background: #1d4ed8;
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
         }
 
         /* Event Card Book Button */

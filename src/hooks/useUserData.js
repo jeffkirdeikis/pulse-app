@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
+import { setUser as setSentryUser, clearUser as clearSentryUser } from '../lib/sentry';
 
 /**
  * Hook to manage all user data from Supabase
@@ -327,8 +328,18 @@ export function useUserData() {
     }
   };
 
+  // Set Sentry user context when user state changes
+  useEffect(() => {
+    if (user.id && !user.isGuest) {
+      setSentryUser(user);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user.id, user.isGuest, user.email, user.name]);
+
   // Reset data on logout
   const resetUserData = () => {
+    // Clear Sentry user context
+    clearSentryUser();
     setUser({
       id: null,
       name: '',

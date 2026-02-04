@@ -139,7 +139,16 @@ function parseClassicSchedule(text, studio) {
     const timeMatch = line.match(/^(\d{1,2}:\d{2}\s*(?:am|pm))\s*PST$/i);
     if (timeMatch && currentDate) {
       // Next line should be class name
-      const className = lines[i + 1];
+      let offset = 1;
+      let className = lines[i + offset] || '';
+
+      // Skip availability text pattern "(N Reserved, N Open)" or "(N Reserved, N Waitlisted)"
+      // These are booking status, not class names
+      if (/^\(\d+\s+Reserved,\s+\d+\s+(Open|Waitlisted)\)$/i.test(className)) {
+        offset++;
+        className = lines[i + offset] || '';
+      }
+
       if (!className) continue;
 
       // Skip if class is cancelled or is a navigation element
