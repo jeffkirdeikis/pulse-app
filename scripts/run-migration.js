@@ -9,11 +9,11 @@ import { createClient } from '@supabase/supabase-js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { SUPABASE_URL, SUPABASE_SERVICE_KEY } from './lib/env.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://ygpfklhjwwqwrfpsfhue.supabase.co';
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || 'REDACTED_SERVICE_KEY';
+const SUPABASE_KEY = SUPABASE_SERVICE_KEY();
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: { persistSession: false }

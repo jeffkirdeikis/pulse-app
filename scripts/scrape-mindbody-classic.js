@@ -8,9 +8,9 @@
  */
 
 import puppeteer from 'puppeteer';
+import { SUPABASE_URL, SUPABASE_SERVICE_KEY } from './lib/env.js';
 
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://ygpfklhjwwqwrfpsfhue.supabase.co';
-const SUPABASE_KEY = process.env.SUPABASE_KEY || 'REDACTED_SERVICE_KEY';
+const SUPABASE_KEY = SUPABASE_SERVICE_KEY();
 
 // Studios using classic Mindbody interface
 const CLASSIC_STUDIOS = [

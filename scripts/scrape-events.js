@@ -5,9 +5,10 @@
  * Run: node scripts/scrape-events.js
  */
 
-const FIRECRAWL_API_KEY = process.env.FIRECRAWL_API_KEY || 'REDACTED_FIRECRAWL_KEY';
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://ygpfklhjwwqwrfpsfhue.supabase.co';
-const SUPABASE_KEY = process.env.SUPABASE_KEY || 'REDACTED_SERVICE_KEY';
+import { SUPABASE_URL, SUPABASE_SERVICE_KEY, FIRECRAWL_API_KEY as getFirecrawlKey } from './lib/env.js';
+
+const FIRECRAWL_API_KEY = getFirecrawlKey();
+const SUPABASE_KEY = SUPABASE_SERVICE_KEY();
 
 // Squamish event sources - aggregators and community sites
 const EVENT_SOURCES = [

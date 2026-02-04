@@ -5,9 +5,10 @@
  * Run: node scripts/update-google-data.js
  */
 
-const GOOGLE_API_KEY = process.env.GOOGLE_PLACES_API_KEY || 'REDACTED_GOOGLE_API_KEY';
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://ygpfklhjwwqwrfpsfhue.supabase.co';
-const SUPABASE_KEY = process.env.SUPABASE_KEY || 'REDACTED_SERVICE_KEY';
+import { SUPABASE_URL, SUPABASE_SERVICE_KEY, GOOGLE_PLACES_API_KEY } from './lib/env.js';
+
+const GOOGLE_API_KEY = GOOGLE_PLACES_API_KEY();
+const SUPABASE_KEY = SUPABASE_SERVICE_KEY();
 
 async function findPlaceId(name, address) {
   const query = encodeURIComponent(`${name} ${address} Squamish BC`);
