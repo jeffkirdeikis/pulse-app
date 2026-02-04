@@ -235,21 +235,63 @@ async function scrapeStudio(browser, studio) {
     }, studio.tabId);
     await new Promise(r => setTimeout(r, 5000));
 
-    // Get page text
-    const text = await page.evaluate(() => document.body.innerText);
+    // Filter for next 30 days (use string comparison to avoid timezone issues)
+    const endDate = new Date(today);
+    endDate.setDate(today.getDate() + 30);
+    const endDateStr = pacificFormatter.format(endDate);
 
-    // Check for security block
-    if (text.includes('Security Check') || text.includes('Verifying you are human')) {
-      throw new Error('Blocked by security check');
+    // Scrape multiple weeks (Classic Mindbody shows one week at a time)
+    const allClasses = [];
+    const WEEKS_TO_SCRAPE = 5; // ~35 days of classes
+
+    for (let week = 0; week < WEEKS_TO_SCRAPE; week++) {
+      // Get page text
+      const text = await page.evaluate(() => document.body.innerText);
+
+      // Check for security block
+      if (text.includes('Security Check') || text.includes('Verifying you are human')) {
+        throw new Error('Blocked by security check');
+      }
+
+      // Parse classes from current week view
+      const weekClasses = parseClassicSchedule(text, studio);
+      allClasses.push(...weekClasses);
+
+      // Click "next week" button to navigate forward
+      if (week < WEEKS_TO_SCRAPE - 1) {
+        const clicked = await page.evaluate(() => {
+          // Mindbody classic uses #week-arrow-r for next week navigation
+          const weekArrowRight = document.querySelector('#week-arrow-r');
+          if (weekArrowRight) {
+            weekArrowRight.click();
+            return true;
+          }
+          // Fallback selectors
+          const nextButtons = document.querySelectorAll('.date-arrow-r, a[href*="fw=1"], .next-week');
+          for (const btn of nextButtons) {
+            btn.click();
+            return true;
+          }
+          return false;
+        });
+
+        if (clicked) {
+          await new Promise(r => setTimeout(r, 3000));
+        } else {
+          console.log(`   Week ${week + 1}: Could not find next week button`);
+          break;
+        }
+      }
     }
 
-    // Parse classes
-    const classes = parseClassicSchedule(text, studio);
-
-    // Filter for next 7 days (use string comparison to avoid timezone issues)
-    const endDate = new Date(today);
-    endDate.setDate(today.getDate() + 7);
-    const endDateStr = pacificFormatter.format(endDate);
+    // Deduplicate classes (same class might appear if weeks overlap)
+    const seen = new Set();
+    const classes = allClasses.filter(c => {
+      const key = `${c.title}-${c.time}-${c.date}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
 
     for (const cls of classes) {
       // Compare dates as strings (YYYY-MM-DD format)

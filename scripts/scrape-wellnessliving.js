@@ -11,7 +11,7 @@ import { SUPABASE_URL, SUPABASE_SERVICE_KEY } from './lib/env.js';
 
 const SUPABASE_KEY = SUPABASE_SERVICE_KEY();
 
-const DAYS_TO_SCRAPE = 7; // Reduced from 30 to prevent timeout
+const DAYS_TO_SCRAPE = 30;
 
 // WellnessLiving studios
 const WELLNESS_STUDIOS = [

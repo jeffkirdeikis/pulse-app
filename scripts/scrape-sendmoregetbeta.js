@@ -11,7 +11,7 @@ import { SUPABASE_URL, SUPABASE_SERVICE_KEY } from './lib/env.js';
 
 const SUPABASE_KEY = SUPABASE_SERVICE_KEY();
 
-const DAYS_TO_SCRAPE = 7;
+const DAYS_TO_SCRAPE = 30;
 
 // Studios using SendMoreGetBeta
 const SENDMORE_STUDIOS = [
