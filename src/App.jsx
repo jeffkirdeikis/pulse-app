@@ -10475,10 +10475,10 @@ export default function PulseApp() {
                 ) : (
                   <>
                     <button className="header-btn-icon messages-btn" onClick={openMessages}>
-                      <MessageCircle size={20} color="#374151" strokeWidth={2} />
+                      <MessageCircle size={22} color="#374151" strokeWidth={2} style={{ stroke: '#374151' }} />
                     </button>
                     <button className="header-btn-icon notification-btn">
-                      <Bell size={20} color="#374151" strokeWidth={2} />
+                      <Bell size={22} color="#374151" strokeWidth={2} style={{ stroke: '#374151' }} />
                       <span className="notification-dot"></span>
                     </button>
                     <div className="profile-btn" onClick={() => setShowProfileMenu(!showProfileMenu)}>
@@ -11229,9 +11229,18 @@ export default function PulseApp() {
                     }}
                   >
                     {isInMyCalendar(selectedEvent.id) ? (
-                      <Check size={22} color="#16a34a" strokeWidth={3} />
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" style={{ stroke: '#15803d', strokeWidth: 3 }} strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                      </svg>
                     ) : (
-                      <CalendarPlus size={22} color="#7c3aed" strokeWidth={2} />
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" style={{ stroke: '#5b21b6', strokeWidth: 2.5 }} strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                        <line x1="12" y1="14" x2="12" y2="18"></line>
+                        <line x1="10" y1="16" x2="14" y2="16"></line>
+                      </svg>
                     )}
                   </button>
                 </div>
@@ -15917,8 +15926,21 @@ export default function PulseApp() {
           transform: scale(1.05);
         }
 
+        .header-btn-icon svg {
+          stroke: #374151 !important;
+          stroke-width: 2 !important;
+        }
+
         .messages-btn:hover {
           color: #3b82f6;
+        }
+
+        .messages-btn:hover svg {
+          stroke: #3b82f6 !important;
+        }
+
+        .notification-btn:hover svg {
+          stroke: #f59e0b !important;
         }
 
         .sign-in-btn {
