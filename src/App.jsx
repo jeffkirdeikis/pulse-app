@@ -10475,10 +10475,14 @@ export default function PulseApp() {
                 ) : (
                   <>
                     <button className="header-btn-icon messages-btn" onClick={openMessages}>
-                      <MessageCircle size={22} color="#374151" strokeWidth={2} style={{ stroke: '#374151' }} />
+                      <div style={{ color: '#374151', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <MessageCircle size={22} strokeWidth={2} />
+                      </div>
                     </button>
                     <button className="header-btn-icon notification-btn">
-                      <Bell size={22} color="#374151" strokeWidth={2} style={{ stroke: '#374151' }} />
+                      <div style={{ color: '#374151', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Bell size={22} strokeWidth={2} />
+                      </div>
                       <span className="notification-dot"></span>
                     </button>
                     <div className="profile-btn" onClick={() => setShowProfileMenu(!showProfileMenu)}>
@@ -11216,32 +11220,25 @@ export default function PulseApp() {
                       height: '44px',
                       minWidth: '44px',
                       background: isInMyCalendar(selectedEvent.id)
-                        ? 'linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%)'
-                        : 'linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%)',
-                      border: 'none',
+                        ? '#dcfce7'
+                        : '#ffffff',
+                      border: isInMyCalendar(selectedEvent.id) ? '2px solid #bbf7d0' : '2px solid #c7d2fe',
                       borderRadius: '12px',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       cursor: 'pointer',
                       flexShrink: 0,
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
                     }}
                   >
-                    {isInMyCalendar(selectedEvent.id) ? (
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" style={{ stroke: '#15803d', strokeWidth: 3 }} strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="20 6 9 17 4 12"></polyline>
-                      </svg>
-                    ) : (
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" style={{ stroke: '#5b21b6', strokeWidth: 2.5 }} strokeLinecap="round" strokeLinejoin="round">
-                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                        <line x1="16" y1="2" x2="16" y2="6"></line>
-                        <line x1="8" y1="2" x2="8" y2="6"></line>
-                        <line x1="3" y1="10" x2="21" y2="10"></line>
-                        <line x1="12" y1="14" x2="12" y2="18"></line>
-                        <line x1="10" y1="16" x2="14" y2="16"></line>
-                      </svg>
-                    )}
+                    <div style={{ color: isInMyCalendar(selectedEvent.id) ? '#047857' : '#4f46e5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {isInMyCalendar(selectedEvent.id) ? (
+                        <Check size={22} strokeWidth={3} />
+                      ) : (
+                        <CalendarPlus size={22} strokeWidth={2} />
+                      )}
+                    </div>
                   </button>
                 </div>
 
@@ -16994,7 +16991,25 @@ export default function PulseApp() {
           transform: translateY(-1px);
           box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15);
         }
-        
+
+        /* Force icon visibility - Lucide icons use stroke for rendering */
+        .header-btn-icon svg,
+        .header-btn-icon svg path,
+        .header-btn-icon svg line,
+        .header-btn-icon svg polyline,
+        .header-btn-icon svg circle {
+          stroke: #374151 !important;
+          stroke-width: 2 !important;
+        }
+
+        .header-btn-icon:hover svg,
+        .header-btn-icon:hover svg path,
+        .header-btn-icon:hover svg line,
+        .header-btn-icon:hover svg polyline,
+        .header-btn-icon:hover svg circle {
+          stroke: #3b82f6 !important;
+        }
+
         .notification-btn .notification-dot {
           position: absolute;
           top: 8px;
@@ -22384,7 +22399,6 @@ export default function PulseApp() {
           display: flex;
           align-items: center;
           justify-content: center;
-          color: #374151;
           cursor: pointer;
           transition: all 0.2s ease;
           flex-shrink: 0;
@@ -22395,11 +22409,7 @@ export default function PulseApp() {
           transform: scale(1.05);
         }
 
-        .add-calendar-btn svg {
-          width: 22px;
-          height: 22px;
-          fill: none;
-        }
+        /* No special SVG rules - let Lucide handle it with color inheritance */
 
         /* Event Quick Actions */
         .event-quick-actions {

@@ -119,29 +119,59 @@ grep -n "TODO\|FIXME" src/App.jsx                                         # Inco
 
 ---
 
-## 🖼️ MANDATORY VISUAL QA
+## 🚨🚨🚨 MANDATORY VISUAL QA - #1 CRITICAL RULE 🚨🚨🚨
 
-**"npm run build" passing does NOT mean the feature works visually.**
+**On Feb 4, 2026: Claimed icons were "fixed" 10+ times based on computed styles and code changes. Every time the icons were still visually broken. STOP CLAIMING THINGS ARE FIXED WITHOUT VISUAL PROOF.**
+
+### The Only Valid QA for Visual Changes
+
+1. Take screenshot
+2. **ACTUALLY LOOK at the screenshot**
+3. **CONFIRM with your own eyes** that the fix is visible
+4. If you can't clearly see the fix working → IT'S NOT FIXED
+
+### What Does NOT Count as Verification
+
+| NOT Valid | Why |
+|-----------|-----|
+| `npm run build` passes | Build doesn't verify visual appearance |
+| Computed styles show correct values | CSS can be "correct" but still not render |
+| Code review looks right | Code can be wrong even if it looks right |
+| "Should work now" | Assumptions are not verification |
 
 ### Screenshot Protocol
 
 ```bash
-node screenshot.cjs          # Take screenshot
-# Then use Read tool on /tmp/app-modal.png to view
+# 1. Take screenshot
+node screenshot.cjs
+
+# 2. READ the screenshot file - actually view it
+Read tool on /tmp/app-modal.png
+
+# 3. LOOK at the image and ASK YOURSELF:
+#    - Can I clearly see the element that was broken?
+#    - Is it now visually correct?
+#    - Would the user be satisfied?
+
+# 4. If ANY doubt → the fix is not complete
 ```
 
-### When to Screenshot
+### Lucide Icon Fix Pattern (PROVEN Feb 4, 2026)
 
-- Any UI/styling change
-- Before telling user "it's fixed"
-- When user reports something broken
-
-### CSS Fix That Actually Works (Lucide Icons)
-
+**WRONG** - These do NOT reliably work:
 ```jsx
-// Don't fight CSS specificity - use inline props:
 <Bell size={22} color="#374151" strokeWidth={2} />
+<Bell size={22} color="#374151" style={{ stroke: '#374151' }} />
 ```
+
+**CORRECT** - Wrap in div with color set:
+```jsx
+<div style={{ color: '#374151', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+  <Bell size={22} strokeWidth={2} />
+</div>
+```
+
+Lucide icons use `stroke: currentColor`. The `currentColor` value requires a parent element with `color` set via CSS/style for proper inheritance inside button elements.
 
 ---
 
@@ -203,6 +233,8 @@ When a bug is reported:
 | CSS Blocking | z-index blocks input | Actually TYPE in inputs |
 | Wrong Context | Modal in wrong view | Verify render context |
 | Partial Testing | Modal opens, inputs broken | Test ENTIRE feature |
+| **Computed ≠ Visual** | Styles show correct color, icon still invisible | **LOOK at the screenshot** |
+| **CSS Inheritance** | Lucide icon color prop doesn't work in buttons | Wrap in div with color style |
 
 ---
 
@@ -217,6 +249,9 @@ Never mark complete if:
 - Modal opens empty
 - You haven't actually tested it
 - Assuming it works from code review only
+- **For visual fixes: You haven't taken AND VIEWED a screenshot**
+- **Computed styles look correct but you haven't visually verified**
+- **You're about to say "should work now" or "that should fix it"**
 
 ---
 
