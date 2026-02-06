@@ -12,8 +12,8 @@
  * 4. Write to Supabase as a secondary data source
  */
 
-const puppeteer = require('puppeteer');
-const { createClient } = require('@supabase/supabase-js');
+import puppeteer from 'puppeteer';
+import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
   process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL,
@@ -73,7 +73,7 @@ async function scrapeJaneDiscover() {
     });
 
     // Wait for the page to fully render
-    await page.waitForTimeout(3000);
+    await new Promise(r => setTimeout(r, 3000));
 
     // Try to set location to Squamish
     console.log('📍 Setting location to Squamish, BC...');
@@ -84,7 +84,7 @@ async function scrapeJaneDiscover() {
     if (locationInput) {
       await locationInput.click({ clickCount: 3 }); // Select all existing text
       await locationInput.type('Squamish, BC', { delay: 50 });
-      await page.waitForTimeout(1500);
+      await new Promise(r => setTimeout(r, 1500));
 
       // Try to select from autocomplete dropdown
       const autocompleteItem = await page.$(
@@ -95,7 +95,7 @@ async function scrapeJaneDiscover() {
       } else {
         await page.keyboard.press('Enter');
       }
-      await page.waitForTimeout(2000);
+      await new Promise(r => setTimeout(r, 2000));
     } else {
       console.log('  ⚠️ Could not find location input');
     }
@@ -115,7 +115,7 @@ async function scrapeJaneDiscover() {
 
       if (filterBtn && filterBtn.asElement()) {
         await filterBtn.asElement().click();
-        await page.waitForTimeout(2000);
+        await new Promise(r => setTimeout(r, 2000));
       }
 
       // Extract visible practitioner results

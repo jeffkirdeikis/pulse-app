@@ -12,8 +12,8 @@
  * Rate limits: 3 seconds between page loads, runs every 30 minutes
  */
 
-const puppeteer = require('puppeteer');
-const { createClient } = require('@supabase/supabase-js');
+import puppeteer from 'puppeteer';
+import { createClient } from '@supabase/supabase-js';
 
 // Initialize Supabase with service role key for full access
 const supabase = createClient(
@@ -77,7 +77,7 @@ async function scrapeClinic(browser, clinic) {
     });
 
     // Wait for page content to load
-    await page.waitForTimeout(2000);
+    await new Promise(r => setTimeout(r, 2000));
 
     // Strategy 1: Look for treatment/service links
     const treatmentLinks = await page.evaluate(() => {
@@ -134,11 +134,67 @@ async function scrapeClinic(browser, clinic) {
           waitUntil: 'networkidle2',
           timeout: 20000,
         });
-        await page.waitForTimeout(1500);
+        await new Promise(r => setTimeout(r, 1500));
+
+        // Try to click into a practitioner to trigger availability loading
+        const practClicked = await page.evaluate(() => {
+          // Look for practitioner cards/buttons
+          const practEls = document.querySelectorAll(
+            '[class*="practitioner"] a, [class*="staff"] a, [class*="provider"] a, ' +
+            'a[href*="staff"], a[href*="practitioner"], a[href*="therapist"]'
+          );
+          if (practEls.length > 0) {
+            practEls[0].click();
+            return true;
+          }
+          return false;
+        });
+
+        if (practClicked) {
+          await new Promise(r => setTimeout(r, 2000));
+        }
 
         // Extract available time slots from the page
         const pageSlots = await page.evaluate(() => {
           const results = [];
+
+          // Try to find the current date from the page
+          let pageDate = null;
+
+          // Look for date in page content
+          const datePatterns = [
+            // "February 6, 2026" or "Feb 6, 2026"
+            /(?:January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2},?\s+\d{4}/i,
+            // "2026-02-06"
+            /\d{4}-\d{2}-\d{2}/,
+            // "06/02/2026"
+            /\d{2}\/\d{2}\/\d{4}/,
+          ];
+
+          const pageText = document.body.innerText;
+          for (const pattern of datePatterns) {
+            const match = pageText.match(pattern);
+            if (match) {
+              try {
+                const d = new Date(match[0]);
+                if (!isNaN(d.getTime())) {
+                  pageDate = d.toISOString().split('T')[0];
+                  break;
+                }
+              } catch { /* skip */ }
+            }
+          }
+
+          // Also check data attributes and meta tags
+          const dateAttrs = document.querySelectorAll('[data-date], [data-day], [datetime]');
+          dateAttrs.forEach(el => {
+            if (!pageDate) {
+              const val = el.getAttribute('data-date') || el.getAttribute('data-day') || el.getAttribute('datetime');
+              if (val && /\d{4}-\d{2}-\d{2}/.test(val)) {
+                pageDate = val.match(/\d{4}-\d{2}-\d{2}/)[0];
+              }
+            }
+          });
 
           // JaneApp renders available times as clickable elements
           const slotSelectors = [
@@ -164,7 +220,7 @@ async function scrapeClinic(browser, clinic) {
                 if (period === 'pm' && hour !== 12) hour += 12;
                 if (period === 'am' && hour === 12) hour = 0;
 
-                // Try to find the associated date
+                // Try to find the associated date from closest parent
                 const dateEl = el.closest('[data-date]');
                 const dateAttr = dateEl?.getAttribute('data-date');
 
@@ -173,7 +229,7 @@ async function scrapeClinic(browser, clinic) {
                 const practName = practSection?.querySelector('[class*="name"]')?.textContent?.trim();
 
                 results.push({
-                  date: dateAttr || null,
+                  date: dateAttr || pageDate || null,
                   hour,
                   minute,
                   practitioner: practName || null,
@@ -312,8 +368,20 @@ async function upsertSlots(allSlots, providerMap) {
   const today = new Date().toISOString().split('T')[0];
   const records = [];
 
+  let skippedNoDate = 0;
+  let skippedNoProvider = 0;
+
   for (const slot of allSlots) {
-    if (!slot.date || !slot.startTime) continue;
+    if (!slot.startTime) {
+      skippedNoDate++;
+      continue;
+    }
+
+    // Default to today if date couldn't be extracted from the page
+    // JaneApp booking pages default to showing today's availability
+    if (!slot.date) {
+      slot.date = today;
+    }
 
     // Try to match to a provider
     let providerId = null;
@@ -330,7 +398,7 @@ async function upsertSlots(allSlots, providerMap) {
     }
 
     if (!providerId) {
-      console.warn(`  ⚠️ No provider match for ${slot.clinicSlug} / ${slot.practitioner}`);
+      skippedNoProvider++;
       continue;
     }
 
@@ -344,8 +412,31 @@ async function upsertSlots(allSlots, providerMap) {
     });
   }
 
+  console.log(`  Skipped: ${skippedNoDate} without date, ${skippedNoProvider} without provider match`);
+
+  // Deduplicate by unique constraint key: provider_id + date + start_time + duration_minutes
+  const seen = new Set();
+  const dedupedRecords = [];
+  for (const r of records) {
+    const key = `${r.provider_id}-${r.date}-${r.start_time}-${r.duration_minutes}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      dedupedRecords.push(r);
+    }
+  }
+  console.log(`  Deduped: ${records.length} → ${dedupedRecords.length} unique slots`);
+
+  // Replace records with deduped version
+  records.length = 0;
+  records.push(...dedupedRecords);
+
   if (records.length === 0) {
     console.log('\n📭 No matched records to insert');
+    // Log a sample of what was found for debugging
+    if (allSlots.length > 0) {
+      console.log('  Sample slot:', JSON.stringify(allSlots[0]));
+      console.log('  Provider map keys:', Object.keys(providerMap).slice(0, 10));
+    }
     return;
   }
 
