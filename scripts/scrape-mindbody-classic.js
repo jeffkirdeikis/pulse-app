@@ -29,6 +29,14 @@ const CLASSIC_STUDIOS = [
     scheduleUrl: 'https://clients.mindbodyonline.com/classic/mainclass?studioid=5729485&tabID=7',
     address: '38173 Cleveland Ave, Squamish, BC',
     category: 'Yoga & Pilates'
+  },
+  {
+    name: 'Mountain Fitness Center',
+    studioId: '265219',
+    tabId: '7',
+    scheduleUrl: 'https://clients.mindbodyonline.com/classic/mainclass?studioid=265219&tabID=7',
+    address: 'Squamish, BC',
+    category: 'Fitness'
   }
 ];
 

@@ -28,6 +28,13 @@ const WELLNESS_STUDIOS = [
     scheduleUrl: 'https://www.wellnessliving.com/schedule/thesoundmartialarts',
     address: '38922 Progress Way, Squamish, BC',
     category: 'Martial Arts'
+  },
+  {
+    name: 'Roundhouse Martial Arts & Fitness',
+    businessId: null,
+    scheduleUrl: 'https://www.wellnessliving.com/schedule/roundhouse_martial_arts',
+    address: '38147 Cleveland Ave #201, Squamish, BC',
+    category: 'Martial Arts'
   }
 ];
 

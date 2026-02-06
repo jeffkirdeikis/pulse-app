@@ -131,6 +131,20 @@ export const RELIABLE_SOURCES = [
     verified: true,
     notes: 'Yoga and pilates studio'
   },
+  {
+    name: 'Mountain Fitness Center',
+    booking_system: 'mindbody-classic',
+    widget_id: null,
+    studio_id: '265219',
+    tab_id: '7',
+    url: 'https://clients.mindbodyonline.com/classic/mainclass?studioid=265219&tabID=7',
+    address: 'Squamish, BC',
+    category: 'Fitness',
+    scrape_frequency: 'daily',
+    priority: 8,
+    verified: true,
+    notes: 'Gym with group fitness classes'
+  },
 
   // ========================================
   // WELLNESSLIVING (Web scraping)
@@ -160,6 +174,19 @@ export const RELIABLE_SOURCES = [
     priority: 8,
     verified: true,
     notes: 'Martial arts classes'
+  },
+  {
+    name: 'Roundhouse Martial Arts & Fitness',
+    booking_system: 'wellnessliving',
+    widget_id: null,
+    studio_id: null,
+    url: 'https://www.wellnessliving.com/schedule/roundhouse_martial_arts',
+    address: '38147 Cleveland Ave #201, Squamish, BC',
+    category: 'Martial Arts',
+    scrape_frequency: 'daily',
+    priority: 8,
+    verified: true,
+    notes: 'MMA, BJJ, Muay Thai, Kickboxing - UFC vet Cole Smith'
   },
 
   // ========================================
