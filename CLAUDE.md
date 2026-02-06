@@ -316,6 +316,8 @@ When a bug is reported:
 | **Over-Fixing** | Tried to "fix" Google avatar by filtering URLs, broke everything | Ask user what they want first |
 | **Scraper Date Duplication** | Navigation fails silently, same schedule stamped on every day for 30 days | Parse dates from page text, never assign computed dates from loop counters |
 | **AI Data Hallucination** | AI invented 1,471 fake events like "Yoga Class" at A&W, "MMA" at a pharmacy | ALWAYS verify AI-extracted data against source page text. Use `verified-extractor.js` with 5-layer anti-hallucination pipeline |
+| **Dedup Missing Key Fields** | `classExists()` checked title+date+venue but NOT time, dropping same-title classes at different times (Wild Life Gym lost 50%+ of classes) | Dedup checks MUST include ALL fields that make a record unique (title+date+time+venue) |
+| **Booking System ≠ Public Schedule** | Roundhouse has WellnessLiving but schedule shows "no classes" — they use it for member mgmt, not public scheduling | Always verify a detected booking system actually has public data before adding to scraper |
 
 ---
 
@@ -375,6 +377,16 @@ SELECT COUNT(*) FROM events WHERE venue_id IS NULL;
 - `insertClass()` rejects records without valid date format
 - Navigation failures log warnings and stop scraping (instead of continuing with stale data)
 
+### Dedup False-Positive Lesson (Feb 6, 2026)
+
+**SCENARIO**: `classExists()` in all 6 scraper files checked only `title + date + venue_name` to detect duplicates. It did NOT check `start_time`. When a studio has the same class at different times (e.g., "Train Wild" at 7:45 AM, 9:00 AM, 10:15 AM), only the first one was inserted — the rest were falsely flagged as duplicates and dropped.
+
+**IMPACT**: Wild Life Gym lost 50%+ of its classes (113 vs 217). Squamish Barbell lost ~28% (376 vs 524). The bug existed in ALL 6 scraper files.
+
+**THE RULE**: Dedup checks MUST include ALL fields that make a record unique. For classes: `title + date + time + venue`. The corrected `classExists()` function includes `start_time` in the query.
+
+**ALSO LEARNED**: Detecting a booking system (e.g., WellnessLiving on Roundhouse's website) does NOT mean the schedule is public. Always verify the page actually returns class data before adding to scrapers.
+
 ### Scraper Rules
 
 | DO | DON'T |
@@ -382,12 +394,15 @@ SELECT COUNT(*) FROM events WHERE venue_id IS NULL;
 | Return `null` when parsing fails | Return fallback like `'09:00'` |
 | Skip records with missing fields | Insert with fake values |
 | Log warnings for debugging | Silently use defaults |
+| Include ALL unique fields in dedup checks | Check only title+date (misses time) |
+| Verify booking system has public data | Assume detection means data exists |
 
 ### Bad Data Indicators
 
 - Many events at 9:00 AM with `auto-scraped` tag
 - Events where title = venue_name
 - Holiday events on wrong dates
+- Studio with suspiciously low class count (dedup dropping valid records)
 
 ---
 

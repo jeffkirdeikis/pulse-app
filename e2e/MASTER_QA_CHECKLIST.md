@@ -141,6 +141,23 @@ This section tracks bugs that made it past QA and the lessons learned.
 
 **KEY LESSON**: Many buttons in the app have NO onClick handlers or use alert() as placeholders. Before marking any feature complete, search for these patterns.
 
+### Bug #11: classExists() Dedup Drops Valid Classes
+- **Date**: 2026-02-06
+- **Symptom**: Wild Life Gym only showed ~4 classes/day instead of ~8. 50%+ of classes missing.
+- **Root Cause**: `classExists()` in all 6 scraper files checked only `title + date + venue_name` — not `start_time`. Same-title classes at different times (e.g., "Train Wild" at 7:45 AM, 9:00 AM, 10:15 AM) were falsely flagged as duplicates.
+- **Why Missed**: The dedup logic was never tested with studios that run the same class multiple times per day.
+- **Fix**: Added `start_time` to `classExists()` query in all 6 scraper files.
+- **Impact**: Class count jumped from 720 to 2,003 across all venues.
+- **CRITICAL LESSON**: Dedup functions MUST include ALL fields that make a record unique. For scraper classes: `title + date + time + venue`.
+
+### Bug #12: Booking System Detection ≠ Public Schedule
+- **Date**: 2026-02-06
+- **Symptom**: Roundhouse Martial Arts detected as WellnessLiving, but scraper returned 0 classes.
+- **Root Cause**: Roundhouse has a WellnessLiving account but hasn't configured a public schedule — page shows "There are no classes today" for every day.
+- **Why Missed**: Assumed detecting a booking system meant public data was available.
+- **Fix**: Commented out Roundhouse from WellnessLiving scraper until schedule is configured.
+- **LESSON**: Always verify a detected booking system actually has public data before adding to scrapers. Visit the schedule URL manually and confirm classes appear.
+
 ---
 
 ## CRITICAL QA RULES (Synced with CLAUDE.md)
@@ -658,10 +675,13 @@ expect(value).toBe('test@example.com');
 
 | ID | Check | How to Verify | Pass Criteria |
 |----|-------|---------------|---------------|
-| DATA-010 | AI extraction disabled | `scrape-with-ai.js` exits immediately | process.exit(1) at top of main() |
-| DATA-011 | Orchestrator AI disabled | No AI extraction calls in orchestrator | extractWithAI never called |
-| DATA-012 | Only booking system data inserted | Check scraper output log | Only entries from detected booking systems |
+| DATA-010 | Unverified AI extraction disabled | `scrape-with-ai.js` not used | Only `verified-extractor.js` (with source text verification) allowed |
+| DATA-011 | AI-verified events tagged correctly | `SELECT * FROM events WHERE tags @> '{"ai-verified"}'` | All have confidence_score=0.75, tagged ai-verified+website-verified |
+| DATA-012 | Only booking system + verified data inserted | Check scraper output log | Only entries from detected booking systems or verified AI extraction |
 | DATA-013 | Post-scrape validation passes | Run validation queries from CLAUDE.md | All checks pass |
+| DATA-014 | Dedup includes start_time | `grep 'classExists' scripts/scrape-*.js` | All calls pass time parameter |
+| DATA-015 | Same-title classes preserved | `SELECT title, start_date, COUNT(*) FROM events WHERE event_type='class' GROUP BY title, start_date HAVING COUNT(*)>1 LIMIT 5` | Multi-time classes exist (e.g. "Train Wild" x3) |
+| DATA-016 | New booking source verified | Visit schedule URL in browser | Actual classes visible before adding to scraper |
 
 ---
 
