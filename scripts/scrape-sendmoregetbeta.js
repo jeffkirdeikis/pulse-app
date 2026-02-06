@@ -58,10 +58,15 @@ function isFitnessClass(className) {
   return hasFitness && !hasExclude;
 }
 
-async function classExists(title, date, studioName) {
+async function classExists(title, date, studioName, time) {
   try {
-    const response = await fetch(
-      `${SUPABASE_URL}/rest/v1/events?title=eq.${encodeURIComponent(title)}&start_date=eq.${date}&venue_name=eq.${encodeURIComponent(studioName)}&limit=1`,
+    let url = `${SUPABASE_URL}/rest/v1/events?title=eq.${encodeURIComponent(title)}&start_date=eq.${date}&venue_name=eq.${encodeURIComponent(studioName)}`;
+    if (time) {
+      const normalizedTime = time.length === 5 ? `${time}:00` : time;
+      url += `&start_time=eq.${encodeURIComponent(normalizedTime)}`;
+    }
+    url += '&limit=1';
+    const response = await fetch(url,
       { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }
     );
     const data = await response.json();
@@ -152,7 +157,7 @@ async function scrapeStudio(browser, studio) {
       studioClassesFound++;
       stats.classesFound++;
 
-      const exists = await classExists(cls.title, cls.date, cls.studioName);
+      const exists = await classExists(cls.title, cls.date, cls.studioName, cls.time);
       if (exists) continue;
 
       const success = await insertClass(cls);

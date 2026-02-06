@@ -75,10 +75,15 @@ function getEndDatePacific(daysFromNow) {
   return formatter.format(date);
 }
 
-async function classExists(title, date, venueName) {
+async function classExists(title, date, venueName, time) {
   try {
-    const response = await fetch(
-      `${SUPABASE_URL}/rest/v1/events?title=eq.${encodeURIComponent(title)}&start_date=eq.${date}&venue_name=eq.${encodeURIComponent(venueName)}&limit=1`,
+    let url = `${SUPABASE_URL}/rest/v1/events?title=eq.${encodeURIComponent(title)}&start_date=eq.${date}&venue_name=eq.${encodeURIComponent(venueName)}`;
+    if (time) {
+      const normalizedTime = time.length === 5 ? `${time}:00` : time;
+      url += `&start_time=eq.${encodeURIComponent(normalizedTime)}`;
+    }
+    url += '&limit=1';
+    const response = await fetch(url,
       { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }
     );
     const data = await response.json();
@@ -237,12 +242,13 @@ async function scrapeMindbodyWidget(source, browser) {
       classesFound++;
       stats.classesFound++;
 
-      const exists = await classExists(cls.title, dateStr, source.name);
+      const parsedTime = parseTime(cls.time);
+      const exists = await classExists(cls.title, dateStr, source.name, parsedTime);
       if (exists) continue;
 
       const success = await insertClass({
         title: cls.title,
-        time: parseTime(cls.time),
+        time: parsedTime,
         instructor: cls.instructor,
         venueName: source.name,
         address: source.address,
@@ -428,7 +434,7 @@ async function scrapeMindbodyClassic(source, browser) {
       classesFound++;
       stats.classesFound++;
 
-      const exists = await classExists(cls.title, cls.date, cls.venueName);
+      const exists = await classExists(cls.title, cls.date, cls.venueName, cls.time);
       if (exists) continue;
 
       const success = await insertClass(cls);
@@ -611,7 +617,7 @@ async function scrapeWellnessLiving(source, browser) {
         classesFound++;
         stats.classesFound++;
 
-        const exists = await classExists(cls.title, cls.date, source.name);
+        const exists = await classExists(cls.title, cls.date, source.name, cls.time);
         if (exists) continue;
 
         const success = await insertClass(cls);
@@ -811,7 +817,7 @@ async function scrapeBrandedweb(source, browser) {
         classesFound++;
         stats.classesFound++;
 
-        const exists = await classExists(cls.title, cls.date, cls.venueName);
+        const exists = await classExists(cls.title, cls.date, cls.venueName, cls.time);
         if (exists) continue;
 
         const success = await insertClass(cls);
@@ -944,7 +950,7 @@ async function scrapeSendMoreGetBeta(source, browser) {
       classesFound++;
       stats.classesFound++;
 
-      const exists = await classExists(cls.title, cls.date, cls.venueName);
+      const exists = await classExists(cls.title, cls.date, cls.venueName, cls.time);
       if (exists) continue;
 
       const success = await insertClass(cls);
