@@ -55,9 +55,11 @@ git status  # Must show "nothing to commit" or explicitly ask user to commit
 
 ### The Rule
 
-**Every piece of data in the app MUST come from a verified, real-world source.** No exceptions. This applies to:
+**Web scraping is essential and encouraged** — all event/class data comes from scraping real websites. The problem is specifically **AI hallucination**: feeding raw HTML to an LLM and asking it to "extract" events results in the AI *inventing* fake events that don't exist on the page.
 
-- **Events & Classes**: Only from verified booking systems (Mindbody, WellnessLiving, JaneApp) or manually submitted by business owners
+**Every piece of data in the app MUST come from a real, scrapeable source.** No exceptions. This applies to:
+
+- **Events & Classes**: From web scrapers (Mindbody, WellnessLiving, JaneApp, or any new scraper that parses real data), or manually submitted by business owners
 - **Deals**: Only from business owners or verified promotions
 - **Business info**: Only from the Supabase `businesses` table (real directory data)
 - **Business panel**: Real data only - no placeholder/demo content
@@ -68,29 +70,31 @@ git status  # Must show "nothing to commit" or explicitly ask user to commit
 
 | Banned | Why |
 |--------|-----|
-| AI-generated events/classes/deals | AI hallucinates plausible-sounding but completely fake content |
-| `scrape-with-ai.js` | DISABLED - produces hallucinated events |
-| AI extraction in `scrape-orchestrator.js` | DISABLED - same hallucination problem |
+| Using an LLM to "extract" events from HTML | The LLM hallucinates plausible-sounding but completely fake events |
+| `scrape-with-ai.js` | DISABLED - feeds HTML to Claude, which invents fictional events |
+| `extractWithAI()` in `scrape-orchestrator.js` | DISABLED - same hallucination problem |
 | Hardcoded sample events/classes | Could be mistaken for real data |
 | Fallback/default event data | Users cannot distinguish fake from real |
 
-### What Is Allowed
+### What IS Allowed (and encouraged)
 
 | Source | Trust Level |
 |--------|-------------|
+| **Any web scraper that parses structured data** | High - reads what's actually on the page |
 | Mindbody API/widget scraper | High - parses real booking system |
 | WellnessLiving scraper | High - parses real booking system |
 | JaneApp scraper | High - parses real booking system |
+| New scrapers for other booking systems | High - as long as they parse real data, not use AI extraction |
 | User-submitted events (via Submit Event form) | Medium - human-verified |
 | Business owner submissions | Medium - business-verified |
 | Supabase `businesses` table | High - curated directory |
 
-### Before Adding Any Data Source
+### Before Adding Any New Scraper
 
-1. **Verify** it scrapes from a real booking/scheduling system
-2. **Confirm** the data matches what appears on the actual website
+1. **Scraper must parse real structured data** (DOM elements, APIs, JSON-LD, etc.)
+2. **Confirm** the scraped data matches what actually appears on the website
 3. **Validate** with the scraper data quality checks (see SCRAPER DATA QUALITY section)
-4. **Never** use AI to "fill in" missing data - if data doesn't exist, show an empty state
+4. **Never** use an LLM to "fill in" or "extract" missing data — if data doesn't exist on the page, don't create it
 
 ---
 
