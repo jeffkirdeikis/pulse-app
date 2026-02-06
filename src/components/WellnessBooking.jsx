@@ -92,6 +92,8 @@ export default function WellnessBooking({
   const [slots, setSlots] = useState([]);
   const [loading, setLoading] = useState(true);
   const [lastScrapeTime, setLastScrapeTime] = useState(null);
+  const [dateCounts, setDateCounts] = useState({}); // { 'YYYY-MM-DD': count }
+  const [initialDateSet, setInitialDateSet] = useState(false);
 
   // Modals
   const [selectedSlot, setSelectedSlot] = useState(null);
@@ -108,6 +110,7 @@ export default function WellnessBooking({
   const [userAlerts, setUserAlerts] = useState([]);
 
   const dateScrollRef = useRef(null);
+  const selectedDateRef = useRef(null);
   const dates = getDateRange();
 
   // Fetch providers
@@ -144,6 +147,39 @@ export default function WellnessBooking({
     setLoading(false);
   }, [selectedDate, discipline, duration, timeRange, directBillingOnly]);
 
+  // Fetch slot counts for all dates in the carousel
+  const fetchDateCounts = useCallback(async () => {
+    const dateList = dates.map(d => d.date);
+    // Use a simple query - get all available slots for the next 14 days
+    let query = supabase
+      .from('pulse_availability_slots')
+      .select('date')
+      .in('date', dateList)
+      .eq('is_available', true);
+
+    const { data, error } = await query;
+
+    if (!error && data) {
+      const counts = {};
+      data.forEach(row => {
+        counts[row.date] = (counts[row.date] || 0) + 1;
+      });
+      setDateCounts(counts);
+
+      // Auto-select first available date if today has no slots (only on initial load)
+      if (!initialDateSet) {
+        setInitialDateSet(true);
+        const today = dates[0].date;
+        if (!counts[today] && Object.keys(counts).length > 0) {
+          const firstAvailable = dateList.find(d => counts[d] > 0);
+          if (firstAvailable) {
+            setSelectedDate(firstAvailable);
+          }
+        }
+      }
+    }
+  }, [initialDateSet]);
+
   // Fetch last scrape time
   const fetchLastScrape = useCallback(async () => {
     const { data } = await supabase
@@ -172,7 +208,18 @@ export default function WellnessBooking({
     fetchProviders();
     fetchAvailability();
     fetchLastScrape();
-  }, [fetchProviders, fetchAvailability, fetchLastScrape]);
+    fetchDateCounts();
+  }, [fetchProviders, fetchAvailability, fetchLastScrape, fetchDateCounts]);
+
+  // Scroll date carousel to selected date
+  useEffect(() => {
+    if (selectedDateRef.current && dateScrollRef.current) {
+      const container = dateScrollRef.current;
+      const el = selectedDateRef.current;
+      const scrollLeft = el.offsetLeft - container.offsetWidth / 2 + el.offsetWidth / 2;
+      container.scrollTo({ left: Math.max(0, scrollLeft), behavior: 'smooth' });
+    }
+  }, [selectedDate]);
 
   useEffect(() => {
     fetchUserAlerts();
@@ -197,8 +244,9 @@ export default function WellnessBooking({
       }
     }
 
-    // Open in webview overlay
-    setShowBookingWebview(url);
+    // Open in new tab (JaneApp blocks iframe embedding)
+    window.open(url, '_blank', 'noopener,noreferrer');
+    setSelectedSlot(null);
   };
 
   // Save alert
@@ -284,7 +332,7 @@ export default function WellnessBooking({
             <button
               key={d.key}
               className={`wb-discipline-tab ${discipline === d.key ? 'active' : ''}`}
-              onClick={() => setDiscipline(d.key)}
+              onClick={() => { setDiscipline(d.key); setSelectedSlot(null); }}
             >
               <Icon size={16} />
               <span>{d.label}</span>
@@ -295,19 +343,24 @@ export default function WellnessBooking({
 
       {/* Date Carousel */}
       <div className="wb-date-carousel" ref={dateScrollRef}>
-        {dates.map(d => (
-          <button
-            key={d.date}
-            className={`wb-date-item ${selectedDate === d.date ? 'active' : ''} ${d.isToday ? 'today' : ''}`}
-            onClick={() => setSelectedDate(d.date)}
-          >
-            <span className="wb-date-day">{d.dayName}</span>
-            <span className="wb-date-num">{d.dayNum}</span>
-            {selectedDate === d.date && slots.length > 0 && (
-              <span className="wb-date-badge">{slots.length}</span>
-            )}
-          </button>
-        ))}
+        {dates.map(d => {
+          const count = dateCounts[d.date] || 0;
+          const isSelected = selectedDate === d.date;
+          return (
+            <button
+              key={d.date}
+              ref={isSelected ? selectedDateRef : null}
+              className={`wb-date-item ${isSelected ? 'active' : ''} ${d.isToday ? 'today' : ''} ${count > 0 && !isSelected ? 'has-slots' : ''}`}
+              onClick={() => { setSelectedDate(d.date); setSelectedSlot(null); }}
+            >
+              <span className="wb-date-day">{d.dayName}</span>
+              <span className="wb-date-num">{d.dayNum}</span>
+              {count > 0 && (
+                <span className="wb-date-badge">{count}</span>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       {/* Filters Row */}
@@ -398,6 +451,8 @@ export default function WellnessBooking({
           <EmptyState
             hasProviders={providers.length > 0}
             selectedDate={selectedDate}
+            dateCounts={dateCounts}
+            onSelectDate={setSelectedDate}
             onSetAlert={() => {
               if (!isAuthenticated) {
                 setShowAuthModal?.(true);
@@ -482,27 +537,6 @@ export default function WellnessBooking({
         />
       )}
 
-      {/* Booking Webview Overlay */}
-      {showBookingWebview && (
-        <div className="wb-webview-overlay">
-          <div className="wb-webview-header">
-            <button className="wb-webview-back" onClick={() => setShowBookingWebview(null)}>
-              <ArrowLeft size={20} />
-              <span>Back to Pulse</span>
-            </button>
-            <a href={showBookingWebview} target="_blank" rel="noopener noreferrer" className="wb-webview-external">
-              <ExternalLink size={16} />
-            </a>
-          </div>
-          <iframe
-            src={showBookingWebview}
-            className="wb-webview-frame"
-            title="Booking"
-            sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
-          />
-        </div>
-      )}
-
       <style>{wellnessBookingStyles}</style>
     </div>
   );
@@ -532,9 +566,14 @@ function SkeletonLoading() {
   );
 }
 
-function EmptyState({ hasProviders, selectedDate, onSetAlert }) {
+function EmptyState({ hasProviders, selectedDate, onSetAlert, dateCounts, onSelectDate }) {
   const dateObj = new Date(selectedDate + 'T12:00:00');
   const dateStr = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+
+  // Find the next date with availability
+  const nextAvailable = dateCounts ? Object.entries(dateCounts)
+    .filter(([d, count]) => count > 0 && d > selectedDate)
+    .sort(([a], [b]) => a.localeCompare(b))[0] : null;
 
   if (!hasProviders) {
     return (
@@ -557,11 +596,29 @@ function EmptyState({ hasProviders, selectedDate, onSetAlert }) {
         <Calendar size={40} />
       </div>
       <h3>No Openings for {dateStr}</h3>
-      <p>Try a different day, adjust your filters, or set up an alert to get notified when slots open up.</p>
-      <button className="wb-empty-alert-btn" onClick={onSetAlert}>
-        <Bell size={16} />
-        Notify Me When Available
-      </button>
+      {nextAvailable ? (
+        <>
+          <p>
+            {(() => {
+              const nextDate = new Date(nextAvailable[0] + 'T12:00:00');
+              const nextStr = nextDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+              return `${nextAvailable[1]} slots available on ${nextStr}`;
+            })()}
+          </p>
+          <button className="wb-empty-jump-btn" onClick={() => onSelectDate(nextAvailable[0])}>
+            <Calendar size={16} />
+            Jump to Next Available
+          </button>
+        </>
+      ) : (
+        <>
+          <p>Try adjusting your filters, or set up an alert to get notified when slots open up.</p>
+          <button className="wb-empty-alert-btn" onClick={onSetAlert}>
+            <Bell size={16} />
+            Notify Me When Available
+          </button>
+        </>
+      )}
     </div>
   );
 }
@@ -722,7 +779,7 @@ function BookingSheet({ slot, onClose, onBook, onViewProfile }) {
           </div>
 
           <p className="wb-sheet-disclaimer">
-            You'll complete your booking on {slot.clinic_name}'s site · Availability refreshed every 30 min
+            Opens {slot.clinic_name}'s booking page in a new tab · Availability refreshed every 30 min
           </p>
         </div>
       </div>
@@ -784,7 +841,7 @@ function ProviderDetailModal({ provider, slots, onClose, onSlotClick, onBook, ha
 
         {slots.length > 0 && (
           <div className="wb-modal-section">
-            <h3>Available Today</h3>
+            <h3>Available Times</h3>
             <div className="wb-modal-slots">
               {slots.map(slot => (
                 <button
@@ -1024,6 +1081,7 @@ const wellnessBookingStyles = `
   border-color: #111827;
 }
 .wb-date-item.today:not(.active) { border-color: #ec4899; }
+.wb-date-item.has-slots:not(.active) { border-color: #a78bfa; background: #faf5ff; }
 .wb-date-day { font-size: 11px; font-weight: 500; opacity: 0.7; text-transform: uppercase; color: inherit; }
 .wb-date-num { font-size: 18px; font-weight: 700; color: inherit; }
 .wb-date-badge {
@@ -1257,6 +1315,20 @@ const wellnessBookingStyles = `
   cursor: pointer;
 }
 .wb-empty-alert-btn:active { transform: scale(0.97); }
+.wb-empty-jump-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: #111827;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.wb-empty-jump-btn:active { transform: scale(0.97); }
 .wb-empty-progress {
   width: 120px;
   height: 4px;

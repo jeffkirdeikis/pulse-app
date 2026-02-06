@@ -370,6 +370,7 @@ async function upsertSlots(allSlots, providerMap) {
 
   let skippedNoDate = 0;
   let skippedNoProvider = 0;
+  let skippedPastDate = 0;
 
   for (const slot of allSlots) {
     if (!slot.startTime) {
@@ -381,6 +382,12 @@ async function upsertSlots(allSlots, providerMap) {
     // JaneApp booking pages default to showing today's availability
     if (!slot.date) {
       slot.date = today;
+    }
+
+    // Reject slots with past dates
+    if (slot.date < today) {
+      skippedPastDate++;
+      continue;
     }
 
     // Try to match to a provider
@@ -412,7 +419,7 @@ async function upsertSlots(allSlots, providerMap) {
     });
   }
 
-  console.log(`  Skipped: ${skippedNoDate} without date, ${skippedNoProvider} without provider match`);
+  console.log(`  Skipped: ${skippedNoDate} without time, ${skippedPastDate} past dates, ${skippedNoProvider} without provider match`);
 
   // Deduplicate by unique constraint key: provider_id + date + start_time + duration_minutes
   const seen = new Set();
