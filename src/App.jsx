@@ -4,6 +4,40 @@ import { supabase } from './lib/supabase';
 import { useUserData } from './hooks/useUserData';
 import { formatResponseTime } from './lib/businessAnalytics';
 
+// All dates/times in this app are in Squamish (Pacific) time, regardless of user's location.
+const PACIFIC_TZ = 'America/Vancouver';
+
+/** Get current Date adjusted to Pacific timezone */
+function getPacificNow() {
+  // Get current time string in Pacific, then parse it back to a Date
+  const pacificStr = new Date().toLocaleString('en-US', { timeZone: PACIFIC_TZ });
+  return new Date(pacificStr);
+}
+
+/** Get today's date string (YYYY-MM-DD) in Pacific timezone */
+function getPacificDateStr() {
+  const now = new Date();
+  const fmt = new Intl.DateTimeFormat('en-CA', { timeZone: PACIFIC_TZ, year: 'numeric', month: '2-digit', day: '2-digit' });
+  return fmt.format(now);
+}
+
+/** Create a Date object for a Pacific date + time (from DB fields) */
+function pacificDate(dateStr, timeStr) {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const [hours, minutes] = (timeStr || '09:00').split(':').map(Number);
+  // Build an ISO string with Pacific offset, then let JS parse it
+  // Use toLocaleString roundtrip to get correct Pacific-local Date
+  const fakeLocal = new Date(year, month - 1, day, hours, minutes, 0, 0);
+  const localStr = fakeLocal.toLocaleString('en-US', { timeZone: PACIFIC_TZ });
+  // The offset between fakeLocal (user's TZ) and Pacific TZ
+  const pacificEquiv = new Date(localStr);
+  const offset = fakeLocal.getTime() - pacificEquiv.getTime();
+  return new Date(fakeLocal.getTime() + offset);
+}
+
+/** Format options for displaying dates/times always in Pacific timezone */
+const PACIFIC_DATE_OPTS = { timeZone: PACIFIC_TZ };
+
 // Booking systems lookup - maps venue names to their booking URLs
 // Sources: Mindbody, WellnessLiving, JaneApp scrapers
 const BOOKING_SYSTEMS = {
@@ -8615,9 +8649,8 @@ export default function PulseApp() {
   useEffect(() => {
     async function fetchEvents() {
       setEventsLoading(true);
-      // Use local date (not UTC) to avoid timezone issues
-      const today = new Date();
-      const localDateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      // Always use Squamish (Pacific) date, regardless of user's timezone
+      const localDateStr = getPacificDateStr();
 
       const { data, error } = await supabase
         .from('events')
@@ -8634,9 +8667,9 @@ export default function PulseApp() {
 
       // Map Supabase events to the UI format
       const mappedEvents = data.map(event => {
-        // Parse date as local time (not UTC) by using YYYY-MM-DD format with explicit time
-        const [year, month, day] = event.start_date.split('-').map(Number);
-        let [hours, minutes] = (event.start_time || '09:00').split(':').map(Number);
+        // Parse date/time as Pacific (Squamish) time, regardless of user's timezone
+        let startTimeStr = event.start_time || '09:00';
+        let [hours, minutes] = startTimeStr.split(':').map(Number);
 
         // Fix suspicious times: classes at 1-5 AM are likely data errors, default to 9 AM
         // Also fix weird times like XX:26 which indicate scraping errors
@@ -8644,25 +8677,25 @@ export default function PulseApp() {
           hours = 9;
           minutes = 0;
         } else if (minutes === 26) {
-          // Times ending in :26 are a common scraping error, round to nearest hour
           minutes = 0;
         }
 
-        const startDate = new Date(year, month - 1, day, hours, minutes, 0, 0);
+        const fixedStartTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+        const startDate = pacificDate(event.start_date, fixedStartTime);
 
         let endDate;
         if (event.end_time) {
           let [endHours, endMinutes] = event.end_time.split(':').map(Number);
-          // Apply same fixes for suspicious end times
           if (endHours >= 1 && endHours <= 5) {
-            endHours = 10; // Default to 10 AM for end time
+            endHours = 10;
             endMinutes = 0;
           } else if (endMinutes === 26) {
             endMinutes = 0;
           }
-          endDate = new Date(year, month - 1, day, endHours, endMinutes, 0, 0);
+          const fixedEndTime = `${String(endHours).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}`;
+          endDate = pacificDate(event.start_date, fixedEndTime);
         } else {
-          endDate = new Date(year, month - 1, day, hours + 1, minutes, 0, 0);
+          endDate = pacificDate(event.start_date, `${String(hours + 1).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`);
         }
 
         return {
@@ -8924,8 +8957,8 @@ export default function PulseApp() {
       const subject = `Booking Request: ${bookingEvent.title}`;
       const message = `Hi, I'd like to book:\n\n` +
         `Class: ${bookingEvent.title}\n` +
-        `Date: ${bookingEvent.start.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}\n` +
-        `Time: ${bookingEvent.start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}\n\n` +
+        `Date: ${bookingEvent.start.toLocaleDateString('en-US', { timeZone: PACIFIC_TZ, weekday: 'long', month: 'long', day: 'numeric' })}\n` +
+        `Time: ${bookingEvent.start.toLocaleTimeString('en-US', { timeZone: PACIFIC_TZ, hour: 'numeric', minute: '2-digit' })}\n\n` +
         (bookingRequestMessage ? `Message: ${bookingRequestMessage}` : '');
 
       const conversationId = await startConversation(business.id, subject, message);
@@ -9278,7 +9311,7 @@ export default function PulseApp() {
         eventType: event.eventType || 'event',
         title: event.title,
         date: event.start ? event.start.toISOString().split('T')[0] : event.date,
-        time: event.start ? event.start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : event.time,
+        time: event.start ? event.start.toLocaleTimeString('en-US', { timeZone: PACIFIC_TZ, hour: 'numeric', minute: '2-digit' }) : event.time,
         venue: getVenueName(event.venueId, event),
         address: event.location || event.address || '',
         ...event
@@ -9687,7 +9720,7 @@ export default function PulseApp() {
     const slots = new Set();
     const allEvents = [...REAL_DATA.events, ...dbEvents];
     const filteredByDay = allEvents.filter(e => {
-      const now = new Date();
+      const now = getPacificNow();
       if (filters.day === 'today') {
         const today = new Date(now);
         today.setHours(0, 0, 0, 0);
@@ -9837,7 +9870,7 @@ export default function PulseApp() {
   const isVerified = (venueId) => REAL_DATA.venues.find(v => v.id === venueId)?.verified || false;
   
   const _getTimeUntil = (date) => {
-    const hours = Math.floor((date - new Date()) / (1000 * 60 * 60));
+    const hours = Math.floor((date - getPacificNow()) / (1000 * 60 * 60));
     if (hours < 0) return 'Past';
     if (hours < 1) return 'Soon';
     if (hours < 24) return `${hours}h`;
@@ -9845,7 +9878,7 @@ export default function PulseApp() {
   };
 
   const filterEvents = () => {
-    const now = new Date();
+    const now = getPacificNow(); // Always filter based on Squamish time
     // Combine hardcoded events with database events
     let filtered = [...REAL_DATA.events, ...dbEvents];
 
@@ -10027,7 +10060,7 @@ export default function PulseApp() {
 
     const groupedEvents = groupEventsByDate(events);
     const dateKeys = Object.keys(groupedEvents).sort((a, b) => new Date(a) - new Date(b));
-    const now = new Date();
+    const now = getPacificNow();
     const today = new Date(now);
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
@@ -10046,10 +10079,10 @@ export default function PulseApp() {
       } else if (isTomorrow) {
         dateLabelText = 'Tomorrow';
       } else {
-        dateLabelText = date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+        dateLabelText = date.toLocaleDateString('en-US', { timeZone: PACIFIC_TZ, weekday: 'long', month: 'long', day: 'numeric' });
       }
       
-      const fullDateSubtext = date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+      const fullDateSubtext = date.toLocaleDateString('en-US', { timeZone: PACIFIC_TZ, weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
 
       return (
         <div key={dateKey}>
@@ -10364,13 +10397,13 @@ export default function PulseApp() {
               <div className="detail-icon">
                 <Calendar size={16} />
               </div>
-              <span className="detail-text">{event.start.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+              <span className="detail-text">{event.start.toLocaleDateString('en-US', { timeZone: PACIFIC_TZ, weekday: 'short', month: 'short', day: 'numeric' })}</span>
             </div>
             <div className="event-detail-item">
               <div className="detail-icon">
                 <Clock size={16} />
               </div>
-              <span className="detail-text">{event.start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</span>
+              <span className="detail-text">{event.start.toLocaleTimeString('en-US', { timeZone: PACIFIC_TZ, hour: 'numeric', minute: '2-digit' })}</span>
             </div>
           </div>
 
@@ -10486,7 +10519,7 @@ export default function PulseApp() {
                       <span className="notification-dot"></span>
                     </button>
                     <div className="profile-btn" onClick={() => setShowProfileMenu(!showProfileMenu)}>
-                      <div className="profile-avatar">{user.avatar ? <img src={user.avatar} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} /> : (user.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'U')}</div>
+                      <div className="profile-avatar">{user.avatar ? <img src={user.avatar} alt="" onError={(e) => { console.error('Avatar failed to load:', user.avatar); e.target.style.display = 'none'; }} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (user.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'U')}</div>
                     </div>
                   </>
                 )}
@@ -11206,10 +11239,10 @@ export default function PulseApp() {
                   </div>
                   <div className="datetime-content">
                     <div className="datetime-date">
-                      {selectedEvent.start.toLocaleString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                      {selectedEvent.start.toLocaleString('en-US', { timeZone: PACIFIC_TZ, weekday: 'long', month: 'long', day: 'numeric' })}
                     </div>
                     <div className="datetime-time">
-                      {selectedEvent.start.toLocaleString('en-US', { hour: 'numeric', minute: '2-digit' })} - {selectedEvent.end.toLocaleString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                      {selectedEvent.start.toLocaleString('en-US', { timeZone: PACIFIC_TZ, hour: 'numeric', minute: '2-digit' })} - {selectedEvent.end.toLocaleString('en-US', { timeZone: PACIFIC_TZ, hour: 'numeric', minute: '2-digit' })}
                     </div>
                   </div>
                   <button
@@ -12193,20 +12226,20 @@ export default function PulseApp() {
                           <div className="calendar-date-header">
                             <div className="calendar-date-badge">
                               <span className="date-day">{date.getDate()}</span>
-                              <span className="date-month">{date.toLocaleString('en-US', { month: 'short' })}</span>
+                              <span className="date-month">{date.toLocaleString('en-US', { timeZone: PACIFIC_TZ, month: 'short' })}</span>
                             </div>
                             <div className="calendar-date-info">
-                              <span className="date-weekday">{date.toLocaleString('en-US', { weekday: 'long' })}</span>
-                              <span className="date-full">{date.toLocaleString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
+                              <span className="date-weekday">{date.toLocaleString('en-US', { timeZone: PACIFIC_TZ, weekday: 'long' })}</span>
+                              <span className="date-full">{date.toLocaleString('en-US', { timeZone: PACIFIC_TZ, month: 'long', day: 'numeric', year: 'numeric' })}</span>
                             </div>
                           </div>
                           <div className="calendar-date-events">
                             {events.map(event => (
                               <div key={event.id} className={`calendar-event-card ${event.eventType === 'class' ? 'class' : 'event'}`}>
                                 <div className="calendar-event-time">
-                                  <span>{event.start.toLocaleString('en-US', { hour: 'numeric', minute: '2-digit' })}</span>
+                                  <span>{event.start.toLocaleString('en-US', { timeZone: PACIFIC_TZ, hour: 'numeric', minute: '2-digit' })}</span>
                                   <span className="time-separator">-</span>
-                                  <span>{event.end.toLocaleString('en-US', { hour: 'numeric', minute: '2-digit' })}</span>
+                                  <span>{event.end.toLocaleString('en-US', { timeZone: PACIFIC_TZ, hour: 'numeric', minute: '2-digit' })}</span>
                                 </div>
                                 <div className="calendar-event-details">
                                   <div className="calendar-event-header">
@@ -13828,7 +13861,7 @@ export default function PulseApp() {
                       <span>{bookingEvent.start.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
                       <span className="dot">•</span>
                       <Clock size={14} />
-                      <span>{bookingEvent.start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</span>
+                      <span>{bookingEvent.start.toLocaleTimeString('en-US', { timeZone: PACIFIC_TZ, hour: 'numeric', minute: '2-digit' })}</span>
                     </div>
                   </div>
                 </div>
@@ -17044,6 +17077,13 @@ export default function PulseApp() {
           color: white;
           transition: all 0.2s;
           box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25);
+          overflow: hidden;
+        }
+
+        .profile-avatar img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
         }
         
         .profile-btn:hover .profile-avatar {
