@@ -12,6 +12,7 @@ export const XP_REWARDS = {
   save_item: 25,
   daily_checkin: 10, // multiplied by streak
   referral: 200,
+  booking_click: 50, // wellness booking through Pulse
 };
 
 /**
@@ -194,4 +195,11 @@ export async function trackDailyCheckin() {
  */
 export async function trackReferral(referredUserId) {
   return addUserXP('referral', referredUserId);
+}
+
+/**
+ * Track wellness booking click
+ */
+export async function trackBookingClick(providerId) {
+  return addUserXP('booking_click', providerId);
 }

@@ -3,6 +3,7 @@ import { Calendar, CalendarPlus, MapPin, Clock, Star, Check, Bell, Search, Filte
 import { supabase } from './lib/supabase';
 import { useUserData } from './hooks/useUserData';
 import { formatResponseTime } from './lib/businessAnalytics';
+import WellnessBooking from './components/WellnessBooking';
 
 // All dates/times in this app are in Squamish (Pacific) time, regardless of user's location.
 const PACIFIC_TZ = 'America/Vancouver';
@@ -8574,6 +8575,7 @@ export default function PulseApp() {
   const [showMyCalendarModal, setShowMyCalendarModal] = useState(false);
   const [serviceCategoryFilter, setServiceCategoryFilter] = useState('All');
   const [dealCategoryFilter, setDealCategoryFilter] = useState('All');
+  const [servicesSubView, setServicesSubView] = useState('directory'); // directory | booking
 
   // Supabase services data
   const [services, setServices] = useState([]);
@@ -10533,21 +10535,21 @@ export default function PulseApp() {
               <div className="banner-tabs">
                 <button 
                   className={`banner-tab ${currentSection === 'classes' ? 'active' : ''}`}
-                  onClick={() => setCurrentSection('classes')}
+                  onClick={() => { setCurrentSection('classes'); setServicesSubView('directory'); }}
                 >
                   <Calendar size={18} />
                   <span>Classes</span>
                 </button>
-                <button 
+                <button
                   className={`banner-tab ${currentSection === 'events' ? 'active' : ''}`}
-                  onClick={() => setCurrentSection('events')}
+                  onClick={() => { setCurrentSection('events'); setServicesSubView('directory'); }}
                 >
                   <Star size={18} />
                   <span>Events</span>
                 </button>
-                <button 
+                <button
                   className={`banner-tab ${currentSection === 'deals' ? 'active' : ''}`}
-                  onClick={() => setCurrentSection('deals')}
+                  onClick={() => { setCurrentSection('deals'); setServicesSubView('directory'); }}
                 >
                   <DollarSign size={18} />
                   <span>Deals</span>
@@ -10920,12 +10922,72 @@ export default function PulseApp() {
               </>
             ) : currentSection === 'services' ? (
               <>
+                {servicesSubView === 'booking' ? (
+                  <WellnessBooking
+                    onBack={() => setServicesSubView('directory')}
+                    isAuthenticated={isAuthenticated}
+                    session={session}
+                    showToast={showToast}
+                    setShowAuthModal={setShowAuthModal}
+                  />
+                ) : (
+                <>
+                {/* Wellness Booking Banner */}
+                <div
+                  className="wb-launch-banner"
+                  onClick={() => setServicesSubView('booking')}
+                  style={{
+                    margin: '16px 24px 0',
+                    padding: '20px',
+                    background: 'linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)',
+                    borderRadius: '16px',
+                    cursor: 'pointer',
+                    color: 'white',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    transition: 'transform 0.15s ease',
+                  }}
+                >
+                  <div style={{ position: 'relative', zIndex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                      <Heart size={18} />
+                      <span style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', opacity: 0.9 }}>New Feature</span>
+                    </div>
+                    <h3 style={{ fontSize: '18px', fontWeight: 800, margin: '0 0 4px', letterSpacing: '-0.3px' }}>Book Wellness</h3>
+                    <p style={{ fontSize: '13px', opacity: 0.85, margin: 0 }}>
+                      Find massage, physio, chiro & acupuncture openings across Squamish
+                    </p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '12px', fontSize: '13px', fontWeight: 600 }}>
+                      <span>Browse availability</span>
+                      <ChevronRight size={16} />
+                    </div>
+                  </div>
+                  <div style={{
+                    position: 'absolute',
+                    top: '-20px',
+                    right: '-20px',
+                    width: '120px',
+                    height: '120px',
+                    background: 'rgba(255,255,255,0.1)',
+                    borderRadius: '50%',
+                  }} />
+                  <div style={{
+                    position: 'absolute',
+                    bottom: '-30px',
+                    right: '40px',
+                    width: '80px',
+                    height: '80px',
+                    background: 'rgba(255,255,255,0.08)',
+                    borderRadius: '50%',
+                  }} />
+                </div>
+
                 {/* Services Filter */}
                 <div className="filters-section" style={{marginTop: '20px'}}>
                   <div className="filters-row-single">
                     <div className="filter-group">
-                      <select 
-                        value={serviceCategoryFilter} 
+                      <select
+                        value={serviceCategoryFilter}
                         onChange={(e) => setServiceCategoryFilter(e.target.value)}
                         className="filter-dropdown"
                       >
@@ -11178,6 +11240,8 @@ export default function PulseApp() {
                       Clear Search
                     </button>
                   </div>
+                )}
+              </>
                 )}
               </>
             ) : (
