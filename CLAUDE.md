@@ -49,6 +49,51 @@ git status  # Must show "nothing to commit" or explicitly ask user to commit
 
 ---
 
+## 🚨🚨🚨 REAL DATA ONLY - ZERO TOLERANCE FOR FAKE DATA 🚨🚨🚨
+
+**On Feb 6, 2026: The AI scraper hallucinated 1,471 fake events (64% of all data). "Yoga for Beginners" at Shoppers Drug Mart, "Mixed Martial Arts" at a pharmacy, "Electrical Wiring 101" at an electrician. ALL were completely invented by the AI.**
+
+### The Rule
+
+**Every piece of data in the app MUST come from a verified, real-world source.** No exceptions. This applies to:
+
+- **Events & Classes**: Only from verified booking systems (Mindbody, WellnessLiving, JaneApp) or manually submitted by business owners
+- **Deals**: Only from business owners or verified promotions
+- **Business info**: Only from the Supabase `businesses` table (real directory data)
+- **Business panel**: Real data only - no placeholder/demo content
+- **Admin panel**: Real data only - no placeholder/demo content
+- **UI placeholders**: If sample data is needed for empty states, label it clearly as "example" and never mix with real data
+
+### What Is Banned
+
+| Banned | Why |
+|--------|-----|
+| AI-generated events/classes/deals | AI hallucinates plausible-sounding but completely fake content |
+| `scrape-with-ai.js` | DISABLED - produces hallucinated events |
+| AI extraction in `scrape-orchestrator.js` | DISABLED - same hallucination problem |
+| Hardcoded sample events/classes | Could be mistaken for real data |
+| Fallback/default event data | Users cannot distinguish fake from real |
+
+### What Is Allowed
+
+| Source | Trust Level |
+|--------|-------------|
+| Mindbody API/widget scraper | High - parses real booking system |
+| WellnessLiving scraper | High - parses real booking system |
+| JaneApp scraper | High - parses real booking system |
+| User-submitted events (via Submit Event form) | Medium - human-verified |
+| Business owner submissions | Medium - business-verified |
+| Supabase `businesses` table | High - curated directory |
+
+### Before Adding Any Data Source
+
+1. **Verify** it scrapes from a real booking/scheduling system
+2. **Confirm** the data matches what appears on the actual website
+3. **Validate** with the scraper data quality checks (see SCRAPER DATA QUALITY section)
+4. **Never** use AI to "fill in" missing data - if data doesn't exist, show an empty state
+
+---
+
 ## 🚨 CRITICAL: NEVER DESTROY UNCOMMITTED WORK
 
 ### Prohibited Commands (require explicit user approval)
@@ -256,6 +301,7 @@ When a bug is reported:
 | **CSS Inheritance** | Lucide icon color prop doesn't work in buttons | Wrap in div with color style |
 | **Over-Fixing** | Tried to "fix" Google avatar by filtering URLs, broke everything | Ask user what they want first |
 | **Scraper Date Duplication** | Navigation fails silently, same schedule stamped on every day for 30 days | Parse dates from page text, never assign computed dates from loop counters |
+| **AI Data Hallucination** | AI invented 1,471 fake events like "Yoga Class" at A&W, "MMA" at a pharmacy | NEVER use AI to generate/extract event data. Only verified booking system scrapers allowed |
 
 ---
 

@@ -577,6 +577,19 @@ Return JSON only:
  * Main entry point
  */
 async function main() {
+  // ⛔ DISABLED: AI extraction produces hallucinated events.
+  // The AI invents fictional events for businesses (e.g. "Yoga Class" at A&W,
+  // "Mixed Martial Arts" at Shoppers Drug Mart). 1,471+ fake entries were created
+  // before this was caught. Only dedicated scrapers (Mindbody, WellnessLiving, etc.)
+  // can reliably produce real event data.
+  //
+  // To re-enable: remove this block and fix the hallucination problem first.
+  // See CLAUDE-ARCHIVE.md "AI Scraper Hallucination" entry for details.
+  console.error('⛔ AI scraper is DISABLED - it produces hallucinated/fake events.');
+  console.error('   Use dedicated scrapers (scrape-reliable-sources.js, scrape-fitness-classes.js) instead.');
+  console.error('   See CLAUDE-ARCHIVE.md for details.');
+  process.exit(1);
+
   const args = process.argv.slice(2);
   const startTime = new Date();
 

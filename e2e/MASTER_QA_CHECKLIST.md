@@ -638,6 +638,33 @@ expect(value).toBe('test@example.com');
 
 ---
 
+# SECTION 12: DATA INTEGRITY (CRITICAL)
+
+**ZERO TOLERANCE for fake/hallucinated data. See CLAUDE.md "REAL DATA ONLY" policy.**
+
+## 12.1 Data Source Verification
+
+| ID | Check | How to Verify | Pass Criteria |
+|----|-------|---------------|---------------|
+| DATA-001 | No AI-extracted events | `SELECT COUNT(*) FROM events WHERE source = 'ai-extracted'` | Count = 0 |
+| DATA-002 | All events from verified sources | `SELECT DISTINCT source FROM events` | Only: mindbody-api, wellnessliving, janeapp, user-submitted, manual |
+| DATA-003 | No hallucinated business names | `SELECT * FROM events WHERE title = venue_name` | Count = 0 |
+| DATA-004 | No suspicious clustering | `SELECT start_time, COUNT(*) FROM events GROUP BY start_time ORDER BY COUNT(*) DESC LIMIT 5` | No single time with 50+ events |
+| DATA-005 | No date duplication | Ratio query from CLAUDE.md | No venue with ratio > 25 |
+| DATA-006 | Business panel shows real data | Visual inspection of business panel | No placeholder/demo content |
+| DATA-007 | Admin panel shows real data | Visual inspection of admin panel | No placeholder/demo content |
+
+## 12.2 After Any Scraper Run
+
+| ID | Check | How to Verify | Pass Criteria |
+|----|-------|---------------|---------------|
+| DATA-010 | AI extraction disabled | `scrape-with-ai.js` exits immediately | process.exit(1) at top of main() |
+| DATA-011 | Orchestrator AI disabled | No AI extraction calls in orchestrator | extractWithAI never called |
+| DATA-012 | Only booking system data inserted | Check scraper output log | Only entries from detected booking systems |
+| DATA-013 | Post-scrape validation passes | Run validation queries from CLAUDE.md | All checks pass |
+
+---
+
 # AUTOMATED TEST IMPLEMENTATION PATTERN
 
 ```javascript
