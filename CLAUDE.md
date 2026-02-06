@@ -173,6 +173,25 @@ Read tool on /tmp/app-modal.png
 
 Lucide icons use `stroke: currentColor`. The `currentColor` value requires a parent element with `color` set via CSS/style for proper inheritance inside button elements.
 
+### OAuth Avatar Lesson (Feb 5, 2026) - DON'T OVER-FIX
+
+**SCENARIO**: User reported profile icon showed "landscape image" (Google's default avatar).
+
+**WRONG RESPONSE**: I tried to filter out Google default avatars with URL pattern matching:
+```javascript
+// BAD: This filter matches ALL Google avatars, not just defaults!
+url.includes('/a-/') // <-- This is in EVERY Google profile URL
+```
+
+**RESULT**: Broke the avatar completely - showed broken image icon instead.
+
+**LESSON LEARNED**:
+1. Don't "fix" things the user didn't explicitly ask to fix
+2. Google default avatars ARE valid - users may prefer them over initials
+3. URL pattern matching for OAuth is dangerous - test thoroughly
+4. A broken image is WORSE than an ugly default
+5. **ASK the user what they want before changing avatar behavior**
+
 ---
 
 ## 📋 QA PROTOCOL
@@ -235,6 +254,8 @@ When a bug is reported:
 | Partial Testing | Modal opens, inputs broken | Test ENTIRE feature |
 | **Computed ≠ Visual** | Styles show correct color, icon still invisible | **LOOK at the screenshot** |
 | **CSS Inheritance** | Lucide icon color prop doesn't work in buttons | Wrap in div with color style |
+| **Over-Fixing** | Tried to "fix" Google avatar by filtering URLs, broke everything | Ask user what they want first |
+| **Scraper Date Duplication** | Navigation fails silently, same schedule stamped on every day for 30 days | Parse dates from page text, never assign computed dates from loop counters |
 
 ---
 
@@ -260,9 +281,17 @@ Never mark complete if:
 ### Validation After Any Scraper Run
 
 ```sql
+-- 🚨 Date duplication detection (CRITICAL - Feb 5, 2026 lesson)
+-- Ratio > 25 means navigation failed and same schedule was stamped on every day
+SELECT venue_name, COUNT(*) as total, COUNT(DISTINCT title) as titles,
+  ROUND(COUNT(*)::numeric / NULLIF(COUNT(DISTINCT title), 0), 1) as ratio
+FROM events WHERE tags @> '{"auto-scraped"}' AND event_type = 'class'
+GROUP BY venue_name HAVING COUNT(*)::numeric / NULLIF(COUNT(DISTINCT title), 0) > 20
+ORDER BY ratio DESC;
+
 -- Suspicious clustering (placeholder detection)
 SELECT start_time, COUNT(*) FROM events
-WHERE tags @> '["auto-scraped"]'
+WHERE tags @> '{"auto-scraped"}'
 GROUP BY start_time ORDER BY COUNT(*) DESC LIMIT 5;
 
 -- Business listings as events (bad data)
@@ -271,6 +300,20 @@ SELECT * FROM events WHERE title = venue_name;
 -- Orphaned events
 SELECT COUNT(*) FROM events WHERE venue_id IS NULL;
 ```
+
+### Scraper Date Duplication Lesson (Feb 5, 2026)
+
+**SCENARIO**: WellnessLiving and Brandedweb scrapers used day-by-day loops with fragile page navigation (CSS selectors that don't match, hardcoded pixel clicks). When navigation failed silently, the same page was scraped 30 times and each iteration assigned a different computed date. Result: every class appeared on every day for 30 days (785+ bad records).
+
+**THE RULE**: Scrapers must NEVER assign dates from a loop counter. Dates must ALWAYS come from:
+1. Parsed day headers in the page text (e.g., "Thursday, February 05, 2026")
+2. API responses that are date-specific (e.g., Mindbody widget API with `start_date` param)
+3. DOM elements that display the actual date
+
+**SAFEGUARDS ADDED**:
+- `validateScrapedData()` runs after each scraper and auto-deletes data with ratio > 25x
+- `insertClass()` rejects records without valid date format
+- Navigation failures log warnings and stop scraping (instead of continuing with stale data)
 
 ### Scraper Rules
 

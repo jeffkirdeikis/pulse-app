@@ -5,6 +5,83 @@ Use this as a reference when investigating similar issues.
 
 ---
 
+## 🔴 BUG: Over-Fixing Made Avatar Worse (2026-02-05)
+
+### Initial Report
+User said "explain how the profile icon broke again" with screenshot showing landscape image in profile button.
+
+### My Bad Assumption
+I assumed the landscape image was an unwanted Google default avatar that should be filtered out.
+
+### What I Did Wrong
+1. Added URL pattern matching to filter Google "default" avatars
+2. Used `url.includes('/a-/')` as a filter condition
+3. **CRITICAL ERROR**: `/a-/` is in ALL Google profile picture URLs, not just defaults!
+
+### The Result
+My "fix" caused the avatar to show a **broken image icon** instead of the user's Google profile picture. I made it worse.
+
+### What Actually Happened
+- The "landscape image" WAS the user's Google profile picture
+- Google assigns nature/landscape images as defaults, but users may prefer them
+- My filter blocked ALL Google avatars, not just defaults
+- The user just wanted to understand why it looked like that, not necessarily to "fix" it
+
+### The Fix
+Reverted all changes. The original code was correct:
+```javascript
+avatar_url: userMeta.avatar_url || userMeta.picture || null,
+```
+
+### Lessons Learned
+
+| Mistake | Lesson |
+|---------|--------|
+| Assumed user wanted a fix | **ASK** what they want before changing behavior |
+| URL pattern matching | Google's `/a-/` is in ALL avatar URLs, not just defaults |
+| Over-engineering | Sometimes "ugly" is better than "broken" |
+| Not testing | Should have verified fix before documenting it as "PROVEN" |
+
+### Prevention
+- When user says something "looks wrong", ask: "What would you like it to show instead?"
+- Don't filter OAuth avatars without explicit user request
+- Test URL patterns against real URLs before deploying
+
+---
+
+## 🔴 BUG: Scraper Date Duplication - Every Class on Every Day (2026-02-05)
+
+### Initial Report
+User said schedule is incorrect. Screenshot showed "Traditional Hot Yoga" on Thu Feb 5 at 7:00 PM, but the actual Breathe Fitness WellnessLiving schedule showed that class does NOT run on Thursdays. App showed 850 results instead of ~30-40 expected for one day's view.
+
+### Root Cause
+Two scrapers (WellnessLiving and Brandedweb) had day-by-day loops that:
+1. **Failed to navigate silently** - CSS selectors didn't match actual DOM, hardcoded pixel clicks missed buttons. `try/catch {}` swallowed all errors.
+2. **Assigned computed dates from loop counter** - Instead of parsing dates from the actual page content, they assigned `dateStr` from `new Date(today + dayOffset)`.
+
+Result: Same weekly schedule scraped 30 times. Each class got 30 records with different dates. 785 bad WellnessLiving records + 173 bad Brandedweb records = 958 total bad records for only 25 unique classes.
+
+### Fix Applied
+1. **WellnessLiving scraper**: Rewrote to parse day headers from page text ("Thursday, February 05, 2026") and navigate week-by-week.
+2. **Brandedweb scraper**: Same treatment - parse date headers, week-by-week navigation with stale-page detection.
+3. **Global safeguard**: `validateScrapedData()` runs after every scraper and auto-deletes data where ratio of records-to-unique-titles exceeds 25x.
+4. **insertClass() validation**: Rejects records without valid date format.
+5. **Deleted all 958 bad records** from database.
+
+### The Rule
+**NEVER assign dates from a loop counter.** Dates must come from parsed page content, API responses, or DOM elements. If navigation fails, stop scraping - don't continue with stale data.
+
+### Affected Scrapers (Audited All 5)
+| Scraper | Status | Date Source |
+|---------|--------|-------------|
+| Mindbody Widget | ✅ OK | Parsed from DOM (`.bw-day__date`) |
+| Mindbody Classic | ✅ OK | Parsed from text ("Mon January 26, 2026") |
+| Mindbody API (scrape-fitness-classes.js) | ✅ OK | API is date-specific per request |
+| WellnessLiving | 🔴→✅ Fixed | Was loop counter, now parsed from text |
+| Brandedweb | 🔴→✅ Fixed | Was loop counter, now parsed from text |
+
+---
+
 ## 🔴 COMPREHENSIVE QA SESSION 2026-02-02
 
 ### 5-AGENT PARALLEL QA AUDIT FINDINGS

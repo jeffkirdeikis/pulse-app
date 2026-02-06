@@ -87,6 +87,14 @@ async function classExists(title, date, venueName) {
 }
 
 async function insertClass(cls) {
+  // SAFETY: Reject classes without a valid parsed date.
+  // This prevents the bug where navigation fails and all classes get assigned
+  // a computed date from the loop counter instead of a real parsed date.
+  if (!cls.date || !/^\d{4}-\d{2}-\d{2}$/.test(cls.date)) {
+    console.warn(`   ⚠️ Skipping "${cls.title}" - invalid date: ${cls.date}`);
+    return false;
+  }
+
   const eventData = {
     title: cls.title,
     description: cls.instructor ? `Instructor: ${cls.instructor}` : `${cls.category} class at ${cls.venueName}`,
@@ -117,6 +125,40 @@ async function insertClass(cls) {
     });
     return response.ok;
   } catch { return false; }
+}
+
+/**
+ * Post-scrape validation: detect suspicious date duplication.
+ * If a venue has too many records per unique class title, the scraper
+ * likely failed to navigate and duplicated the same schedule across dates.
+ */
+async function validateScrapedData(venueName, bookingSystemTag) {
+  try {
+    const todayStr = getTodayPacific();
+    const response = await fetch(
+      `${SUPABASE_URL}/rest/v1/events?select=title,start_date&venue_name=eq.${encodeURIComponent(venueName)}&event_type=eq.class&start_date=gte.${todayStr}&tags=cs.{auto-scraped,${bookingSystemTag}}`,
+      { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }
+    );
+    const data = await response.json();
+    if (!Array.isArray(data) || data.length === 0) return;
+
+    const titles = new Set(data.map(d => d.title));
+    const ratio = data.length / titles.size;
+
+    // A class running every day for 30 days = ratio of 30.
+    // Most classes run 2-5x/week = ratio of 8-20 over 30 days.
+    // Ratio > 25 strongly indicates duplication (same schedule stamped on every day).
+    if (ratio > 25) {
+      console.warn(`   🚨 VALIDATION FAIL: ${venueName} has ${data.length} records for ${titles.size} unique classes (ratio: ${ratio.toFixed(1)}x)`);
+      console.warn(`      This likely indicates failed navigation causing date duplication.`);
+      console.warn(`      Deleting suspicious data to prevent incorrect schedules.`);
+      await deleteOldClasses(venueName, todayStr, bookingSystemTag);
+      return false;
+    }
+    return true;
+  } catch {
+    return true; // Don't block on validation errors
+  }
 }
 
 async function deleteOldClasses(venueName, fromDate, bookingSystemTag) {
@@ -599,29 +641,72 @@ async function scrapeWellnessLiving(source, browser) {
 // BRANDEDWEB SCRAPER (Mindbody branded widgets)
 // ============================================================
 
-function parseBrandedwebClasses(text, date, source) {
+/**
+ * Parse Brandedweb (Mindbody) schedule text into classes with date headers.
+ * Brandedweb pages may show day headers like "Tuesday, February 10, 2026"
+ * or "Tue, Feb 10" followed by class listings with time/duration/name/instructor.
+ */
+function parseBrandedwebSchedule(text, source) {
   const classes = [];
   const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
 
-  for (let i = 0; i < lines.length - 3; i++) {
+  const months = ['january', 'february', 'march', 'april', 'may', 'june',
+                  'july', 'august', 'september', 'october', 'november', 'december'];
+  const shortMonths = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+
+  let currentDate = null;
+
+  for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
+
+    // Match date headers: "Tuesday, February 10, 2026" or "Tuesday, February 10"
+    const dateMatch1 = line.match(/^\w+,\s+(\w+)\s+(\d{1,2}),?\s*(\d{4})?$/i);
+    if (dateMatch1) {
+      const monthName = dateMatch1[1].toLowerCase();
+      const day = parseInt(dateMatch1[2]);
+      const year = dateMatch1[3] ? parseInt(dateMatch1[3]) : new Date().getFullYear();
+      const monthIndex = months.indexOf(monthName);
+      const shortIndex = shortMonths.findIndex(m => monthName.startsWith(m));
+      const idx = monthIndex !== -1 ? monthIndex : shortIndex;
+      if (idx !== -1) {
+        currentDate = `${year}-${String(idx + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      }
+      continue;
+    }
+
+    // Match shorter date headers: "Tue, Feb 10" or "Feb 10, 2026"
+    const dateMatch2 = line.match(/(?:\w+,\s+)?(\w+)\s+(\d{1,2})(?:,\s*(\d{4}))?$/i);
+    if (dateMatch2 && !line.match(/^\d/) && line.length < 30) {
+      const monthName = dateMatch2[1].toLowerCase();
+      const day = parseInt(dateMatch2[2]);
+      const year = dateMatch2[3] ? parseInt(dateMatch2[3]) : new Date().getFullYear();
+      const shortIndex = shortMonths.findIndex(m => monthName.startsWith(m));
+      if (shortIndex !== -1 && day >= 1 && day <= 31) {
+        currentDate = `${year}-${String(shortIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        continue;
+      }
+    }
+
+    if (!currentDate) continue;
 
     // Check if line is a time (e.g., "8:30 AM", "6:00 PM")
     const timeMatch = line.match(/^(\d{1,2}:\d{2}\s*(?:AM|PM))$/i);
     if (!timeMatch) continue;
 
     // Next line should be duration
+    if (i + 1 >= lines.length) continue;
     const durationLine = lines[i + 1];
     if (!/^\d+\s*min$/i.test(durationLine)) continue;
 
     // Next line should be class name
+    if (i + 2 >= lines.length) continue;
     const className = lines[i + 2];
     if (!className || className.length < 3 || className.length > 100) continue;
     if (/^(Show Details|Book|Oxygen|Squamish|\d)/.test(className)) continue;
 
     // Next line might be instructor
-    const instructor = lines[i + 3] || '';
-    const cleanInstructor = /^(Show Details|Book|Oxygen)/.test(instructor) ? '' : instructor;
+    const instructor = (i + 3 < lines.length) ? lines[i + 3] : '';
+    const cleanInstructor = /^(Show Details|Book|Oxygen|\d)/.test(instructor) ? '' : instructor;
 
     classes.push({
       title: className,
@@ -630,15 +715,15 @@ function parseBrandedwebClasses(text, date, source) {
       venueName: source.name,
       address: source.address,
       category: source.category,
-      date: date,
+      date: currentDate,
       bookingSystem: 'brandedweb'
     });
   }
 
-  // Deduplicate
+  // Deduplicate by title + date + time
   const seen = new Set();
   return classes.filter(c => {
-    const key = `${c.title}-${c.time}`;
+    const key = `${c.title}-${c.date}-${c.time}`;
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
@@ -656,7 +741,6 @@ async function scrapeBrandedweb(source, browser) {
 
   try {
     const todayStr = getTodayPacific();
-    const endDateStr = getEndDatePacific(DAYS_TO_SCRAPE);
 
     await deleteOldClasses(source.name, todayStr, 'brandedweb');
 
@@ -664,26 +748,66 @@ async function scrapeBrandedweb(source, browser) {
     await page.goto(source.url, { waitUntil: 'networkidle2', timeout: 60000 });
     await new Promise(r => setTimeout(r, 3000));
 
-    // Scrape day by day
-    const today = new Date();
-    for (let dayOffset = 0; dayOffset < DAYS_TO_SCRAPE; dayOffset++) {
-      const targetDate = new Date(today);
-      targetDate.setDate(today.getDate() + dayOffset);
-      const dateStr = targetDate.toISOString().split('T')[0];
+    // Brandedweb pages show a weekly schedule. Navigate week-by-week.
+    const weeksNeeded = Math.ceil(DAYS_TO_SCRAPE / 7);
+    let lastPageText = '';
 
-      // Click on date to navigate (approximate position based on day of week)
-      if (dayOffset > 0) {
-        const dayOfWeek = targetDate.getDay();
-        const xPositions = [200, 300, 400, 500, 200, 300, 400];
-        await page.mouse.click(xPositions[dayOfWeek] || 200, 265);
-        await new Promise(r => setTimeout(r, 2000));
+    for (let week = 0; week < weeksNeeded; week++) {
+      if (week > 0) {
+        // Try to navigate to next week
+        try {
+          const clicked = await page.evaluate(() => {
+            // Look for forward/next navigation elements
+            const selectors = [
+              'button[aria-label*="Next"]', 'button[aria-label*="next"]',
+              'button[aria-label*="Forward"]', '.next-week', '[class*="next"]',
+              '[class*="forward"]', '.fa-chevron-right', '.fa-arrow-right'
+            ];
+            for (const sel of selectors) {
+              const el = document.querySelector(sel);
+              if (el) { el.click(); return true; }
+            }
+            // Try arrow buttons by text
+            const buttons = document.querySelectorAll('button, a, span');
+            for (const btn of buttons) {
+              const text = btn.textContent.trim();
+              if (text === '>' || text === '›' || text === '→' || text === '▶' || text === 'Next') {
+                btn.click();
+                return true;
+              }
+            }
+            return false;
+          });
+
+          if (clicked) {
+            await new Promise(r => setTimeout(r, 3000));
+          } else {
+            console.log(`   ⚠️ Could not navigate to week ${week + 1}, stopping`);
+            break;
+          }
+        } catch (navErr) {
+          console.log(`   ⚠️ Navigation error week ${week + 1}: ${navErr.message}`);
+          break;
+        }
       }
 
-      // Extract classes from page text
-      const text = await page.evaluate(() => document.body.innerText);
-      const classes = parseBrandedwebClasses(text, dateStr, source);
+      // Extract page text and check it actually changed
+      const pageText = await page.evaluate(() => document.body.innerText);
+      if (week > 0 && pageText === lastPageText) {
+        console.log(`   ⚠️ Page didn't change after navigation, stopping`);
+        break;
+      }
+      lastPageText = pageText;
+
+      // Parse classes with date headers from the page text
+      const classes = parseBrandedwebSchedule(pageText, source);
+
+      const dates = new Set(classes.map(c => c.date));
+      console.log(`   Week ${week + 1}: Found ${classes.length} classes across ${dates.size} days`);
 
       for (const cls of classes) {
+        if (cls.date < todayStr) continue;
+
         classesFound++;
         stats.classesFound++;
 
@@ -894,6 +1018,9 @@ async function main() {
           console.log(`\n⚠️  Unknown booking system: ${source.booking_system} for ${source.name}`);
           stats.errors.push({ source: source.name, error: `Unknown booking system: ${source.booking_system}` });
       }
+
+      // Post-scrape validation: detect and remove duplicated schedules
+      await validateScrapedData(source.name, source.booking_system);
 
       // Brief pause between sources
       await new Promise(r => setTimeout(r, 2000));
