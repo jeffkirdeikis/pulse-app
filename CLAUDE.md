@@ -55,11 +55,11 @@ git status  # Must show "nothing to commit" or explicitly ask user to commit
 
 ### The Rule
 
-**Web scraping is essential and encouraged** — all event/class data comes from scraping real websites. The problem is specifically **AI hallucination**: feeding raw HTML to an LLM and asking it to "extract" events results in the AI *inventing* fake events that don't exist on the page.
+**Web scraping is essential and encouraged** — all event/class data comes from scraping real websites. The core risk is **AI hallucination**: feeding raw HTML to an LLM and asking it to "extract" events can result in the AI *inventing* fake events. This is solved by **source text verification** — every AI-extracted event must be deterministically verified against the page text before insertion.
 
 **Every piece of data in the app MUST come from a real, scrapeable source.** No exceptions. This applies to:
 
-- **Events & Classes**: From web scrapers (Mindbody, WellnessLiving, JaneApp, or any new scraper that parses real data), or manually submitted by business owners
+- **Events & Classes**: From web scrapers (Mindbody, WellnessLiving, JaneApp, verified AI extraction, or any scraper that produces real data), or manually submitted by business owners
 - **Deals**: Only from business owners or verified promotions
 - **Business info**: Only from the Supabase `businesses` table (real directory data)
 - **Business panel**: Real data only - no placeholder/demo content
@@ -70,9 +70,9 @@ git status  # Must show "nothing to commit" or explicitly ask user to commit
 
 | Banned | Why |
 |--------|-----|
-| Using an LLM to "extract" events from HTML | The LLM hallucinates plausible-sounding but completely fake events |
-| `scrape-with-ai.js` | DISABLED - feeds HTML to Claude, which invents fictional events |
-| `extractWithAI()` in `scrape-orchestrator.js` | DISABLED - same hallucination problem |
+| **Unverified** AI extraction (feeding HTML to LLM without source verification) | The LLM hallucinates plausible-sounding but completely fake events |
+| `scrape-with-ai.js` | DISABLED - feeds HTML to Claude without any verification |
+| Old `extractWithAI()` in `scrape-orchestrator.js` | REMOVED - no source text verification |
 | Hardcoded sample events/classes | Could be mistaken for real data |
 | Fallback/default event data | Users cannot distinguish fake from real |
 
@@ -80,21 +80,31 @@ git status  # Must show "nothing to commit" or explicitly ask user to commit
 
 | Source | Trust Level |
 |--------|-------------|
-| **Any web scraper that parses structured data** | High - reads what's actually on the page |
-| Mindbody API/widget scraper | High - parses real booking system |
-| WellnessLiving scraper | High - parses real booking system |
-| JaneApp scraper | High - parses real booking system |
-| New scrapers for other booking systems | High - as long as they parse real data, not use AI extraction |
+| **Dedicated booking system scrapers** (Mindbody, WellnessLiving, JaneApp, etc.) | High - parses real structured data |
+| **Verified AI extraction** (`verified-extractor.js` with 5-layer anti-hallucination) | Medium - AI extracts, then every title+date verified in page text |
+| Any web scraper that parses structured data | High - reads what's actually on the page |
 | User-submitted events (via Submit Event form) | Medium - human-verified |
 | Business owner submissions | Medium - business-verified |
 | Supabase `businesses` table | High - curated directory |
 
+### Verified AI Extraction Pipeline (5 anti-hallucination layers)
+
+The `scripts/lib/verified-extractor.js` module enables safe AI extraction:
+
+1. **Signal pre-filter** (free) — pages without dates, times, and event keywords never reach AI
+2. **Strict AI prompt** — uses `innerText` (not HTML), requires `source_quote`, explicitly says "return empty if none"
+3. **Source text verification** — every extracted title must appear in page text (80%+ word match), date OR time must appear in page text
+4. **event-validator.js** — forbidden titles, AI hallucination patterns, placeholder detection, clustering detection
+5. **Database constraints** — CHECK constraints, holiday triggers, quarantine table
+
+All AI-verified events are tagged `['auto-scraped', 'ai-verified', 'website-verified']` with `confidence_score = 0.75` for easy bulk query/delete.
+
 ### Before Adding Any New Scraper
 
-1. **Scraper must parse real structured data** (DOM elements, APIs, JSON-LD, etc.)
+1. **Scraper must produce verifiable data** (DOM parsing, APIs, JSON-LD, or AI with source verification)
 2. **Confirm** the scraped data matches what actually appears on the website
 3. **Validate** with the scraper data quality checks (see SCRAPER DATA QUALITY section)
-4. **Never** use an LLM to "fill in" or "extract" missing data — if data doesn't exist on the page, don't create it
+4. **Never** use an LLM to "fill in" or "invent" data — if data doesn't exist on the page, don't create it
 
 ---
 
@@ -305,7 +315,7 @@ When a bug is reported:
 | **CSS Inheritance** | Lucide icon color prop doesn't work in buttons | Wrap in div with color style |
 | **Over-Fixing** | Tried to "fix" Google avatar by filtering URLs, broke everything | Ask user what they want first |
 | **Scraper Date Duplication** | Navigation fails silently, same schedule stamped on every day for 30 days | Parse dates from page text, never assign computed dates from loop counters |
-| **AI Data Hallucination** | AI invented 1,471 fake events like "Yoga Class" at A&W, "MMA" at a pharmacy | NEVER use AI to generate/extract event data. Only verified booking system scrapers allowed |
+| **AI Data Hallucination** | AI invented 1,471 fake events like "Yoga Class" at A&W, "MMA" at a pharmacy | ALWAYS verify AI-extracted data against source page text. Use `verified-extractor.js` with 5-layer anti-hallucination pipeline |
 
 ---
 
