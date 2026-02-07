@@ -305,6 +305,7 @@ async function scrapeClinic(browser, clinic) {
             date: ps.date,
             startTime: `${String(ps.hour).padStart(2, '0')}:${String(ps.minute).padStart(2, '0')}`,
             durationMinutes,
+            _source: 'dom', // Track origin for filtering
           });
         }
       } catch (err) {
@@ -363,6 +364,7 @@ async function scrapeClinic(browser, clinic) {
                 startTime: timeStr,
                 durationMinutes: durMin,
                 bookingUrl,
+                _source: 'api', // Structured API data — trustworthy
               });
             }
           }
@@ -392,6 +394,7 @@ async function scrapeClinic(browser, clinic) {
                 date,
                 startTime: timeStr,
                 durationMinutes: typeof dur === 'number' ? dur : 60,
+                _source: 'api',
               });
             }
           }
@@ -400,6 +403,28 @@ async function scrapeClinic(browser, clinic) {
         // Skip malformed API response
       }
     }
+
+    // If we got API responses, discard DOM-scraped slots — DOM scraping produces
+    // false positives by matching time-like patterns in treatment descriptions
+    const apiSlots = slots.filter(s => s._source === 'api');
+    const domSlots = slots.filter(s => s._source === 'dom');
+    const hadApiResponse = apiResponses.some(r =>
+      r.url.includes('openings') || r.url.includes('availability')
+    );
+
+    if (hadApiResponse) {
+      // Trust only API data — DOM data is unreliable
+      if (domSlots.length > 0) {
+        console.log(`  Discarding ${domSlots.length} DOM-scraped slots (API data available)`);
+      }
+      slots.length = 0;
+      slots.push(...apiSlots);
+    } else if (apiSlots.length > 0) {
+      // Got API slots from some other endpoint shape
+      slots.length = 0;
+      slots.push(...apiSlots);
+    }
+    // If no API responses at all, keep DOM slots as last resort
 
     // Log success
     await supabase.from('pulse_scrape_log').insert({
@@ -410,7 +435,7 @@ async function scrapeClinic(browser, clinic) {
       duration_ms: Date.now() - startTime,
     });
 
-    console.log(`  ✅ ${clinic.name}: Found ${slots.length} slots (${Date.now() - startTime}ms)`);
+    console.log(`  ✅ ${clinic.name}: Found ${slots.length} slots (${apiSlots.length} API, ${domSlots.length} DOM discarded) (${Date.now() - startTime}ms)`);
   } catch (error) {
     console.error(`  ❌ ${clinic.name}: ${error.message}`);
 
