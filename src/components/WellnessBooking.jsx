@@ -150,10 +150,13 @@ export default function WellnessBooking({
   // Fetch slot counts for all dates in the carousel
   const fetchDateCounts = useCallback(async () => {
     const dateList = dates.map(d => d.date);
-    // Use a simple query - get all available slots for the next 14 days
+    const today = dates[0].date;
+    const nowTime = new Date().toTimeString().slice(0, 8); // "HH:MM:SS"
+
+    // Get all available slots for the next 14 days
     let query = supabase
       .from('pulse_availability_slots')
-      .select('date')
+      .select('date, start_time')
       .in('date', dateList)
       .eq('is_available', true);
 
@@ -162,6 +165,8 @@ export default function WellnessBooking({
     if (!error && data) {
       const counts = {};
       data.forEach(row => {
+        // Skip past times for today
+        if (row.date === today && row.start_time <= nowTime) return;
         counts[row.date] = (counts[row.date] || 0) + 1;
       });
       setDateCounts(counts);
