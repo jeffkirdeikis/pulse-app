@@ -317,10 +317,18 @@ async function scrapeClinic(browser, clinic) {
       try {
         const data = resp.data;
 
+        // Extract staff_member_id and treatment_id from the API URL for direct booking links
+        // URL format: /api/v2/openings?staff_member_id=79&treatment_id=617
+        const urlParams = new URL(resp.url).searchParams;
+        const apiStaffId = urlParams.get('staff_member_id');
+        const apiTreatmentId = urlParams.get('treatment_id');
+
         // JaneApp /api/v2/openings returns: [{id, full_name, openings: [{start_at, duration, ...}]}]
         if (Array.isArray(data) && data[0]?.openings) {
           for (const staffMember of data) {
             const practName = staffMember.full_name || staffMember.name || null;
+            const staffId = apiStaffId || staffMember.id;
+
             for (const opening of (staffMember.openings || [])) {
               const startAt = opening.start_at;
               if (!startAt) continue;
@@ -337,6 +345,15 @@ async function scrapeClinic(browser, clinic) {
                 Math.abs(curr - rawMin) < Math.abs(prev - rawMin) ? curr : prev
               );
 
+              // Build direct booking URL: https://{slug}.janeapp.com/#/staff_member/{id}/treatment/{id}
+              const treatId = apiTreatmentId || opening.treatment_id;
+              let bookingUrl = `https://${clinic.slug}.janeapp.com`;
+              if (staffId && treatId) {
+                bookingUrl += `/#/staff_member/${staffId}/treatment/${treatId}`;
+              } else if (staffId) {
+                bookingUrl += `/#/staff_member/${staffId}`;
+              }
+
               slots.push({
                 clinicSlug: clinic.slug,
                 clinicName: clinic.name,
@@ -345,6 +362,7 @@ async function scrapeClinic(browser, clinic) {
                 date: dateStr,
                 startTime: timeStr,
                 durationMinutes: durMin,
+                bookingUrl,
               });
             }
           }
@@ -538,6 +556,7 @@ async function upsertSlots(allSlots, providerMap) {
       duration_minutes: slot.durationMinutes,
       is_available: true,
       source: 'janeapp_scrape',
+      booking_url: slot.bookingUrl || null,
     });
   }
 

@@ -227,7 +227,9 @@ export default function WellnessBooking({
 
   // Handle booking click
   const handleBookingClick = async (provider, slot = null) => {
-    const url = provider.booking_url || `https://${provider.janeapp_slug}.janeapp.com`;
+    // Prefer slot-level booking URL (direct to practitioner/treatment page)
+    // Fall back to provider booking URL, then generic JaneApp page
+    const url = slot?.booking_url || provider.booking_url || `https://${provider.janeapp_slug}.janeapp.com`;
 
     if (isAuthenticated && session?.user?.id) {
       // Log click and award XP
