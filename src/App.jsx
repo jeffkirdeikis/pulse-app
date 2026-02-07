@@ -8504,7 +8504,7 @@ const getRelatedDeals = (currentDeal, allDeals) => {
 
 export default function PulseApp() {
   const [view, setView] = useState('consumer');
-  const [currentSection, setCurrentSection] = useState('classes'); // classes, events, deals, services - DEFAULT TO CLASSES
+  const [currentSection, setCurrentSection] = useState('classes'); // classes, events, deals, services, wellness - DEFAULT TO CLASSES
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedEvent, setSelectedEvent] = useState(null);
@@ -10533,7 +10533,7 @@ export default function PulseApp() {
           <div className="top-banner-premium">
             <div className="banner-content-premium">
               <div className="banner-tabs">
-                <button 
+                <button
                   className={`banner-tab ${currentSection === 'classes' ? 'active' : ''}`}
                   onClick={() => { setCurrentSection('classes'); setServicesSubView('directory'); }}
                 >
@@ -10554,19 +10554,28 @@ export default function PulseApp() {
                   <DollarSign size={18} />
                   <span>Deals</span>
                 </button>
-                <button 
+              </div>
+              <div className="banner-tabs banner-tabs-row2">
+                <button
                   className={`banner-tab ${currentSection === 'services' ? 'active' : ''}`}
                   onClick={() => setCurrentSection('services')}
                 >
                   <Wrench size={18} />
                   <span>Services</span>
                 </button>
+                <button
+                  className={`banner-tab ${currentSection === 'wellness' ? 'active' : ''}`}
+                  onClick={() => setCurrentSection('wellness')}
+                >
+                  <Heart size={18} />
+                  <span>Wellness</span>
+                </button>
               </div>
             </div>
           </div>
 
-          {/* Search Bar - Premium */}
-          <div className="search-section-premium">
+          {/* Search Bar - Premium (hidden for wellness which has its own UI) */}
+          <div className="search-section-premium" style={currentSection === 'wellness' ? { display: 'none' } : undefined}>
             <div className="search-bar-premium">
               <Search size={20} className="search-icon-premium" />
               <input 
@@ -10793,6 +10802,7 @@ export default function PulseApp() {
           )}
 
           <div className="content">
+            {currentSection !== 'wellness' && (
             <div className="results-count">
               {currentSection === 'deals' ? (
                 dealsLoading ? 'Loading...' : `${filterDeals().filter(d => dealCategoryFilter === 'All' || normalizeDealCategory(d.category) === dealCategoryFilter).length} results`
@@ -10817,7 +10827,8 @@ export default function PulseApp() {
                 eventsLoading ? 'Loading...' : `${filterEvents().length} results`
               )}
             </div>
-            
+            )}
+
             {currentSection === 'deals' ? (
               <>
                 {/* Deals Filter */}
@@ -11244,6 +11255,14 @@ export default function PulseApp() {
               </>
                 )}
               </>
+            ) : currentSection === 'wellness' ? (
+              <WellnessBooking
+                onBack={() => setCurrentSection('services')}
+                isAuthenticated={isAuthenticated}
+                session={session}
+                showToast={showToast}
+                setShowAuthModal={setShowAuthModal}
+              />
             ) : (
               <div className="events-list">
                 {renderEventsWithDividers()}
@@ -17170,8 +17189,13 @@ export default function PulseApp() {
         
         .banner-tabs {
           display: grid;
-          grid-template-columns: repeat(4, 1fr);
+          grid-template-columns: repeat(3, 1fr);
           gap: 0;
+        }
+
+        .banner-tabs.banner-tabs-row2 {
+          grid-template-columns: repeat(2, 1fr);
+          border-top: 1px solid #f3f4f6;
         }
         
         .banner-tab {
