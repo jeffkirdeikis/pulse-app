@@ -5,7 +5,6 @@
 -- ============================================
 
 -- Sea to Sky Massage Therapy — Confirmed JaneApp
--- Individual RMTs seeded as separate providers
 INSERT INTO pulse_wellness_providers (name, clinic_name, discipline, platform, booking_url, janeapp_slug, specialties, bio, photo_url, price_min, price_max, direct_billing, rating, review_count)
 VALUES
     ('Kolten', 'Sea to Sky Massage Therapy', 'massage_therapy', 'janeapp', 'https://seatoskymassage.janeapp.com', 'seatoskymassage', NULL, NULL, NULL, NULL, NULL, false, NULL, NULL),
@@ -15,7 +14,6 @@ VALUES
 ON CONFLICT DO NOTHING;
 
 -- Shift Wellness — Confirmed JaneApp, multi-discipline
--- Location: #103-37989 Cleveland Ave
 INSERT INTO pulse_wellness_providers (name, clinic_name, discipline, platform, booking_url, janeapp_slug, specialties, bio, photo_url, price_min, price_max, direct_billing, rating, review_count)
 VALUES
     ('Teri-Rose', 'Shift Wellness', 'massage_therapy', 'janeapp', 'https://squamish.janeapp.com', 'squamish', NULL, NULL, NULL, NULL, NULL, false, NULL, NULL),
@@ -25,39 +23,60 @@ VALUES
     ('Katlyn', 'Shift Wellness', 'acupuncture', 'janeapp', 'https://squamish.janeapp.com', 'squamish', NULL, NULL, NULL, NULL, NULL, false, NULL, NULL)
 ON CONFLICT DO NOTHING;
 
--- Bliss Massage Therapy — Confirmed JaneApp
+-- Bliss Massage Therapy — Confirmed JaneApp (full names from booking page)
 INSERT INTO pulse_wellness_providers (name, clinic_name, discipline, platform, booking_url, janeapp_slug, specialties, bio, photo_url, price_min, price_max, direct_billing, rating, review_count)
 VALUES
-    ('Kim', 'Bliss Massage Therapy', 'massage_therapy', 'janeapp', 'https://bliss.janeapp.com', 'bliss', NULL, NULL, NULL, NULL, NULL, false, NULL, NULL),
-    ('Grace', 'Bliss Massage Therapy', 'massage_therapy', 'janeapp', 'https://bliss.janeapp.com', 'bliss', NULL, NULL, NULL, NULL, NULL, false, NULL, NULL),
-    ('Madison', 'Bliss Massage Therapy', 'massage_therapy', 'janeapp', 'https://bliss.janeapp.com', 'bliss', NULL, NULL, NULL, NULL, NULL, false, NULL, NULL),
-    ('Danielle', 'Bliss Massage Therapy', 'massage_therapy', 'janeapp', 'https://bliss.janeapp.com', 'bliss', NULL, NULL, NULL, NULL, NULL, false, NULL, NULL),
-    ('Krista', 'Bliss Massage Therapy', 'massage_therapy', 'janeapp', 'https://bliss.janeapp.com', 'bliss', NULL, NULL, NULL, NULL, NULL, false, NULL, NULL),
-    ('Marti', 'Bliss Massage Therapy', 'massage_therapy', 'janeapp', 'https://bliss.janeapp.com', 'bliss', NULL, NULL, NULL, NULL, NULL, false, NULL, NULL)
+    ('Kim Markgraf', 'Bliss Massage Therapy', 'massage_therapy', 'janeapp', 'https://bliss.janeapp.com', 'bliss', NULL, NULL, NULL, NULL, NULL, false, NULL, NULL),
+    ('Grace MacKay', 'Bliss Massage Therapy', 'massage_therapy', 'janeapp', 'https://bliss.janeapp.com', 'bliss', NULL, NULL, NULL, NULL, NULL, false, NULL, NULL),
+    ('Madison Roberts', 'Bliss Massage Therapy', 'massage_therapy', 'janeapp', 'https://bliss.janeapp.com', 'bliss', NULL, NULL, NULL, NULL, NULL, false, NULL, NULL),
+    ('Danielle Trachsel', 'Bliss Massage Therapy', 'massage_therapy', 'janeapp', 'https://bliss.janeapp.com', 'bliss', NULL, NULL, NULL, NULL, NULL, false, NULL, NULL),
+    ('Krista Ottema', 'Bliss Massage Therapy', 'massage_therapy', 'janeapp', 'https://bliss.janeapp.com', 'bliss', NULL, NULL, NULL, NULL, NULL, false, NULL, NULL),
+    ('Martine Rouleau', 'Bliss Massage Therapy', 'massage_therapy', 'janeapp', 'https://bliss.janeapp.com', 'bliss', NULL, NULL, NULL, NULL, NULL, false, NULL, NULL),
+    ('Natalia Finlayson', 'Bliss Massage Therapy', 'massage_therapy', 'janeapp', 'https://bliss.janeapp.com', 'bliss', NULL, NULL, NULL, NULL, NULL, false, NULL, NULL)
 ON CONFLICT DO NOTHING;
 
--- Constellation Wellness — Confirmed JaneApp
+-- Constellation Wellness — Confirmed JaneApp, multi-discipline
 INSERT INTO pulse_wellness_providers (name, clinic_name, discipline, platform, booking_url, janeapp_slug, specialties, bio, photo_url, price_min, price_max, direct_billing, rating, review_count)
 VALUES
-    ('Daniel', 'Constellation Wellness', 'massage_therapy', 'janeapp', 'https://constellationwellness.janeapp.com', 'constellationwellness', NULL, NULL, NULL, NULL, NULL, false, NULL, NULL),
-    ('Elliot', 'Constellation Wellness', 'massage_therapy', 'janeapp', 'https://constellationwellness.janeapp.com', 'constellationwellness', NULL, NULL, NULL, NULL, NULL, false, NULL, NULL)
+    ('Daniel Porcino', 'Constellation Wellness', 'massage_therapy', 'janeapp', 'https://constellationwellness.janeapp.com', 'constellationwellness', NULL, NULL, NULL, NULL, NULL, false, NULL, NULL),
+    ('Elliot Godman', 'Constellation Wellness', 'massage_therapy', 'janeapp', 'https://constellationwellness.janeapp.com', 'constellationwellness', NULL, NULL, NULL, NULL, NULL, false, NULL, NULL),
+    ('McHale Whitehouse', 'Constellation Wellness', 'massage_therapy', 'janeapp', 'https://constellationwellness.janeapp.com', 'constellationwellness', NULL, NULL, NULL, NULL, NULL, false, NULL, NULL),
+    ('Jennifer P', 'Constellation Wellness', 'acupuncture', 'janeapp', 'https://constellationwellness.janeapp.com', 'constellationwellness', NULL, NULL, NULL, NULL, NULL, false, NULL, NULL)
 ON CONFLICT DO NOTHING;
 
--- LivWell Integrated Health — Confirmed JaneApp, multi-discipline
--- NOTE: Exact practitioners need to be confirmed via scraping
+-- LivWell Integrated Health — Confirmed JaneApp, large multi-discipline clinic
+-- Location: 1414 Winnipeg Street, Squamish
 INSERT INTO pulse_wellness_providers (name, clinic_name, discipline, platform, booking_url, janeapp_slug, specialties, bio, photo_url, price_min, price_max, direct_billing, rating, review_count)
 VALUES
-    ('LivWell RMT', 'LivWell Integrated Health', 'massage_therapy', 'janeapp', 'https://livwellsquamish.janeapp.com', 'livwellsquamish', NULL, NULL, NULL, NULL, NULL, false, NULL, NULL),
-    ('LivWell Chiro', 'LivWell Integrated Health', 'chiropractic', 'janeapp', 'https://livwellsquamish.janeapp.com', 'livwellsquamish', NULL, NULL, NULL, NULL, NULL, false, NULL, NULL),
-    ('LivWell Physio', 'LivWell Integrated Health', 'physiotherapy', 'janeapp', 'https://livwellsquamish.janeapp.com', 'livwellsquamish', NULL, NULL, NULL, NULL, NULL, false, NULL, NULL),
-    ('LivWell Acupuncture', 'LivWell Integrated Health', 'acupuncture', 'janeapp', 'https://livwellsquamish.janeapp.com', 'livwellsquamish', NULL, NULL, NULL, NULL, NULL, false, NULL, NULL)
+    -- Acupuncture & Chinese Medicine
+    ('Angela Bowack', 'LivWell Integrated Health', 'acupuncture', 'janeapp', 'https://livwellintegratedhealth.janeapp.com', 'livwellintegratedhealth', NULL, NULL, NULL, NULL, NULL, false, NULL, NULL),
+    ('Alison West', 'LivWell Integrated Health', 'acupuncture', 'janeapp', 'https://livwellintegratedhealth.janeapp.com', 'livwellintegratedhealth', NULL, NULL, NULL, NULL, NULL, false, NULL, NULL),
+    ('Melissa Wheaton', 'LivWell Integrated Health', 'acupuncture', 'janeapp', 'https://livwellintegratedhealth.janeapp.com', 'livwellintegratedhealth', NULL, NULL, NULL, NULL, NULL, false, NULL, NULL),
+    -- Physiotherapy
+    ('Lina Englund', 'LivWell Integrated Health', 'physiotherapy', 'janeapp', 'https://livwellintegratedhealth.janeapp.com', 'livwellintegratedhealth', NULL, NULL, NULL, NULL, NULL, false, NULL, NULL),
+    ('Lara Martin', 'LivWell Integrated Health', 'physiotherapy', 'janeapp', 'https://livwellintegratedhealth.janeapp.com', 'livwellintegratedhealth', NULL, NULL, NULL, NULL, NULL, false, NULL, NULL),
+    ('Claire McDonald', 'LivWell Integrated Health', 'physiotherapy', 'janeapp', 'https://livwellintegratedhealth.janeapp.com', 'livwellintegratedhealth', NULL, NULL, NULL, NULL, NULL, false, NULL, NULL),
+    ('Rachel Richards', 'LivWell Integrated Health', 'physiotherapy', 'janeapp', 'https://livwellintegratedhealth.janeapp.com', 'livwellintegratedhealth', NULL, NULL, NULL, NULL, NULL, false, NULL, NULL),
+    -- Chiropractic
+    ('Valerie Brabant', 'LivWell Integrated Health', 'chiropractic', 'janeapp', 'https://livwellintegratedhealth.janeapp.com', 'livwellintegratedhealth', NULL, NULL, NULL, NULL, NULL, false, NULL, NULL),
+    ('Nathaniel Janzen', 'LivWell Integrated Health', 'chiropractic', 'janeapp', 'https://livwellintegratedhealth.janeapp.com', 'livwellintegratedhealth', NULL, NULL, NULL, NULL, NULL, false, NULL, NULL),
+    ('Rylee Stephens', 'LivWell Integrated Health', 'chiropractic', 'janeapp', 'https://livwellintegratedhealth.janeapp.com', 'livwellintegratedhealth', NULL, NULL, NULL, NULL, NULL, false, NULL, NULL),
+    -- Massage Therapy
+    ('Lauren Billey', 'LivWell Integrated Health', 'massage_therapy', 'janeapp', 'https://livwellintegratedhealth.janeapp.com', 'livwellintegratedhealth', NULL, NULL, NULL, NULL, NULL, false, NULL, NULL),
+    ('Minda Johnson', 'LivWell Integrated Health', 'massage_therapy', 'janeapp', 'https://livwellintegratedhealth.janeapp.com', 'livwellintegratedhealth', NULL, NULL, NULL, NULL, NULL, false, NULL, NULL),
+    ('Karen Olynyk', 'LivWell Integrated Health', 'massage_therapy', 'janeapp', 'https://livwellintegratedhealth.janeapp.com', 'livwellintegratedhealth', NULL, NULL, NULL, NULL, NULL, false, NULL, NULL),
+    ('Rahel Ulrich', 'LivWell Integrated Health', 'massage_therapy', 'janeapp', 'https://livwellintegratedhealth.janeapp.com', 'livwellintegratedhealth', NULL, NULL, NULL, NULL, NULL, false, NULL, NULL),
+    ('Chantelle Groenewoud', 'LivWell Integrated Health', 'massage_therapy', 'janeapp', 'https://livwellintegratedhealth.janeapp.com', 'livwellintegratedhealth', NULL, NULL, NULL, NULL, NULL, false, NULL, NULL),
+    ('Amanda Lum', 'LivWell Integrated Health', 'massage_therapy', 'janeapp', 'https://livwellintegratedhealth.janeapp.com', 'livwellintegratedhealth', NULL, NULL, NULL, NULL, NULL, false, NULL, NULL),
+    ('Jenny Lister', 'LivWell Integrated Health', 'massage_therapy', 'janeapp', 'https://livwellintegratedhealth.janeapp.com', 'livwellintegratedhealth', NULL, NULL, NULL, NULL, NULL, false, NULL, NULL)
 ON CONFLICT DO NOTHING;
 
 -- Emily Costa RMT — Confirmed JaneApp, solo practitioner
--- Location: Garibaldi Estates, Specialties: holistic, jaw/TMJ, nerve
+-- Location: 43 - 40137 Government Rd, Squamish (Garibaldi Estates, Amblepath complex)
+-- Prices: $85 (30min), $115 (45min), $135 (60min), $165 (75min)
 INSERT INTO pulse_wellness_providers (name, clinic_name, discipline, platform, booking_url, janeapp_slug, specialties, bio, photo_url, price_min, price_max, direct_billing, rating, review_count)
 VALUES
-    ('Emily Costa', 'Emily Costa RMT', 'massage_therapy', 'janeapp', 'https://emilycostamassage.janeapp.com', 'emilycostamassage', ARRAY['holistic', 'jaw/TMJ', 'nerve'], NULL, NULL, NULL, NULL, false, NULL, NULL)
+    ('Emily Costa', 'Emily Costa RMT', 'massage_therapy', 'janeapp', 'https://emilycosta.janeapp.com', 'emilycosta', ARRAY['holistic', 'jaw/TMJ', 'nerve', 'prenatal'], NULL, NULL, 8500, 16500, true, NULL, NULL)
 ON CONFLICT DO NOTHING;
 
 -- Kayla Young Wellness — Confirmed JaneApp
@@ -67,38 +86,7 @@ VALUES
 ON CONFLICT DO NOTHING;
 
 -- Anchor Health & Wellness — Likely JaneApp (needs verification)
--- Location: #101 - 37776 2nd Ave, Downtown Squamish
--- NOTE: janeapp_slug needs to be verified by visiting their website
 INSERT INTO pulse_wellness_providers (name, clinic_name, discipline, platform, booking_url, janeapp_slug, specialties, bio, photo_url, price_min, price_max, direct_billing, rating, review_count)
 VALUES
     ('Vanessa Senecal', 'Anchor Health & Wellness', 'massage_therapy', 'janeapp', NULL, NULL, NULL, NULL, NULL, NULL, NULL, false, NULL, NULL)
-ON CONFLICT DO NOTHING;
-
--- Ako Health — Platform needs verification
--- Location: Downtown Squamish
--- NOTE: booking_url and platform need to be verified
-INSERT INTO pulse_wellness_providers (name, clinic_name, discipline, platform, booking_url, janeapp_slug, specialties, bio, photo_url, price_min, price_max, direct_billing, rating, review_count)
-VALUES
-    ('Ako Health RMT', 'Ako Health', 'massage_therapy', 'janeapp', NULL, NULL, NULL, NULL, NULL, NULL, NULL, false, NULL, NULL),
-    ('Ako Health Physio', 'Ako Health', 'physiotherapy', 'janeapp', NULL, NULL, NULL, NULL, NULL, NULL, NULL, false, NULL, NULL),
-    ('Ako Health Acupuncture', 'Ako Health', 'acupuncture', 'janeapp', NULL, NULL, NULL, NULL, NULL, NULL, NULL, false, NULL, NULL)
-ON CONFLICT DO NOTHING;
-
--- Peak Integrated Health — Platform needs verification
--- NOTE: booking_url and platform need to be verified
-INSERT INTO pulse_wellness_providers (name, clinic_name, discipline, platform, booking_url, janeapp_slug, specialties, bio, photo_url, price_min, price_max, direct_billing, rating, review_count)
-VALUES
-    ('Peak Chiro', 'Peak Integrated Health', 'chiropractic', 'janeapp', NULL, NULL, NULL, NULL, NULL, NULL, NULL, false, NULL, NULL),
-    ('Peak Physio', 'Peak Integrated Health', 'physiotherapy', 'janeapp', NULL, NULL, NULL, NULL, NULL, NULL, NULL, false, NULL, NULL),
-    ('Peak RMT', 'Peak Integrated Health', 'massage_therapy', 'janeapp', NULL, NULL, NULL, NULL, NULL, NULL, NULL, false, NULL, NULL),
-    ('Peak Acupuncture', 'Peak Integrated Health', 'acupuncture', 'janeapp', NULL, NULL, NULL, NULL, NULL, NULL, NULL, false, NULL, NULL)
-ON CONFLICT DO NOTHING;
-
--- The Wellness Room — Platform needs verification, two locations
--- NOTE: Platform may not be JaneApp. Locations: Mamquam and Tantalus
-INSERT INTO pulse_wellness_providers (name, clinic_name, discipline, platform, booking_url, janeapp_slug, specialties, bio, photo_url, price_min, price_max, direct_billing, rating, review_count)
-VALUES
-    ('Wellness Room RMT', 'The Wellness Room', 'massage_therapy', 'other', NULL, NULL, NULL, NULL, NULL, NULL, NULL, false, NULL, NULL),
-    ('Wellness Room Chiro', 'The Wellness Room', 'chiropractic', 'other', NULL, NULL, NULL, NULL, NULL, NULL, NULL, false, NULL, NULL),
-    ('Wellness Room Acupuncture', 'The Wellness Room', 'acupuncture', 'other', NULL, NULL, NULL, NULL, NULL, NULL, NULL, false, NULL, NULL)
 ON CONFLICT DO NOTHING;

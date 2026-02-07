@@ -27,8 +27,8 @@ const CLINICS = [
   { slug: 'squamish', name: 'Shift Wellness' },
   { slug: 'bliss', name: 'Bliss Massage Therapy' },
   { slug: 'constellationwellness', name: 'Constellation Wellness' },
-  { slug: 'livwellsquamish', name: 'LivWell Integrated Health' },
-  { slug: 'emilycostamassage', name: 'Emily Costa RMT' },
+  { slug: 'livwellintegratedhealth', name: 'LivWell Integrated Health' },
+  { slug: 'emilycosta', name: 'Emily Costa RMT' },
   { slug: 'kaylayoungwellness', name: 'Kayla Young Wellness' },
 ];
 
@@ -124,6 +124,52 @@ async function scrapeClinic(browser, clinic) {
 
       return links;
     });
+
+    // If few direct treatment links found, try staff member links
+    // (some JaneApp clinics organize by practitioner → treatment instead of treatment → practitioner)
+    if (treatmentLinks.length < 3) {
+      const staffLinks = await page.evaluate(() => {
+        const links = [];
+        document.querySelectorAll('a[href*="staff_member"]').forEach(el => {
+          if (el.href.includes('/bio')) return; // skip bio links
+          const text = el.textContent.trim().split('\n')[0].trim();
+          if (text && text !== 'Read More' && !links.some(l => l.href === el.href)) {
+            links.push({ href: el.href, text });
+          }
+        });
+        return links;
+      });
+
+      if (staffLinks.length > 0) {
+        console.log(`  Found ${staffLinks.length} staff member links (practitioner-first layout)`);
+        // Click through staff members and scrape their treatment pages
+        for (const staff of staffLinks.slice(0, 10)) {
+          try {
+            await page.goto(staff.href, { waitUntil: 'networkidle2', timeout: 20000 });
+            await new Promise(r => setTimeout(r, 1500));
+
+            // Find and click the first treatment link on this staff member's page
+            const staffTreatment = await page.evaluate(() => {
+              const tLinks = Array.from(document.querySelectorAll('a[href*="treatment"]'));
+              if (tLinks[0]) {
+                const href = tLinks[0].href;
+                const text = tLinks[0].textContent.trim();
+                tLinks[0].click();
+                return { href, text };
+              }
+              return null;
+            });
+
+            if (staffTreatment) {
+              await new Promise(r => setTimeout(r, 3000));
+              // Slots will be captured by the API interception (Strategy 2)
+            }
+          } catch (err) {
+            console.warn(`  Warning: Could not scrape staff "${staff.text}": ${err.message}`);
+          }
+        }
+      }
+    }
 
     console.log(`  Found ${treatmentLinks.length} treatment links`);
 
@@ -271,7 +317,41 @@ async function scrapeClinic(browser, clinic) {
       try {
         const data = resp.data;
 
-        // Handle various JaneApp API response shapes
+        // JaneApp /api/v2/openings returns: [{id, full_name, openings: [{start_at, duration, ...}]}]
+        if (Array.isArray(data) && data[0]?.openings) {
+          for (const staffMember of data) {
+            const practName = staffMember.full_name || staffMember.name || null;
+            for (const opening of (staffMember.openings || [])) {
+              const startAt = opening.start_at;
+              if (!startAt) continue;
+
+              // Parse ISO datetime "2026-02-16T12:15:00-08:00"
+              const dateStr = startAt.slice(0, 10); // "2026-02-16"
+              const timeStr = startAt.slice(11, 16); // "12:15"
+              // Duration is in seconds (e.g. 4500 = 75 min)
+              // Snap to allowed values: 30, 45, 60, 75, 90, 120
+              const durSec = opening.duration || 3600;
+              const rawMin = Math.round(durSec / 60);
+              const allowed = [30, 45, 60, 75, 90, 120];
+              const durMin = allowed.reduce((prev, curr) =>
+                Math.abs(curr - rawMin) < Math.abs(prev - rawMin) ? curr : prev
+              );
+
+              slots.push({
+                clinicSlug: clinic.slug,
+                clinicName: clinic.name,
+                practitioner: practName,
+                treatment: opening.treatment?.name || 'Massage',
+                date: dateStr,
+                startTime: timeStr,
+                durationMinutes: durMin,
+              });
+            }
+          }
+          continue;
+        }
+
+        // Fallback: Handle other API response shapes
         const openings = data?.openings || data?.slots || data?.availability || data?.data?.openings;
         if (Array.isArray(openings)) {
           for (const opening of openings) {
@@ -281,7 +361,6 @@ async function scrapeClinic(browser, clinic) {
             const dur = opening.duration || opening.duration_minutes || 60;
 
             if (date && time) {
-              // Normalize time format
               let timeStr = time;
               if (time.includes('T')) {
                 timeStr = time.split('T')[1].slice(0, 5);
@@ -332,6 +411,16 @@ async function scrapeClinic(browser, clinic) {
 }
 
 /**
+ * Strip honorific titles from a name for matching
+ */
+function normalizeName(name) {
+  return name
+    .replace(/^(mrs?\.|ms\.|dr\.|prof\.)\s*/i, '')
+    .trim()
+    .toLowerCase();
+}
+
+/**
  * Look up provider IDs from the database
  */
 async function getProviderMap() {
@@ -344,12 +433,28 @@ async function getProviderMap() {
 
   const map = {};
   for (const p of providers) {
-    // Map by slug + practitioner name (case insensitive)
     if (p.janeapp_slug) {
-      const key = `${p.janeapp_slug}-${p.name.toLowerCase()}`;
-      map[key] = p.id;
-      // Also map by slug + clinic (for generic matches)
-      const clinicKey = `${p.janeapp_slug}-clinic`;
+      const slug = p.janeapp_slug;
+      const fullName = normalizeName(p.name);
+
+      // Map by slug + full name
+      map[`${slug}-${fullName}`] = p.id;
+
+      // Map by slug + first name only (for clinics that show first names)
+      const firstName = fullName.split(' ')[0];
+      const firstNameKey = `${slug}-first-${firstName}`;
+      if (!map[firstNameKey]) map[firstNameKey] = p.id;
+
+      // Map by slug + last name only (for partial matching)
+      const parts = fullName.split(' ');
+      if (parts.length > 1) {
+        const lastName = parts[parts.length - 1];
+        const lastNameKey = `${slug}-last-${lastName}`;
+        if (!map[lastNameKey]) map[lastNameKey] = p.id;
+      }
+
+      // Map by slug + clinic (for generic/fallback matches)
+      const clinicKey = `${slug}-clinic`;
       if (!map[clinicKey]) map[clinicKey] = p.id;
     }
   }
@@ -390,12 +495,29 @@ async function upsertSlots(allSlots, providerMap) {
       continue;
     }
 
-    // Try to match to a provider
+    // Try to match to a provider (multiple strategies)
     let providerId = null;
 
     if (slot.practitioner) {
-      const key = `${slot.clinicSlug}-${slot.practitioner.toLowerCase()}`;
-      providerId = providerMap[key];
+      const normalized = normalizeName(slot.practitioner);
+
+      // Strategy 1: Exact full name match
+      providerId = providerMap[`${slot.clinicSlug}-${normalized}`];
+
+      // Strategy 2: First name match
+      if (!providerId) {
+        const firstName = normalized.split(' ')[0];
+        providerId = providerMap[`${slot.clinicSlug}-first-${firstName}`];
+      }
+
+      // Strategy 3: Last name match
+      if (!providerId) {
+        const parts = normalized.split(' ');
+        if (parts.length > 1) {
+          const lastName = parts[parts.length - 1];
+          providerId = providerMap[`${slot.clinicSlug}-last-${lastName}`];
+        }
+      }
     }
 
     if (!providerId) {
