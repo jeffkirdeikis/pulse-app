@@ -36,8 +36,13 @@ function getDateRange() {
   for (let i = 0; i < 14; i++) {
     const d = new Date(today);
     d.setDate(today.getDate() + i);
+    // Use local date components to avoid UTC offset issues
+    // toISOString() converts to UTC which shifts the date after 4 PM Pacific
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
     dates.push({
-      date: d.toISOString().split('T')[0],
+      date: `${year}-${month}-${day}`,
       dayName: d.toLocaleDateString('en-US', { weekday: 'short' }),
       dayNum: d.getDate(),
       monthName: d.toLocaleDateString('en-US', { month: 'short' }),

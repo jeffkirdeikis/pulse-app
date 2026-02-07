@@ -318,6 +318,8 @@ When a bug is reported:
 | **AI Data Hallucination** | AI invented 1,471 fake events like "Yoga Class" at A&W, "MMA" at a pharmacy | ALWAYS verify AI-extracted data against source page text. Use `verified-extractor.js` with 5-layer anti-hallucination pipeline |
 | **Dedup Missing Key Fields** | `classExists()` checked title+date+venue but NOT time, dropping same-title classes at different times (Wild Life Gym lost 50%+ of classes) | Dedup checks MUST include ALL fields that make a record unique (title+date+time+venue) |
 | **Booking System ≠ Public Schedule** | Roundhouse has WellnessLiving but schedule shows "no classes" — they use it for member mgmt, not public scheduling | Always verify a detected booking system actually has public data before adding to scraper |
+| **UTC vs Local Timezone** | Supabase runs in UTC. `CURRENT_DATE`/`CURRENT_TIME` are UTC. At 9 PM Pacific (5 AM UTC+1), CURRENT_DATE is tomorrow, CURRENT_TIME is 05:00. "Filter past slots" check using UTC lets 8:30 AM morning slots through because `08:30 > 05:00` | ALWAYS use `(now() AT TIME ZONE 'America/Vancouver')` for Pacific time comparisons. JS `toISOString()` also converts to UTC — use `getFullYear()/getMonth()/getDate()` for local dates |
+| **Scraper Data Must Be Verified** | Added 547 slots to database without verifying each clinic's data against live API. Dr. Thea Lanoue appeared to have false data until verified | After EVERY scraper run, run QA verification script comparing DB against live JaneApp API for each clinic. Never trust scraper output without cross-checking |
 
 ---
 
@@ -335,6 +337,9 @@ Never mark complete if:
 - **For visual fixes: You haven't taken AND VIEWED a screenshot**
 - **Computed styles look correct but you haven't visually verified**
 - **You're about to say "should work now" or "that should fix it"**
+- **Any date/time comparison uses CURRENT_DATE, CURRENT_TIME, or toISOString() without timezone awareness**
+- **Scraper data inserted without verifying against live API source**
+- **Wellness slots added without running QA verification across all clinics**
 
 ---
 
