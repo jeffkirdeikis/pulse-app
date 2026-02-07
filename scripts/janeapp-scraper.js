@@ -30,6 +30,10 @@ const CLINICS = [
   { slug: 'livwellintegratedhealth', name: 'LivWell Integrated Health' },
   { slug: 'emilycosta', name: 'Emily Costa RMT' },
   { slug: 'kaylayoungwellness', name: 'Kayla Young Wellness' },
+  { slug: 'akohealth', name: 'Ako Health' },
+  { slug: 'peakintegratedhealth', name: 'Peak Integrated Health' },
+  { slug: 'anchorsquamish', name: 'Anchor Health & Wellness' },
+  { slug: 'twr', name: 'The Wellness Room', bookingPath: '/locations/clinic-tantalus-rd-location/book' },
 ];
 
 /**
@@ -68,7 +72,8 @@ async function scrapeClinic(browser, clinic) {
     });
 
     // Navigate to the booking page
-    const bookingUrl = `https://${clinic.slug}.janeapp.com`;
+    const baseDomain = `https://${clinic.slug}.janeapp.com`;
+    const bookingUrl = clinic.bookingPath ? `${baseDomain}${clinic.bookingPath}` : baseDomain;
     console.log(`  Visiting ${bookingUrl}...`);
 
     await page.goto(bookingUrl, {
@@ -78,6 +83,22 @@ async function scrapeClinic(browser, clinic) {
 
     // Wait for page content to load
     await new Promise(r => setTimeout(r, 2000));
+
+    // Build staff ID -> name map from page links (needed for for_discipline API parsing)
+    const staffIdMap = await page.evaluate(() => {
+      const map = {};
+      document.querySelectorAll('a[href*="staff_member"]').forEach(el => {
+        if (el.href.includes('/bio')) return;
+        const match = el.href.match(/staff_member\/(\d+)/);
+        if (match) {
+          const name = el.textContent.trim().split('\n')[0].trim();
+          if (name && name !== 'Read More') {
+            map[match[1]] = name;
+          }
+        }
+      });
+      return map;
+    });
 
     // Strategy 1: Look for treatment/service links
     const treatmentLinks = await page.evaluate(() => {
@@ -101,8 +122,11 @@ async function scrapeClinic(browser, clinic) {
           if (
             text.includes('massage') || text.includes('rmt') || text.includes('therapeutic') ||
             text.includes('physio') || text.includes('chiro') || text.includes('acupuncture') ||
-            text.includes('osteo') || text.includes('naturo') ||
-            text.includes('60 min') || text.includes('90 min') || text.includes('30 min')
+            text.includes('osteo') || text.includes('naturo') || text.includes('reflexolog') ||
+            text.includes('treatment') || text.includes('assessment') || text.includes('adjustment') ||
+            text.includes('60 min') || text.includes('90 min') || text.includes('30 min') ||
+            text.includes('45 min') || text.includes('75 min') || text.includes('120 min') ||
+            text.includes('prenatal') || text.includes('pregnancy') || text.includes('paediatric')
           ) {
             links.push({ href, text: el.textContent.trim() });
           }
@@ -142,27 +166,37 @@ async function scrapeClinic(browser, clinic) {
 
       if (staffLinks.length > 0) {
         console.log(`  Found ${staffLinks.length} staff member links (practitioner-first layout)`);
-        // Click through staff members and scrape their treatment pages
-        for (const staff of staffLinks.slice(0, 10)) {
+        // Navigate into each staff member, find their treatments, then navigate to trigger API
+        for (const staff of staffLinks.slice(0, 15)) {
           try {
             await page.goto(staff.href, { waitUntil: 'networkidle2', timeout: 20000 });
             await new Promise(r => setTimeout(r, 1500));
 
-            // Find and click the first treatment link on this staff member's page
-            const staffTreatment = await page.evaluate(() => {
-              const tLinks = Array.from(document.querySelectorAll('a[href*="treatment"]'));
-              if (tLinks[0]) {
-                const href = tLinks[0].href;
-                const text = tLinks[0].textContent.trim();
-                tLinks[0].click();
-                return { href, text };
-              }
-              return null;
+            // Get treatment links on this staff member's page
+            const staffTreatments = await page.evaluate(() => {
+              return Array.from(document.querySelectorAll('a[href*="treatment"]'))
+                .filter(a => a.href.includes('staff_member'))
+                .map(a => ({ href: a.href, text: a.textContent.trim().split('\n')[0] }))
+                .filter((v, i, arr) => arr.findIndex(a => a.href === v.href) === i);
             });
 
-            if (staffTreatment) {
+            // Navigate to first treatment to trigger API call (using page.goto, not click)
+            if (staffTreatments.length > 0) {
+              await page.goto(staffTreatments[0].href, { waitUntil: 'networkidle2', timeout: 20000 });
               await new Promise(r => setTimeout(r, 3000));
-              // Slots will be captured by the API interception (Strategy 2)
+              console.log(`    ${staff.text}: ${staffTreatments.length} treatments, API triggered`);
+            } else {
+              // Some staff pages have discipline-level treatment links (not staff-specific)
+              const genericTreatments = await page.evaluate(() => {
+                return Array.from(document.querySelectorAll('a[href*="treatment"]'))
+                  .map(a => ({ href: a.href, text: a.textContent.trim().split('\n')[0] }))
+                  .filter((v, i, arr) => arr.findIndex(a => a.href === v.href) === i)
+                  .slice(0, 1);
+              });
+              if (genericTreatments.length > 0) {
+                await page.goto(genericTreatments[0].href, { waitUntil: 'networkidle2', timeout: 20000 });
+                await new Promise(r => setTimeout(r, 3000));
+              }
             }
           } catch (err) {
             console.warn(`  Warning: Could not scrape staff "${staff.text}": ${err.message}`);
@@ -182,23 +216,20 @@ async function scrapeClinic(browser, clinic) {
         });
         await new Promise(r => setTimeout(r, 1500));
 
-        // Try to click into a practitioner to trigger availability loading
-        const practClicked = await page.evaluate(() => {
-          // Look for practitioner cards/buttons
-          const practEls = document.querySelectorAll(
-            '[class*="practitioner"] a, [class*="staff"] a, [class*="provider"] a, ' +
-            'a[href*="staff"], a[href*="practitioner"], a[href*="therapist"]'
-          );
-          if (practEls.length > 0) {
-            practEls[0].click();
-            return true;
-          }
-          return false;
+        // Update staff ID map from treatment page (may show new staff members)
+        const pageStaff = await page.evaluate(() => {
+          const map = {};
+          document.querySelectorAll('a[href*="staff_member"]').forEach(el => {
+            if (el.href.includes('/bio')) return;
+            const match = el.href.match(/staff_member\/(\d+)/);
+            if (match) {
+              const name = el.textContent.trim().split('\n')[0].trim();
+              if (name && name !== 'Read More') map[match[1]] = name;
+            }
+          });
+          return map;
         });
-
-        if (practClicked) {
-          await new Promise(r => setTimeout(r, 2000));
-        }
+        Object.assign(staffIdMap, pageStaff);
 
         // Extract available time slots from the page
         const pageSlots = await page.evaluate(() => {
@@ -323,6 +354,49 @@ async function scrapeClinic(browser, clinic) {
         const urlParams = new URL(resp.url).searchParams;
         const apiStaffId = urlParams.get('staff_member_id');
         const apiTreatmentId = urlParams.get('treatment_id');
+
+        // JaneApp /api/v2/openings/for_discipline returns flat array:
+        // [{staff_member_id, treatment_id, start_at, duration, ...}]
+        if (Array.isArray(data) && data[0]?.staff_member_id && data[0]?.start_at && !data[0]?.openings) {
+          for (const opening of data) {
+            const startAt = opening.start_at;
+            if (!startAt) continue;
+
+            const dateStr = startAt.slice(0, 10);
+            const timeStr = startAt.slice(11, 16);
+            const durSec = opening.duration || 3600;
+            const rawMin = Math.round(durSec / 60);
+            const allowed = [30, 45, 60, 75, 90, 120];
+            const durMin = allowed.reduce((prev, curr) =>
+              Math.abs(curr - rawMin) < Math.abs(prev - rawMin) ? curr : prev
+            );
+
+            const staffMemberId = String(opening.staff_member_id);
+            const practName = staffIdMap[staffMemberId] || null;
+            const treatId = apiTreatmentId || opening.treatment_id;
+
+            let bookingUrl = `https://${clinic.slug}.janeapp.com`;
+            if (clinic.bookingPath) bookingUrl += clinic.bookingPath;
+            if (staffMemberId && treatId) {
+              bookingUrl += `/#/staff_member/${staffMemberId}/treatment/${treatId}`;
+            } else if (staffMemberId) {
+              bookingUrl += `/#/staff_member/${staffMemberId}`;
+            }
+
+            slots.push({
+              clinicSlug: clinic.slug,
+              clinicName: clinic.name,
+              practitioner: practName,
+              treatment: 'Massage',
+              date: dateStr,
+              startTime: timeStr,
+              durationMinutes: durMin,
+              bookingUrl,
+              _source: 'api',
+            });
+          }
+          continue;
+        }
 
         // JaneApp /api/v2/openings returns: [{id, full_name, openings: [{start_at, duration, ...}]}]
         if (Array.isArray(data) && data[0]?.openings) {
@@ -459,6 +533,8 @@ async function scrapeClinic(browser, clinic) {
 function normalizeName(name) {
   return name
     .replace(/^(mrs?\.|ms\.|dr\.|prof\.)\s*/i, '')
+    .replace(/\s*\([^)]*\)\s*/g, ' ')  // Remove parenthetical nicknames like "(Cat)"
+    .replace(/\s+/g, ' ')
     .trim()
     .toLowerCase();
 }
