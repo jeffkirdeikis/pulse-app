@@ -8492,6 +8492,8 @@ export default function PulseApp() {
   const [showClaimBusinessModal, setShowClaimBusinessModal] = useState(false);
   const [claimFormData, setClaimFormData] = useState({ businessName: '', ownerName: '', email: '', phone: '', role: 'owner', address: '' });
   const [claimSubmitting, setClaimSubmitting] = useState(false);
+  const [claimSearchQuery, setClaimSearchQuery] = useState('');
+  const [claimSelectedBusiness, setClaimSelectedBusiness] = useState(null);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showCalendarToast, setShowCalendarToast] = useState(false);
   const [calendarToastMessage, setCalendarToastMessage] = useState('');
@@ -9904,22 +9906,33 @@ export default function PulseApp() {
     }
     setClaimSubmitting(true);
     try {
-      const { error } = await supabase.from('business_claims').insert({
+      const claimData = {
         user_id: session.user.id,
-        business_name: claimFormData.businessName,
-        business_address: claimFormData.address || null,
+        business_name: claimSelectedBusiness?.name || claimFormData.businessName,
+        business_address: claimSelectedBusiness?.address || claimFormData.address || null,
         owner_name: claimFormData.ownerName,
         contact_email: claimFormData.email,
         contact_phone: claimFormData.phone || null,
         owner_role: claimFormData.role,
-        status: 'pending'
-      });
+        status: user.isAdmin ? 'verified' : 'pending'
+      };
+      // Add business_id if selecting from directory
+      if (claimSelectedBusiness?.id) {
+        claimData.business_id = claimSelectedBusiness.id;
+      }
+      const { error } = await supabase.from('business_claims').insert(claimData);
       if (error) throw error;
       setShowClaimBusinessModal(false);
       setClaimFormData({ businessName: '', ownerName: '', email: '', phone: '', role: 'owner', address: '' });
-      setCalendarToastMessage('Claim submitted successfully!');
-      setShowCalendarToast(true);
-      setTimeout(() => setShowCalendarToast(false), 5000);
+      setClaimSelectedBusiness(null);
+      setClaimSearchQuery('');
+      if (user.isAdmin) {
+        showToast('Business claimed and verified!', 'success');
+        // Refresh user data to pick up the new claim
+        if (typeof refreshUserData === 'function') refreshUserData();
+      } else {
+        showToast('Claim submitted! We\'ll review it shortly.', 'success');
+      }
     } catch (error) {
       console.error('Error submitting claim:', error);
       setCalendarToastMessage('Error submitting claim. Please try again.');
@@ -12170,6 +12183,50 @@ export default function PulseApp() {
                     </div>
                   ) : (
                     <>
+                      {/* Business Search */}
+                      <div style={{ marginBottom: '16px' }}>
+                        <label style={{ display: 'block', fontWeight: 600, marginBottom: '6px', color: '#374151' }}>Find your business</label>
+                        <input
+                          type="text"
+                          placeholder="Search Squamish businesses..."
+                          value={claimSelectedBusiness ? claimSelectedBusiness.name : claimSearchQuery}
+                          onChange={(e) => { setClaimSearchQuery(e.target.value); setClaimSelectedBusiness(null); }}
+                          style={{ width: '100%', padding: '10px 14px', border: '1px solid #d1d5db', borderRadius: '8px', fontSize: '14px' }}
+                        />
+                        {claimSearchQuery.length >= 2 && !claimSelectedBusiness && (
+                          <div style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid #e5e7eb', borderRadius: '8px', marginTop: '4px', background: '#fff' }}>
+                            {services.filter(s => s.name.toLowerCase().includes(claimSearchQuery.toLowerCase())).slice(0, 8).map(biz => (
+                              <div key={biz.id} style={{ padding: '10px 14px', cursor: 'pointer', borderBottom: '1px solid #f3f4f6', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                                onClick={() => {
+                                  setClaimSelectedBusiness(biz);
+                                  setClaimFormData(prev => ({ ...prev, businessName: biz.name, address: biz.address || '' }));
+                                  setClaimSearchQuery('');
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.background = '#f9fafb'}
+                                onMouseLeave={(e) => e.currentTarget.style.background = '#fff'}
+                              >
+                                <div>
+                                  <div style={{ fontWeight: 600, color: '#111827' }}>{biz.name}</div>
+                                  <div style={{ fontSize: '12px', color: '#6b7280' }}>{biz.category} {biz.address ? '· ' + biz.address : ''}</div>
+                                </div>
+                                <CheckCircle size={16} style={{ color: '#9ca3af' }} />
+                              </div>
+                            ))}
+                            {services.filter(s => s.name.toLowerCase().includes(claimSearchQuery.toLowerCase())).length === 0 && (
+                              <div style={{ padding: '12px 14px', color: '#6b7280', textAlign: 'center' }}>No businesses found</div>
+                            )}
+                          </div>
+                        )}
+                        {claimSelectedBusiness && (
+                          <div style={{ marginTop: '8px', padding: '10px 14px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <CheckCircle size={16} style={{ color: '#16a34a' }} />
+                            <span style={{ fontWeight: 600, color: '#166534' }}>{claimSelectedBusiness.name}</span>
+                            <button onClick={() => { setClaimSelectedBusiness(null); setClaimSearchQuery(''); }} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer' }}><X size={14} /></button>
+                          </div>
+                        )}
+                        <p style={{ fontSize: '12px', color: '#9ca3af', marginTop: '6px' }}>Select from the directory above, or fill in the form below for unlisted businesses</p>
+                      </div>
+
                       <div className="claim-form-grid">
                         <div className="claim-form-group full">
                           <label>Business Name *</label>
@@ -13738,7 +13795,7 @@ export default function PulseApp() {
                             </button>
                           </div>
 
-                          <button className="add-another-business" onClick={() => showToast('Business claiming coming soon!', 'info')}>
+                          <button className="add-another-business" onClick={() => { setClaimSelectedBusiness(null); setClaimSearchQuery(''); setShowClaimBusinessModal(true); }}>
                             <Plus size={16} />
                             Claim Another Business
                           </button>
