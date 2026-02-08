@@ -8158,36 +8158,7 @@ const SERVICE_CATEGORIES = [
   'Yoga & Pilates'
 ];
 
-const expandRecurringEvents = (baseEvents) => {
-  const expanded = [];
-  let idCounter = 1;
-  
-  baseEvents.forEach(event => {
-    if (event.recurrence === 'weekly') {
-      // Generate for 7 days (Mon-Sun)
-      for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
-        const newStart = new Date(event.start);
-        newStart.setDate(newStart.getDate() + dayOffset);
-        const newEnd = new Date(event.end);
-        newEnd.setDate(newEnd.getDate() + dayOffset);
-        
-        expanded.push({
-          ...event,
-          id: `e${idCounter++}`,
-          start: newStart,
-          end: newEnd
-        });
-      }
-    } else {
-      expanded.push({...event, id: `e${idCounter++}`});
-    }
-  });
-  
-  return expanded;
-};
-
-// NOTE: Don't call expandRecurringEvents here - it's already called in realData.js
-// Calling it twice causes 4x duplication (see CLAUDE-ARCHIVE.md)
+// NOTE: expandRecurringEvents is handled in realData.js (see CLAUDE-ARCHIVE.md)
 
 // Smart Deal Title Generator - creates clean, compelling titles (max ~50 chars)
 const generateSmartDealTitle = (deal, venueName = '') => {
@@ -8524,7 +8495,6 @@ export default function PulseApp() {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showCalendarToast, setShowCalendarToast] = useState(false);
   const [calendarToastMessage, setCalendarToastMessage] = useState('');
-  const [newEventCategories, setNewEventCategories] = useState([]);
 
   // Helper function to show toast messages
   const showToast = useCallback((message, _type = 'info') => {
@@ -8556,9 +8526,17 @@ export default function PulseApp() {
     signOut
   } = useUserData();
 
+  // Admin Business Impersonation State
+  const [impersonatedBusiness, setImpersonatedBusiness] = useState(null);
+  const [adminSearchQuery, setAdminSearchQuery] = useState('');
+  const [previousAdminState, setPreviousAdminState] = useState(null);
+  const activeBusiness = impersonatedBusiness || (userClaimedBusinesses.length > 0 ? userClaimedBusinesses[0] : null);
+  const isImpersonating = !!impersonatedBusiness;
+
   // Profile modal state
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [profileTab, setProfileTab] = useState('overview'); // overview, activity, saved, businesses, settings
+  const [activityFilter, setActivityFilter] = useState('all');
   const [_editingProfile, _setEditingProfile] = useState(false);
   const [_profileForm, _setProfileForm] = useState({});
 
@@ -8583,6 +8561,7 @@ export default function PulseApp() {
 
   // Supabase events data (from database)
   const [dbEvents, setDbEvents] = useState([]);
+  const [eventsRefreshKey, setEventsRefreshKey] = useState(0);
   const [eventsLoading, setEventsLoading] = useState(true);
 
   // Fetch services from Supabase - extracted to be reusable
@@ -8590,7 +8569,7 @@ export default function PulseApp() {
     setServicesLoading(true);
     const { data, error } = await supabase
       .from('businesses')
-      .select('id, name, category, address, google_rating, google_reviews, phone, website, email')
+      .select('id, name, category, address, google_rating, google_reviews, phone, website, email, logo_url')
       .eq('status', 'active')
       .order('google_rating', { ascending: false, nullsFirst: false });
 
@@ -8610,7 +8589,8 @@ export default function PulseApp() {
       reviews: business.google_reviews,
       phone: business.phone || '',
       website: business.website || '',
-      email: business.email || ''
+      email: business.email || '',
+      logo_url: business.logo_url || null
     }));
 
     setServices(mappedServices);
@@ -8620,6 +8600,19 @@ export default function PulseApp() {
   // Fetch services on mount
   useEffect(() => {
     fetchServices();
+  }, []);
+
+  // Refresh data when tab becomes visible (catches admin edits, external changes)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchServices();
+        setEventsRefreshKey(k => k + 1);
+        setDealsRefreshKey(k => k + 1);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, []);
 
   // ESC key handler to close modals
@@ -8646,6 +8639,18 @@ export default function PulseApp() {
     window.addEventListener('keydown', handleEsc);
     return () => window.removeEventListener('keydown', handleEsc);
   }, []);
+
+  // ESC to exit impersonation mode (separate effect with proper deps)
+  useEffect(() => {
+    if (!impersonatedBusiness) return;
+    const handleImpersonateEsc = (e) => {
+      if (e.key === 'Escape') {
+        exitImpersonation();
+      }
+    };
+    window.addEventListener('keydown', handleImpersonateEsc);
+    return () => window.removeEventListener('keydown', handleImpersonateEsc);
+  }, [impersonatedBusiness]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fetch events from Supabase on mount
   useEffect(() => {
@@ -8704,7 +8709,7 @@ export default function PulseApp() {
           id: event.id,
           title: event.title,
           eventType: event.event_type === 'class' ? 'class' : 'event',
-          venueId: null,
+          venueId: event.venue_id || null,
           venueName: event.venue_name || 'Squamish',
           venueAddress: event.venue_address || 'Squamish, BC',
           start: startDate,
@@ -8724,11 +8729,12 @@ export default function PulseApp() {
     }
 
     fetchEvents();
-  }, []);
+  }, [eventsRefreshKey]);
 
   // Supabase deals data (from database)
   const [dbDeals, setDbDeals] = useState([]);
   const [dealsLoading, setDealsLoading] = useState(true);
+  const [dealsRefreshKey, setDealsRefreshKey] = useState(0);
 
   // Fetch deals from Supabase on mount
   useEffect(() => {
@@ -8776,7 +8782,7 @@ export default function PulseApp() {
     }
 
     fetchDeals();
-  }, []);
+  }, [dealsRefreshKey]);
 
   // Fetch user conversations when messages modal opens
   const fetchConversations = async () => {
@@ -9099,7 +9105,7 @@ export default function PulseApp() {
     if (!businessReplyInput.trim() || !selectedBusinessConversation) return;
     setSendingMessage(true);
     try {
-      const businessId = userClaimedBusinesses[0]?.id;
+      const businessId = activeBusiness?.id;
       const { error } = await supabase.rpc('send_message', {
         p_conversation_id: selectedBusinessConversation.id,
         p_sender_id: businessId,
@@ -9126,8 +9132,8 @@ export default function PulseApp() {
         .eq('id', conversationId);
 
       // Refresh inbox
-      if (userClaimedBusinesses[0]?.id) {
-        fetchBusinessInbox(userClaimedBusinesses[0].id, businessInboxTab === 'bookings' ? 'booking_request' : 'general_inquiry');
+      if (activeBusiness?.id) {
+        fetchBusinessInbox(activeBusiness.id, businessInboxTab === 'bookings' ? 'booking_request' : 'general_inquiry');
       }
       setSelectedBusinessConversation(null);
     } catch (err) {
@@ -9159,19 +9165,60 @@ export default function PulseApp() {
     }
   };
 
+  // Admin Business Impersonation Functions
+  const enterImpersonation = (venue) => {
+    if (!user.isAdmin) return;
+    setPreviousAdminState({
+      adminTab: adminTab,
+      scrollPosition: window.scrollY
+    });
+    setImpersonatedBusiness({
+      id: venue.id,
+      name: venue.name,
+      address: venue.address || '',
+      verified: venue.verified || false,
+      category: venue.category || '',
+      phone: venue.phone || '',
+      website: venue.website || '',
+      email: venue.email || '',
+      logo_url: venue.logo_url || null
+    });
+    setAdminSearchQuery('');
+    setView('business');
+    window.scrollTo(0, 0);
+  };
+
+  const exitImpersonation = () => {
+    const savedState = previousAdminState;
+    setImpersonatedBusiness(null);
+    setView('admin');
+    setBusinessAnalytics(null);
+    setBusinessConversations([]);
+    setSelectedBusinessConversation(null);
+    if (savedState) {
+      setAdminTab(savedState.adminTab);
+      setTimeout(() => window.scrollTo(0, savedState.scrollPosition || 0), 100);
+      setPreviousAdminState(null);
+    }
+  };
+
   // Load business data when view changes
   useEffect(() => {
-    if (view === 'business' && userClaimedBusinesses.length > 0) {
-      const businessId = userClaimedBusinesses[0].id;
+    if (view === 'business' && activeBusiness) {
+      const businessId = activeBusiness.id;
       fetchBusinessInbox(businessId, 'booking_request');
       fetchBusinessAnalytics(businessId, analyticsPeriod);
     }
-  }, [view, userClaimedBusinesses, analyticsPeriod]);
+  }, [view, activeBusiness?.id, analyticsPeriod]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Admin panel state (must be declared before useEffect that uses it)
   const [pendingSubmissions, setPendingSubmissions] = useState([]);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [adminTab, setAdminTab] = useState('pending'); // 'pending', 'approved', 'rejected'
+  const [quickAddForm, setQuickAddForm] = useState({ title: '', venueId: '', venueName: '', startTime: '18:00', duration: '60', price: '', recurrence: 'Weekly' });
+  const [showEditEventModal, setShowEditEventModal] = useState(false);
+  const [editingEvent, setEditingEvent] = useState(null);
+  const [editEventForm, setEditEventForm] = useState({ title: '', description: '', date: '', startTime: '', endTime: '', price: '', category: '' });
 
   // Load pending submissions when admin panel opens
   useEffect(() => {
@@ -9202,6 +9249,11 @@ export default function PulseApp() {
     recurrence: 'none',
     schedule: '', // for deals
     terms: '', // for deals
+    discountType: 'percent', // for deals: percent, fixed, bogo, free_item
+    discountValue: '', // for deals
+    originalPrice: '', // for deals
+    dealPrice: '', // for deals
+    validUntil: '', // for deals
     squareImage: null, // 1:1 image
     bannerImage: null, // 3:1 image
     squareImagePreview: '',
@@ -9285,10 +9337,9 @@ export default function PulseApp() {
 
   const categories = ['All', 'Music', 'Fitness', 'Arts', 'Community', 'Games', 'Wellness', 'Outdoors & Nature', 'Nightlife', 'Family', 'Food & Drink'];
 
-  // Helper to close Add Event modal and reset form
+  // Helper to close Add Event modal
   const closeAddEventModal = () => {
     setShowAddEventModal(false);
-    setNewEventCategories([]);
   };
 
   // Generate Google Calendar URL
@@ -9644,6 +9695,28 @@ export default function PulseApp() {
           .insert(eventData);
 
         if (insertError) throw insertError;
+      } else if (submission.type === 'deal') {
+        const dealData = {
+          title: submission.data.title,
+          description: submission.data.description,
+          business_name: submission.data.businessName || submission.data.business?.name || '',
+          business_address: submission.data.businessAddress || submission.data.business?.address || '',
+          category: submission.data.category || 'General',
+          discount_type: submission.data.discountType || 'special',
+          discount_value: submission.data.discountValue ? parseFloat(submission.data.discountValue) : null,
+          original_price: submission.data.originalPrice ? parseFloat(submission.data.originalPrice) : null,
+          deal_price: submission.data.dealPrice ? parseFloat(submission.data.dealPrice) : null,
+          valid_until: submission.data.validUntil || null,
+          terms_conditions: submission.data.terms || '',
+          schedule: submission.data.schedule || '',
+          status: 'active'
+        };
+
+        const { error: insertError } = await supabase
+          .from('deals')
+          .insert(dealData);
+
+        if (insertError) throw insertError;
       }
 
       // Update local state
@@ -9652,12 +9725,6 @@ export default function PulseApp() {
       );
 
       showToast('Submission approved and published!', 'success');
-
-      // Refresh events to show the new item - trigger a page reload for simplicity
-      if (submission.type === 'event' || submission.type === 'class') {
-        // The useEffect will refetch events on next render
-        showToast('Submission approved! Refresh to see the new item.', 'success');
-      }
     } catch (_err) {
       showToast('Failed to approve. Please try again.', 'error');
     }
@@ -10453,10 +10520,10 @@ export default function PulseApp() {
   return (
     <div className="pulse-app">
       <div className="view-switcher">
-        <button className={view === 'consumer' ? 'active' : ''} onClick={() => setView('consumer')}>Consumer</button>
-        <button className={view === 'business' ? 'active' : ''} onClick={() => setView('business')}>Business</button>
+        <button className={view === 'consumer' ? 'active' : ''} onClick={() => { if (impersonatedBusiness) setImpersonatedBusiness(null); setView('consumer'); }}>Consumer</button>
+        <button className={view === 'business' ? 'active' : ''} onClick={() => { if (impersonatedBusiness) setImpersonatedBusiness(null); setView('business'); }}>Business</button>
         {user.isAdmin && (
-          <button className={view === 'admin' ? 'active' : ''} onClick={() => setView('admin')}>Admin</button>
+          <button className={view === 'admin' ? 'active' : ''} onClick={() => { if (impersonatedBusiness) { exitImpersonation(); } else { setView('admin'); } }}>Admin</button>
         )}
       </div>
 
@@ -10514,7 +10581,7 @@ export default function PulseApp() {
                         <MessageCircle size={22} strokeWidth={2} />
                       </div>
                     </button>
-                    <button className="header-btn-icon notification-btn">
+                    <button className="header-btn-icon notification-btn" onClick={() => showToast('No new notifications', 'info')}>
                       <div style={{ color: '#374151', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <Bell size={22} strokeWidth={2} />
                       </div>
@@ -10943,56 +11010,6 @@ export default function PulseApp() {
                   />
                 ) : (
                 <>
-                {/* Wellness Booking Banner */}
-                <div
-                  className="wb-launch-banner"
-                  onClick={() => setServicesSubView('booking')}
-                  style={{
-                    margin: '16px 24px 0',
-                    padding: '20px',
-                    background: 'linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)',
-                    borderRadius: '16px',
-                    cursor: 'pointer',
-                    color: 'white',
-                    position: 'relative',
-                    overflow: 'hidden',
-                    transition: 'transform 0.15s ease',
-                  }}
-                >
-                  <div style={{ position: 'relative', zIndex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                      <Heart size={18} />
-                      <span style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', opacity: 0.9 }}>New Feature</span>
-                    </div>
-                    <h3 style={{ fontSize: '18px', fontWeight: 800, margin: '0 0 4px', letterSpacing: '-0.3px' }}>Book Wellness</h3>
-                    <p style={{ fontSize: '13px', opacity: 0.85, margin: 0 }}>
-                      Find massage, physio, chiro & acupuncture openings across Squamish
-                    </p>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '12px', fontSize: '13px', fontWeight: 600 }}>
-                      <span>Browse availability</span>
-                      <ChevronRight size={16} />
-                    </div>
-                  </div>
-                  <div style={{
-                    position: 'absolute',
-                    top: '-20px',
-                    right: '-20px',
-                    width: '120px',
-                    height: '120px',
-                    background: 'rgba(255,255,255,0.1)',
-                    borderRadius: '50%',
-                  }} />
-                  <div style={{
-                    position: 'absolute',
-                    bottom: '-30px',
-                    right: '40px',
-                    width: '80px',
-                    height: '80px',
-                    background: 'rgba(255,255,255,0.08)',
-                    borderRadius: '50%',
-                  }} />
-                </div>
-
                 {/* Services Filter */}
                 <div className="filters-section" style={{marginTop: '20px'}}>
                   <div className="filters-row-single">
@@ -12013,7 +12030,7 @@ export default function PulseApp() {
                 {/* Footer */}
                 <div className="service-modal-footer">
                   <p>Information sourced from Google. Last updated recently.</p>
-                  <button className="report-btn">Report an issue</button>
+                  <button className="report-btn" onClick={() => showToast('Report submitted. Thank you!', 'info')}>Report an issue</button>
                 </div>
               </div>
             </div>
@@ -12097,80 +12114,27 @@ export default function PulseApp() {
                   <p>Share your event with the Squamish community</p>
                 </div>
                 <div className="modal-body-premium">
-                  <div className="form-grid">
-                    <div className="form-group">
-                      <label>Event Name *</label>
-                      <input type="text" placeholder="e.g., Yoga in the Park" className="form-input" />
-                    </div>
-                    <div className="form-group full-width">
-                      <label>Categories (select up to 2) *</label>
-                      <div className="category-checkbox-grid">
-                        {categories.filter(cat => cat !== 'All').map(cat => {
-                          const isChecked = newEventCategories.includes(cat);
-                          const isDisabled = !isChecked && newEventCategories.length >= 2;
-                          
-                          return (
-                            <label 
-                              key={cat} 
-                              className={`category-checkbox-label ${isDisabled ? 'disabled' : ''}`}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={isChecked}
-                                disabled={isDisabled}
-                                onChange={(e) => {
-                                  if (e.target.checked) {
-                                    setNewEventCategories([...newEventCategories, cat]);
-                                  } else {
-                                    setNewEventCategories(newEventCategories.filter(c => c !== cat));
-                                  }
-                                }}
-                              />
-                              <span className="checkbox-text">{cat}</span>
-                            </label>
-                          );
-                        })}
-                      </div>
-                      <p className="form-help-text">
-                        {newEventCategories.length === 0 && 'Select 1-2 categories that best describe your event'}
-                        {newEventCategories.length === 1 && 'You can select 1 more category'}
-                        {newEventCategories.length === 2 && '✓ Maximum categories selected'}
-                      </p>
-                    </div>
-                    <div className="form-group full-width">
-                      <label>Description *</label>
-                      <textarea placeholder="Tell us about your event..." className="form-textarea"></textarea>
-                    </div>
-                    <div className="form-group">
-                      <label>Date & Time *</label>
-                      <input type="datetime-local" className="form-input" />
-                    </div>
-                    <div className="form-group">
-                      <label>Location *</label>
-                      <input type="text" placeholder="Venue or address" className="form-input" />
-                    </div>
-                    <div className="form-group">
-                      <label>Price</label>
-                      <input type="text" placeholder="Free or $20" className="form-input" />
-                    </div>
-                    <div className="form-group">
-                      <label>Age Group</label>
-                      <select className="form-input">
-                        <option>All Ages</option>
-                        <option>Kids</option>
-                        <option>Adults</option>
-                        <option>Teens & Adults</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div className="modal-actions">
-                    <button className="btn-secondary" onClick={closeAddEventModal}>Cancel</button>
+                  <p style={{ color: '#6b7280', marginBottom: '1.5rem', textAlign: 'center' }}>Choose what you'd like to add to the Squamish community</p>
+                  <div className="modal-actions" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                     <button className="btn-primary" onClick={() => {
                       closeAddEventModal();
                       setShowSubmissionModal(true);
                       setSubmissionStep(1);
                       setSubmissionType('event');
-                    }}>Submit Event</button>
+                    }}><Calendar size={18} style={{ marginRight: '0.5rem' }} /> Submit an Event</button>
+                    <button className="btn-primary" style={{ background: '#8b5cf6' }} onClick={() => {
+                      closeAddEventModal();
+                      setShowSubmissionModal(true);
+                      setSubmissionStep(1);
+                      setSubmissionType('class');
+                    }}><Sparkles size={18} style={{ marginRight: '0.5rem' }} /> Submit a Class</button>
+                    <button className="btn-primary" style={{ background: '#f59e0b' }} onClick={() => {
+                      closeAddEventModal();
+                      setShowSubmissionModal(true);
+                      setSubmissionStep(1);
+                      setSubmissionType('deal');
+                    }}><Percent size={18} style={{ marginRight: '0.5rem' }} /> Submit a Deal</button>
+                    <button className="btn-secondary" onClick={closeAddEventModal}>Cancel</button>
                   </div>
                 </div>
               </div>
@@ -12746,9 +12710,66 @@ export default function PulseApp() {
                         {submissionType === 'deal' && (
                           <>
                             <div className="form-group full">
+                              <label>Discount Type *</label>
+                              <select
+                                value={submissionForm.discountType}
+                                onChange={(e) => setSubmissionForm(prev => ({ ...prev, discountType: e.target.value }))}
+                                className="form-input"
+                              >
+                                <option value="percent">Percentage Off</option>
+                                <option value="fixed">Dollar Amount Off</option>
+                                <option value="bogo">Buy One Get One</option>
+                                <option value="free_item">Free Item</option>
+                                <option value="special">Special Offer</option>
+                              </select>
+                            </div>
+                            {(submissionForm.discountType === 'percent' || submissionForm.discountType === 'fixed') && (
+                              <div className="form-group full">
+                                <label>{submissionForm.discountType === 'percent' ? 'Discount Percentage' : 'Discount Amount ($)'}</label>
+                                <input
+                                  type="number"
+                                  placeholder={submissionForm.discountType === 'percent' ? 'e.g., 25' : 'e.g., 10'}
+                                  value={submissionForm.discountValue}
+                                  onChange={(e) => setSubmissionForm(prev => ({ ...prev, discountValue: e.target.value }))}
+                                  className="form-input"
+                                />
+                              </div>
+                            )}
+                            <div className="form-group">
+                              <label>Original Price ($)</label>
+                              <input
+                                type="number"
+                                step="0.01"
+                                placeholder="e.g., 40.00"
+                                value={submissionForm.originalPrice}
+                                onChange={(e) => setSubmissionForm(prev => ({ ...prev, originalPrice: e.target.value }))}
+                                className="form-input"
+                              />
+                            </div>
+                            <div className="form-group">
+                              <label>Deal Price ($)</label>
+                              <input
+                                type="number"
+                                step="0.01"
+                                placeholder="e.g., 30.00"
+                                value={submissionForm.dealPrice}
+                                onChange={(e) => setSubmissionForm(prev => ({ ...prev, dealPrice: e.target.value }))}
+                                className="form-input"
+                              />
+                            </div>
+                            <div className="form-group full">
+                              <label>Valid Until</label>
+                              <input
+                                type="date"
+                                value={submissionForm.validUntil}
+                                onChange={(e) => setSubmissionForm(prev => ({ ...prev, validUntil: e.target.value }))}
+                                className="form-input"
+                              />
+                            </div>
+                            <div className="form-group full">
                               <label>Schedule / Availability *</label>
-                              <input 
-                                type="text" 
+                              <input
+                                type="text"
                                 placeholder="e.g., Mon-Fri 3-6pm, Weekends Only"
                                 value={submissionForm.schedule}
                                 onChange={(e) => setSubmissionForm(prev => ({ ...prev, schedule: e.target.value }))}
@@ -12757,7 +12778,7 @@ export default function PulseApp() {
                             </div>
                             <div className="form-group full">
                               <label>Terms & Conditions</label>
-                              <textarea 
+                              <textarea
                                 placeholder="e.g., Cannot be combined with other offers..."
                                 value={submissionForm.terms}
                                 onChange={(e) => setSubmissionForm(prev => ({ ...prev, terms: e.target.value }))}
@@ -13303,14 +13324,14 @@ export default function PulseApp() {
                   {profileTab === 'activity' && (
                     <div className="profile-activity">
                       <div className="activity-filters">
-                        <button className="activity-filter active">All</button>
-                        <button className="activity-filter">Events</button>
-                        <button className="activity-filter">Classes</button>
-                        <button className="activity-filter">Deals</button>
-                        <button className="activity-filter">Reviews</button>
+                        {['all', 'event', 'class', 'deal', 'review'].map(f => (
+                          <button key={f} className={`activity-filter ${activityFilter === f ? 'active' : ''}`} onClick={() => setActivityFilter(f)}>
+                            {f === 'all' ? 'All' : f === 'event' ? 'Events' : f === 'class' ? 'Classes' : f === 'deal' ? 'Deals' : 'Reviews'}
+                          </button>
+                        ))}
                       </div>
                       <div className="activity-list">
-                        {userActivity.map(activity => (
+                        {userActivity.filter(a => activityFilter === 'all' || a.type === activityFilter).map(activity => (
                           <div key={activity.id} className="activity-item-full">
                             <div className={`activity-icon-large ${activity.type}`}>
                               {activity.type === 'event' && <Calendar size={18} />}
@@ -13665,8 +13686,8 @@ export default function PulseApp() {
                                 <div className="insight-badge">Tip</div>
                                 <p>Complete your business profile to <strong>build trust</strong> with potential customers.</p>
                                 <button className="insight-action" onClick={() => {
-                                  if (userClaimedBusinesses.length > 0) {
-                                    const biz = userClaimedBusinesses[0];
+                                  if (activeBusiness) {
+                                    const biz = activeBusiness;
                                     setEditingVenue(biz);
                                     setEditVenueForm({
                                       name: biz.name || '',
@@ -13691,25 +13712,33 @@ export default function PulseApp() {
 
                           {/* Quick Actions */}
                           <div className="biz-quick-actions">
-                            <button className="quick-action-btn primary">
+                            <button className="quick-action-btn primary" onClick={() => { setShowSubmissionModal(true); setSubmissionStep(1); setSubmissionType('event'); }}>
                               <Plus size={18} />
                               New Event
                             </button>
-                            <button className="quick-action-btn">
+                            <button className="quick-action-btn" onClick={() => { setShowSubmissionModal(true); setSubmissionStep(1); setSubmissionType('deal'); }}>
                               <Percent size={18} />
                               New Deal
                             </button>
-                            <button className="quick-action-btn">
+                            <button className="quick-action-btn" onClick={() => {
+                              if (activeBusiness) {
+                                setEditingVenue(activeBusiness);
+                                setEditVenueForm({ name: activeBusiness.name || '', address: activeBusiness.address || '', phone: activeBusiness.phone || '', website: activeBusiness.website || '', email: activeBusiness.email || '', category: activeBusiness.category || '' });
+                                setShowEditVenueModal(true);
+                              }
+                            }}>
                               <Edit2 size={18} />
                               Edit Profile
                             </button>
-                            <button className="quick-action-btn">
+                            <button className="quick-action-btn" onClick={() => {
+                              document.querySelector('.analytics-controls')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            }}>
                               <TrendingUp size={18} />
                               Full Analytics
                             </button>
                           </div>
 
-                          <button className="add-another-business">
+                          <button className="add-another-business" onClick={() => showToast('Business claiming coming soon!', 'info')}>
                             <Plus size={16} />
                             Claim Another Business
                           </button>
@@ -14356,7 +14385,7 @@ export default function PulseApp() {
       {view === 'business' && (
         <div className="business-view-premium">
           {/* Check if user is authenticated first */}
-          {user.isGuest ? (
+          {user.isGuest && !isImpersonating ? (
             <div className="no-business-view">
               <div className="no-biz-content">
                 <div className="no-biz-icon">
@@ -14369,7 +14398,7 @@ export default function PulseApp() {
                 </button>
               </div>
             </div>
-          ) : userClaimedBusinesses.length === 0 ? (
+          ) : !activeBusiness ? (
             <div className="no-business-view">
               <div className="no-biz-content">
                 <div className="no-biz-icon">
@@ -14410,31 +14439,80 @@ export default function PulseApp() {
             </div>
           ) : (
             <>
+              {/* Impersonation Banner */}
+              {isImpersonating && (
+                <div className="impersonation-banner">
+                  <div className="impersonation-left">
+                    <Eye size={18} />
+                    <span>Admin View: <strong>{impersonatedBusiness.name}</strong></span>
+                    <span className="impersonation-badge">Impersonation Mode</span>
+                  </div>
+                  <button className="impersonation-exit-btn" onClick={exitImpersonation}>
+                    <X size={16} />
+                    Exit Business View
+                  </button>
+                </div>
+              )}
+
               {/* Premium Header */}
               <div className="premium-header">
                 <div className="premium-header-content">
                   <div className="header-left">
-                    <div className="venue-avatar-upload" onClick={() => showToast('Logo upload coming soon!', 'info')}>
+                    <div className="venue-avatar-upload" onClick={() => document.getElementById('business-logo-upload')?.click()}>
+                      <input
+                        id="business-logo-upload"
+                        type="file"
+                        accept="image/*"
+                        style={{ display: 'none' }}
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file || !activeBusiness?.id) return;
+                          try {
+                            const fileExt = file.name.split('.').pop();
+                            const fileName = `business-logos/${activeBusiness.id}/logo.${fileExt}`;
+                            const { error: uploadError } = await supabase.storage
+                              .from('avatars')
+                              .upload(fileName, file, { upsert: true });
+                            if (uploadError) throw uploadError;
+                            const { data: { publicUrl } } = supabase.storage
+                              .from('avatars')
+                              .getPublicUrl(fileName);
+                            const { error: updateError } = await supabase
+                              .from('businesses')
+                              .update({ logo_url: publicUrl })
+                              .eq('id', activeBusiness.id);
+                            if (updateError) throw updateError;
+                            fetchServices();
+                            showToast('Logo updated!', 'success');
+                          } catch (err) {
+                            showToast('Failed to upload logo: ' + err.message, 'error');
+                          }
+                          e.target.value = '';
+                        }}
+                      />
                       <div className="venue-avatar">
-                        <span className="venue-initial">{userClaimedBusinesses[0].name.charAt(0)}</span>
+                        {activeBusiness.logo_url
+                          ? <img src={activeBusiness.logo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+                          : <span className="venue-initial">{activeBusiness.name.charAt(0)}</span>
+                        }
                       </div>
                       <div className="upload-overlay">
                         <Edit2 size={20} />
                       </div>
                     </div>
                     <div className="header-text">
-                      <h1>{userClaimedBusinesses[0].name}</h1>
-                      <p className="header-subtitle">{userClaimedBusinesses[0].address}</p>
+                      <h1>{activeBusiness.name}</h1>
+                      <p className="header-subtitle">{activeBusiness.address}</p>
                     </div>
                   </div>
                   <div className="header-right">
-                    {userClaimedBusinesses[0].verified && (
+                    {activeBusiness.verified && (
                       <div className="verification-badge-premium">
                         <CheckCircle size={18} />
                         <span>Verified</span>
                       </div>
                     )}
-                    {userClaimedBusinesses.length > 1 && (
+                    {!isImpersonating && userClaimedBusinesses.length > 1 && (
                       <select className="business-selector">
                         {userClaimedBusinesses.map(b => (
                           <option key={b.id} value={b.id}>{b.name}</option>
@@ -14718,8 +14796,8 @@ export default function PulseApp() {
                     <div className="insight-tag">Tip</div>
                     <p>Complete your business profile to <strong>build trust</strong> with potential customers.</p>
                     <button className="insight-btn" onClick={() => {
-                      if (userClaimedBusinesses.length > 0) {
-                        const biz = userClaimedBusinesses[0];
+                      if (activeBusiness) {
+                        const biz = activeBusiness;
                         setEditingVenue(biz);
                         setEditVenueForm({
                           name: biz.name || '',
@@ -14873,7 +14951,7 @@ export default function PulseApp() {
               <div className="premium-section">
                 <div className="section-header-premium">
                   <h2>🏆 Top Performing</h2>
-                  <button className="btn-text">View all analytics →</button>
+                  <button className="btn-text" onClick={() => document.querySelector('.analytics-controls')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>View all analytics →</button>
                 </div>
                 
                 <div className="top-classes-grid">
@@ -14933,60 +15011,77 @@ export default function PulseApp() {
                 <div className="section-header-premium">
                   <h2>Your Active Listings</h2>
                   <div className="section-actions">
-                    <button className="btn-secondary"><SlidersHorizontal size={18} /> Filter</button>
-                    <button className="btn-primary-gradient"><Plus size={18} /> Add New</button>
+                    <button className="btn-primary-gradient" onClick={() => { setShowSubmissionModal(true); setSubmissionStep(1); }}><Plus size={18} /> Add New</button>
                   </div>
                 </div>
 
-                <div className="listings-table-container">
-                  <table className="listings-table">
-                    <thead>
-                      <tr>
-                        <th>Listing</th>
-                        <th>Type</th>
-                        <th>Status</th>
-                        <th>Views</th>
-                        <th>Conversions</th>
-                        <th>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {[
-                        // Analytics data will be populated from database
-                      ].map((listing, idx) => (
-                        <tr key={idx} className="listing-row">
-                          <td>
-                            <div className="listing-name-cell">
-                              <span className="listing-name">{listing.name}</span>
-                            </div>
-                          </td>
-                          <td>
-                            <span className={`type-badge ${listing.type.toLowerCase()}`}>{listing.type}</span>
-                          </td>
-                          <td>
-                            <span className={`status-badge ${listing.status.toLowerCase()}`}>
-                              <span className="status-dot"></span>
-                              {listing.status}
-                            </span>
-                          </td>
-                          <td>
-                            <span className="metric-cell">{listing.views.toLocaleString()}</span>
-                          </td>
-                          <td>
-                            <span className="metric-cell">{listing.conversions}</span>
-                          </td>
-                          <td>
-                            <div className="actions-cell">
-                              <button className="action-btn-sm" title="Edit"><Edit2 size={14} /></button>
-                              <button className="action-btn-sm" title="Analytics"><TrendingUp size={14} /></button>
-                              <button className="action-btn-sm" title="Duplicate"><Copy size={14} /></button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                {(() => {
+                  const businessListings = activeBusiness ? dbEvents.filter(e => e.venueId === activeBusiness.id || (e.venueName && activeBusiness.name && e.venueName.toLowerCase() === activeBusiness.name.toLowerCase())).slice(0, 20) : [];
+                  return businessListings.length > 0 ? (
+                    <div className="listings-table-container">
+                      <table className="listings-table">
+                        <thead>
+                          <tr>
+                            <th>Listing</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                            <th>Time</th>
+                            <th>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {businessListings.map((listing) => (
+                            <tr key={listing.id} className="listing-row">
+                              <td>
+                                <div className="listing-name-cell">
+                                  <span className="listing-name">{listing.title}</span>
+                                </div>
+                              </td>
+                              <td>
+                                <span className={`type-badge ${listing.eventType}`}>{listing.eventType === 'class' ? 'Class' : 'Event'}</span>
+                              </td>
+                              <td>
+                                <span className="status-badge active">
+                                  <span className="status-dot"></span>
+                                  Active
+                                </span>
+                              </td>
+                              <td><span className="metric-cell">{listing.start ? new Date(listing.start).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—'}</span></td>
+                              <td><span className="metric-cell">{listing.start ? new Date(listing.start).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '—'}</span></td>
+                              <td>
+                                <div className="actions-cell">
+                                  <button className="action-btn-sm" title="Edit" onClick={() => {
+                                    setEditingEvent(listing);
+                                    setEditEventForm({ title: listing.title || '', description: listing.description || '', date: listing.start ? `${listing.start.getFullYear()}-${String(listing.start.getMonth()+1).padStart(2,'0')}-${String(listing.start.getDate()).padStart(2,'0')}` : '', startTime: listing.start ? `${String(listing.start.getHours()).padStart(2,'0')}:${String(listing.start.getMinutes()).padStart(2,'0')}` : '', endTime: listing.end ? `${String(listing.end.getHours()).padStart(2,'0')}:${String(listing.end.getMinutes()).padStart(2,'0')}` : '', price: listing.price || '', category: listing.category || '' });
+                                    setShowEditEventModal(true);
+                                  }}><Edit2 size={14} /></button>
+                                  <button className="action-btn-sm danger" title="Delete" onClick={async () => {
+                                    if (confirm(`Delete "${listing.title}"?`)) {
+                                      try {
+                                        const { error } = await supabase.from('events').delete().eq('id', listing.id);
+                                        if (error) throw error;
+                                        showToast(`"${listing.title}" deleted`, 'success');
+                                        setEventsRefreshKey(k => k + 1);
+                                      } catch (_err) {
+                                        showToast('Failed to delete', 'error');
+                                      }
+                                    }
+                                  }}><Trash2 size={14} /></button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div style={{ textAlign: 'center', padding: '32px 16px', color: '#9ca3af' }}>
+                      <Calendar size={32} style={{ marginBottom: '8px', opacity: 0.5 }} />
+                      <p style={{ margin: 0, fontSize: '14px' }}>No active listings yet. Add an event or class to get started.</p>
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Audience Insights */}
@@ -15063,7 +15158,7 @@ export default function PulseApp() {
                       className={`inbox-tab ${businessInboxTab === 'bookings' ? 'active' : ''}`}
                       onClick={() => {
                         setBusinessInboxTab('bookings');
-                        fetchBusinessInbox(userClaimedBusinesses[0]?.id, 'booking_request');
+                        fetchBusinessInbox(activeBusiness?.id, 'booking_request');
                       }}
                     >
                       Booking Requests
@@ -15075,7 +15170,7 @@ export default function PulseApp() {
                       className={`inbox-tab ${businessInboxTab === 'messages' ? 'active' : ''}`}
                       onClick={() => {
                         setBusinessInboxTab('messages');
-                        fetchBusinessInbox(userClaimedBusinesses[0]?.id, 'general_inquiry');
+                        fetchBusinessInbox(activeBusiness?.id, 'general_inquiry');
                       }}
                     >
                       Messages
@@ -15199,19 +15294,27 @@ export default function PulseApp() {
               {/* Quick Actions */}
               <div className="premium-section actions-section">
                 <div className="quick-actions-grid">
-                  <button className="qa-btn primary">
+                  <button className="qa-btn primary" onClick={() => { setShowSubmissionModal(true); setSubmissionStep(1); setSubmissionType('event'); }}>
                     <Plus size={20} />
                     <span>New Event</span>
                   </button>
-                  <button className="qa-btn">
+                  <button className="qa-btn" onClick={() => { setShowSubmissionModal(true); setSubmissionStep(1); setSubmissionType('deal'); }}>
                     <Percent size={20} />
                     <span>New Deal</span>
                   </button>
-                  <button className="qa-btn">
+                  <button className="qa-btn" onClick={() => {
+                    if (activeBusiness) {
+                      setEditingVenue(activeBusiness);
+                      setEditVenueForm({ name: activeBusiness.name || '', address: activeBusiness.address || '', phone: activeBusiness.phone || '', website: activeBusiness.website || '', email: activeBusiness.email || '', category: activeBusiness.category || '' });
+                      setShowEditVenueModal(true);
+                    }
+                  }}>
                     <Edit2 size={20} />
                     <span>Edit Profile</span>
                   </button>
-                  <button className="qa-btn">
+                  <button className="qa-btn" onClick={() => {
+                    document.querySelector('.analytics-controls')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }}>
                     <TrendingUp size={20} />
                     <span>Full Analytics</span>
                   </button>
@@ -15224,19 +15327,19 @@ export default function PulseApp() {
                   <div className="qa-icon">📊</div>
                   <h3>Download Report</h3>
                   <p>Get detailed analytics for this month</p>
-                  <button className="btn-outline">Download PDF</button>
+                  <button className="btn-outline" onClick={() => showToast('PDF reports coming in a future update', 'info')}>Download PDF</button>
                 </div>
                 <div className="quick-action-card">
                   <div className="qa-icon">✉️</div>
                   <h3>Contact Support</h3>
                   <p>Need help? Our team is here for you</p>
-                  <button className="btn-outline">Get Help</button>
+                  <button className="btn-outline" onClick={() => window.open('mailto:support@pulsesquamish.com', '_blank')}>Get Help</button>
                 </div>
                 <div className="quick-action-card">
                   <div className="qa-icon">🎯</div>
                   <h3>Boost Visibility</h3>
                   <p>Feature your listings for more reach</p>
-                  <button className="btn-outline">Upgrade</button>
+                  <button className="btn-outline" onClick={() => showToast('Premium features coming soon', 'info')}>Upgrade</button>
                 </div>
               </div>
             </>
@@ -15269,8 +15372,40 @@ export default function PulseApp() {
                 <p className="admin-subtitle">System Overview & Management</p>
               </div>
               <div className="admin-header-actions">
-                <button className="btn-secondary"><SlidersHorizontal size={18} /> Settings</button>
-                <button className="btn-primary-gradient"><Plus size={18} /> Add Venue</button>
+                <div className="admin-impersonate-search" style={{ position: 'relative' }}>
+                  <div className="search-box-admin">
+                    <Search size={16} />
+                    <input
+                      type="text"
+                      placeholder="View as business..."
+                      value={adminSearchQuery}
+                      onChange={(e) => setAdminSearchQuery(e.target.value)}
+                    />
+                  </div>
+                  {adminSearchQuery.length > 1 && (
+                    <div className="admin-search-dropdown">
+                      {services
+                        .filter(s => s.name.toLowerCase().includes(adminSearchQuery.toLowerCase()))
+                        .slice(0, 8)
+                        .map(venue => (
+                          <div key={venue.id} className="admin-search-result" onClick={() => enterImpersonation(venue)}>
+                            <div className="admin-search-avatar">{venue.name.charAt(0)}</div>
+                            <div className="admin-search-info">
+                              <div className="admin-search-name">{venue.name}</div>
+                              <div className="admin-search-meta">{venue.category}</div>
+                            </div>
+                            <Eye size={14} style={{ color: '#9ca3af' }} />
+                          </div>
+                        ))
+                      }
+                      {services.filter(s => s.name.toLowerCase().includes(adminSearchQuery.toLowerCase())).length === 0 && (
+                        <div className="admin-search-empty">No businesses found</div>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <button className="btn-secondary" onClick={() => showToast('Admin settings coming soon', 'info')}><SlidersHorizontal size={18} /> Settings</button>
+                <button className="btn-primary-gradient" onClick={() => showToast('Use the business directory to manage venues', 'info')}><Plus size={18} /> Add Venue</button>
               </div>
             </div>
           </div>
@@ -15330,8 +15465,8 @@ export default function PulseApp() {
                 <p className="section-subtitle">Automated venue data collection</p>
               </div>
               <div className="section-actions">
-                <button className="btn-secondary"><SlidersHorizontal size={18} /> Configure</button>
-                <button className="btn-primary-gradient"><Plus size={18} /> Run Scrape Now</button>
+                <button className="btn-secondary" onClick={() => showToast('Scraping configuration is managed via CLI', 'info')}><SlidersHorizontal size={18} /> Configure</button>
+                <button className="btn-primary-gradient" onClick={() => showToast('Run scrapers via CLI: node scripts/scrape-orchestrator.js', 'info')}><Plus size={18} /> Run Scrape Now</button>
               </div>
             </div>
 
@@ -15425,7 +15560,7 @@ export default function PulseApp() {
               <div className="admin-search-filters">
                 <div className="search-box-admin">
                   <Search size={18} />
-                  <input type="text" placeholder="Search venues..." />
+                  <input type="text" placeholder="Search venues..." value={adminSearchQuery} onChange={(e) => setAdminSearchQuery(e.target.value)} />
                 </div>
                 <select className="filter-select-admin">
                   <option>All Categories</option>
@@ -15443,7 +15578,9 @@ export default function PulseApp() {
             </div>
 
             <div className="venues-grid-admin">
-              {services.slice(0, 12).map((venue, idx) => {
+              {services
+                .filter(s => !adminSearchQuery || s.name.toLowerCase().includes(adminSearchQuery.toLowerCase()) || (s.category && s.category.toLowerCase().includes(adminSearchQuery.toLowerCase())))
+                .slice(0, adminSearchQuery ? 50 : 12).map((venue, idx) => {
                 const classCount = dbEvents.filter(e => e.venueId === venue.id).length;
                 return (
                   <div key={venue.id} className="venue-card-admin" ref={(el) => venueCardRefs.current[idx] = el}>
@@ -15470,8 +15607,6 @@ export default function PulseApp() {
                     {/* Stats will be populated from real analytics data */}
                     <div className="venue-card-actions">
                       <button className="action-btn-mini" onClick={() => {
-                        console.log('EDIT BUTTON CLICKED for venue:', venue.name);
-                        console.log('Setting editingVenue and showEditVenueModal...');
                         setEditingVenue(venue);
                         setEditVenueForm({
                           name: venue.name || '',
@@ -15482,9 +15617,8 @@ export default function PulseApp() {
                           category: venue.category || ''
                         });
                         setShowEditVenueModal(true);
-                        console.log('showEditVenueModal set to true');
                       }}><Edit2 size={14} /></button>
-                      <button className="action-btn-mini" onClick={() => setSelectedService(venue)}><Eye size={14} /></button>
+                      <button className="action-btn-mini impersonate" title="View as this business" onClick={() => enterImpersonation(venue)}><Eye size={14} /></button>
                       <button className="action-btn-mini danger" onClick={async () => {
                         if (confirm(`Delete ${venue.name}? This cannot be undone.`)) {
                           try {
@@ -15517,45 +15651,78 @@ export default function PulseApp() {
               <div className="form-grid-admin">
                 <div className="form-field-admin">
                   <label>Class Title</label>
-                  <input type="text" placeholder="e.g. Hot Yoga Flow" />
+                  <input type="text" placeholder="e.g. Hot Yoga Flow" value={quickAddForm.title} onChange={(e) => setQuickAddForm(prev => ({ ...prev, title: e.target.value }))} />
                 </div>
                 <div className="form-field-admin">
                   <label>Venue</label>
-                  <select>
-                    <option>Select venue...</option>
-                    {REAL_DATA.venues.slice(0, 10).map(v => (
+                  <select value={quickAddForm.venueId} onChange={(e) => {
+                    const venue = services.find(s => s.id === e.target.value);
+                    setQuickAddForm(prev => ({ ...prev, venueId: e.target.value, venueName: venue?.name || '' }));
+                  }}>
+                    <option value="">Select venue...</option>
+                    {services.slice(0, 50).map(v => (
                       <option key={v.id} value={v.id}>{v.name}</option>
                     ))}
                   </select>
                 </div>
                 <div className="form-field-admin">
                   <label>Start Time</label>
-                  <input type="time" defaultValue="18:00" />
+                  <input type="time" value={quickAddForm.startTime} onChange={(e) => setQuickAddForm(prev => ({ ...prev, startTime: e.target.value }))} />
                 </div>
                 <div className="form-field-admin">
                   <label>Duration</label>
-                  <select>
-                    <option>30 minutes</option>
-                    <option>45 minutes</option>
-                    <option>60 minutes</option>
-                    <option>90 minutes</option>
+                  <select value={quickAddForm.duration} onChange={(e) => setQuickAddForm(prev => ({ ...prev, duration: e.target.value }))}>
+                    <option value="30">30 minutes</option>
+                    <option value="45">45 minutes</option>
+                    <option value="60">60 minutes</option>
+                    <option value="90">90 minutes</option>
                   </select>
                 </div>
                 <div className="form-field-admin">
                   <label>Price</label>
-                  <input type="text" placeholder="$20" />
+                  <input type="text" placeholder="$20" value={quickAddForm.price} onChange={(e) => setQuickAddForm(prev => ({ ...prev, price: e.target.value }))} />
                 </div>
                 <div className="form-field-admin">
                   <label>Recurrence</label>
-                  <select>
-                    <option>Weekly</option>
-                    <option>Daily</option>
-                    <option>Bi-weekly</option>
-                    <option>Monthly</option>
+                  <select value={quickAddForm.recurrence} onChange={(e) => setQuickAddForm(prev => ({ ...prev, recurrence: e.target.value }))}>
+                    <option value="Weekly">Weekly</option>
+                    <option value="Daily">Daily</option>
+                    <option value="Bi-weekly">Bi-weekly</option>
+                    <option value="Monthly">Monthly</option>
                   </select>
                 </div>
               </div>
-              <button className="btn-primary-gradient btn-large-admin">
+              <button className="btn-primary-gradient btn-large-admin" onClick={async () => {
+                if (!quickAddForm.title || !quickAddForm.venueId) {
+                  showToast('Please fill in title and venue', 'error');
+                  return;
+                }
+                try {
+                  const [hours, mins] = quickAddForm.startTime.split(':').map(Number);
+                  const endMins = hours * 60 + mins + parseInt(quickAddForm.duration);
+                  const endTime = `${String(Math.floor(endMins / 60)).padStart(2, '0')}:${String(endMins % 60).padStart(2, '0')}`;
+
+                  const { error } = await supabase.from('events').insert({
+                    title: quickAddForm.title,
+                    venue_name: quickAddForm.venueName,
+                    venue_id: quickAddForm.venueId,
+                    start_date: getPacificDateStr(),
+                    start_time: quickAddForm.startTime,
+                    end_time: endTime,
+                    event_type: 'class',
+                    price: quickAddForm.price || null,
+                    recurrence: quickAddForm.recurrence.toLowerCase(),
+                    tags: ['admin-added'],
+                    status: 'active'
+                  });
+                  if (error) throw error;
+                  showToast(`"${quickAddForm.title}" added!`, 'success');
+                  setQuickAddForm({ title: '', venueId: '', venueName: '', startTime: '18:00', duration: '60', price: '', recurrence: 'Weekly' });
+                } catch (err) {
+                  console.error('Quick add error:', err);
+                  showToast('Failed to add class', 'error');
+                }
+              }}>
                 <Plus size={20} /> Add Class
               </button>
             </div>
@@ -15640,18 +15807,12 @@ export default function PulseApp() {
               <div className="claim-modal-actions">
                 <button className="claim-cancel-btn" onClick={() => { setShowEditVenueModal(false); setEditingVenue(null); }}>Cancel</button>
                 <button className="claim-submit-btn" onClick={async () => {
-                  console.log('SAVE CHANGES CLICKED');
-                  console.log('editingVenue:', editingVenue);
-                  console.log('editingVenue.id:', editingVenue?.id);
-                  console.log('editVenueForm:', editVenueForm);
-
                   if (!editingVenue?.id) {
                     showToast('Error: No venue ID found', 'error');
                     return;
                   }
 
                   try {
-                    console.log('Updating business with ID:', editingVenue.id);
                     const { data, error } = await supabase
                       .from('businesses')
                       .update({
@@ -15665,13 +15826,10 @@ export default function PulseApp() {
                       .eq('id', editingVenue.id)
                       .select();
 
-                    console.log('Supabase update response - data:', data, 'error:', error);
-
                     if (error) throw error;
 
                     // Check if any rows were actually updated
                     if (!data || data.length === 0) {
-                      console.error('No rows updated - likely RLS policy blocking update');
                       showToast('Update blocked - check database permissions', 'error');
                       return;
                     }
@@ -15687,6 +15845,83 @@ export default function PulseApp() {
                   }
                 }}>Save Changes</button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Event/Class Modal */}
+      {showEditEventModal && editingEvent && (
+        <div className="modal-overlay" onClick={() => { setShowEditEventModal(false); setEditingEvent(null); }}>
+          <div className="claim-modal-premium" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header-premium">
+              <h2>Edit {editingEvent.eventType === 'class' ? 'Class' : 'Event'}</h2>
+              <button className="modal-close-btn" onClick={() => { setShowEditEventModal(false); setEditingEvent(null); }}><X size={20} /></button>
+            </div>
+            <div className="modal-body-premium">
+              <div className="form-group">
+                <label>Title</label>
+                <input type="text" value={editEventForm.title} onChange={(e) => setEditEventForm(prev => ({ ...prev, title: e.target.value }))} />
+              </div>
+              <div className="form-group">
+                <label>Description</label>
+                <textarea rows={3} value={editEventForm.description} onChange={(e) => setEditEventForm(prev => ({ ...prev, description: e.target.value }))} />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+                <div className="form-group">
+                  <label>Date</label>
+                  <input type="date" value={editEventForm.date} onChange={(e) => setEditEventForm(prev => ({ ...prev, date: e.target.value }))} />
+                </div>
+                <div className="form-group">
+                  <label>Start Time</label>
+                  <input type="time" value={editEventForm.startTime} onChange={(e) => setEditEventForm(prev => ({ ...prev, startTime: e.target.value }))} />
+                </div>
+                <div className="form-group">
+                  <label>End Time</label>
+                  <input type="time" value={editEventForm.endTime} onChange={(e) => setEditEventForm(prev => ({ ...prev, endTime: e.target.value }))} />
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div className="form-group">
+                  <label>Price</label>
+                  <input type="text" placeholder="Free or $20" value={editEventForm.price} onChange={(e) => setEditEventForm(prev => ({ ...prev, price: e.target.value }))} />
+                </div>
+                <div className="form-group">
+                  <label>Category</label>
+                  <input type="text" value={editEventForm.category} onChange={(e) => setEditEventForm(prev => ({ ...prev, category: e.target.value }))} />
+                </div>
+              </div>
+            </div>
+            <div className="modal-actions-premium">
+              <button className="btn-secondary" onClick={() => { setShowEditEventModal(false); setEditingEvent(null); }}>Cancel</button>
+              <button className="btn-primary-gradient" onClick={async () => {
+                try {
+                  const updateData = {
+                    title: editEventForm.title,
+                    description: editEventForm.description,
+                    start_date: editEventForm.date,
+                    start_time: editEventForm.startTime,
+                    end_time: editEventForm.endTime,
+                    category: editEventForm.category
+                  };
+                  if (editEventForm.price && editEventForm.price.toLowerCase() !== 'free') {
+                    updateData.price = editEventForm.price.replace(/[^0-9.]/g, '');
+                    updateData.is_free = false;
+                  } else {
+                    updateData.is_free = true;
+                    updateData.price = null;
+                  }
+                  const { error } = await supabase.from('events').update(updateData).eq('id', editingEvent.id);
+                  if (error) throw error;
+                  showToast(`"${editEventForm.title}" updated!`, 'success');
+                  setShowEditEventModal(false);
+                  setEditingEvent(null);
+                  setEventsRefreshKey(k => k + 1);
+                } catch (err) {
+                  console.error('Error updating event:', err);
+                  showToast('Failed to update', 'error');
+                }
+              }}>Save Changes</button>
             </div>
           </div>
         </div>
@@ -15937,7 +16172,7 @@ export default function PulseApp() {
         </div>
       )}
 
-      <style jsx>{`
+      <style>{`
         * { margin: 0; padding: 0; box-sizing: border-box; }
         .pulse-app { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif; background: #fff; min-height: 100vh; color: #000; }
         .view-switcher { position: fixed; top: 20px; right: 20px; background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 6px; display: flex; gap: 6px; z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
@@ -21218,6 +21453,135 @@ export default function PulseApp() {
           background: #fef2f2;
           border-color: #fecaca;
           color: #dc2626;
+        }
+
+        .action-btn-mini.impersonate:hover {
+          background: #eff6ff;
+          border-color: #93c5fd;
+          color: #2563eb;
+        }
+
+        /* Impersonation Banner */
+        .impersonation-banner {
+          position: sticky;
+          top: 0;
+          z-index: 1000;
+          background: linear-gradient(135deg, #f59e0b, #d97706);
+          color: white;
+          padding: 10px 20px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+          border-bottom: 2px solid #b45309;
+        }
+        .impersonation-left {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          font-size: 14px;
+        }
+        .impersonation-badge {
+          background: rgba(255,255,255,0.2);
+          padding: 2px 10px;
+          border-radius: 4px;
+          font-size: 11px;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+        .impersonation-exit-btn {
+          background: rgba(255,255,255,0.2);
+          border: 1px solid rgba(255,255,255,0.4);
+          color: white;
+          padding: 6px 16px;
+          border-radius: 8px;
+          cursor: pointer;
+          font-weight: 600;
+          font-size: 13px;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          transition: all 0.15s;
+          font-family: inherit;
+        }
+        .impersonation-exit-btn:hover {
+          background: rgba(255,255,255,0.3);
+        }
+
+        /* Admin Search Dropdown */
+        .admin-impersonate-search {
+          position: relative;
+        }
+        .admin-impersonate-search .search-box-admin {
+          min-width: 220px;
+        }
+        .admin-search-dropdown {
+          position: absolute;
+          top: 100%;
+          left: 0;
+          right: 0;
+          background: white;
+          border: 1px solid #e5e7eb;
+          border-radius: 12px;
+          box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+          margin-top: 4px;
+          max-height: 360px;
+          overflow-y: auto;
+          z-index: 100;
+        }
+        .admin-search-result {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 10px 14px;
+          cursor: pointer;
+          transition: background 0.15s;
+        }
+        .admin-search-result:hover {
+          background: #f3f4f6;
+        }
+        .admin-search-result:first-child {
+          border-radius: 12px 12px 0 0;
+        }
+        .admin-search-result:last-child {
+          border-radius: 0 0 12px 12px;
+        }
+        .admin-search-avatar {
+          width: 32px;
+          height: 32px;
+          border-radius: 8px;
+          background: linear-gradient(135deg, #3b82f6, #2563eb);
+          color: white;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: 700;
+          font-size: 13px;
+          flex-shrink: 0;
+        }
+        .admin-search-info {
+          flex: 1;
+          min-width: 0;
+        }
+        .admin-search-name {
+          font-size: 13px;
+          font-weight: 600;
+          color: #111827;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .admin-search-meta {
+          font-size: 11px;
+          color: #9ca3af;
+        }
+        .admin-search-empty {
+          padding: 16px;
+          text-align: center;
+          color: #9ca3af;
+          font-size: 13px;
         }
         
         .quick-add-premium {

@@ -319,23 +319,6 @@ export default function WellnessBooking({
 
   return (
     <div className="wellness-booking">
-      {/* Header */}
-      <div className="wb-header">
-        <button className="wb-back-btn" onClick={onBack}>
-          <ArrowLeft size={20} />
-        </button>
-        <div className="wb-header-text">
-          <h1 className="wb-title">Book Wellness</h1>
-          <p className="wb-subtitle">Real-time availability across Squamish</p>
-        </div>
-        {lastScrapeTime && (
-          <div className="wb-live-badge">
-            <div className="wb-live-dot" />
-            <span>{formatTimeSince(lastScrapeTime)}</span>
-          </div>
-        )}
-      </div>
-
       {/* Discipline Tabs */}
       <div className="wb-discipline-tabs">
         {DISCIPLINES.map(d => {
@@ -977,19 +960,20 @@ const wellnessBookingStyles = `
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 16px 20px;
-  background: linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%);
-  color: white;
+  padding: 14px 20px;
+  background: white;
+  color: #111827;
   position: sticky;
   top: 0;
   z-index: 50;
+  border-bottom: 1px solid #e5e7eb;
 }
 .wb-back-btn {
-  background: rgba(255,255,255,0.2);
+  background: #f3f4f6;
   border: none;
   border-radius: 10px;
   padding: 8px;
-  color: white;
+  color: #374151;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -1001,20 +985,22 @@ const wellnessBookingStyles = `
   font-weight: 800;
   letter-spacing: -0.3px;
   margin: 0;
+  color: #111827;
 }
 .wb-subtitle {
   font-size: 12px;
-  opacity: 0.85;
+  color: #6b7280;
   margin: 2px 0 0;
 }
 .wb-live-badge {
   display: flex;
   align-items: center;
   gap: 6px;
-  background: rgba(255,255,255,0.2);
+  background: #f0fdf4;
   border-radius: 20px;
   padding: 4px 10px;
   font-size: 11px;
+  color: #166534;
 }
 .wb-live-dot {
   width: 6px;
@@ -1031,35 +1017,40 @@ const wellnessBookingStyles = `
 /* Discipline Tabs */
 .wb-discipline-tabs {
   display: flex;
-  gap: 6px;
-  padding: 12px 16px;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  background: white;
+  gap: 8px;
+  padding: 16px 20px;
+  flex-wrap: wrap;
+  justify-content: center;
+  background: #f9fafb;
   border-bottom: 1px solid #e5e7eb;
 }
-.wb-discipline-tabs::-webkit-scrollbar { display: none; }
 .wb-discipline-tab {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
-  border-radius: 20px;
-  border: 1px solid #e5e7eb;
+  gap: 7px;
+  padding: 10px 18px;
+  border-radius: 12px;
+  border: 1.5px solid #e5e7eb;
   background: white;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
-  color: #6b7280;
+  color: #374151;
   cursor: pointer;
-  white-space: nowrap;
-  transition: all 0.15s ease;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
 }
 .wb-discipline-tab.active {
-  background: linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%);
+  background: #3b82f6;
   color: white;
-  border-color: transparent;
+  border-color: #3b82f6;
+  box-shadow: 0 2px 8px rgba(59,130,246,0.3);
 }
-.wb-discipline-tab:not(.active):hover { background: #f3f4f6; }
+.wb-discipline-tab:not(.active):hover {
+  background: white;
+  border-color: #3b82f6;
+  color: #3b82f6;
+  box-shadow: 0 2px 6px rgba(59,130,246,0.1);
+}
 
 /* Date Carousel */
 .wb-date-carousel {
