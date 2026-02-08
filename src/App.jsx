@@ -14299,6 +14299,10 @@ export default function PulseApp() {
                       <p>Review and approve submissions</p>
                     </div>
                   </div>
+                  <button className="admin-btn approve" style={{ marginTop: '12px', display: 'flex', alignItems: 'center', gap: '8px' }} onClick={() => { setShowAdminPanel(false); setView('admin'); }}>
+                    <SlidersHorizontal size={16} />
+                    Open Full Dashboard
+                  </button>
                 </div>
 
                 <div className="admin-content">
@@ -26319,6 +26323,8 @@ export default function PulseApp() {
           display: flex;
           gap: 12px;
           margin-bottom: 20px;
+          position: relative;
+          z-index: 10;
         }
 
         .quick-action-btn {
@@ -26335,6 +26341,7 @@ export default function PulseApp() {
           font-weight: 600;
           color: #374151;
           cursor: pointer;
+          pointer-events: auto;
           transition: all 0.2s ease;
         }
 
