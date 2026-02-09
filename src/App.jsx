@@ -21,6 +21,9 @@ import EditVenueModal from './components/modals/EditVenueModal';
 import ImageCropperModal from './components/modals/ImageCropperModal';
 import ContactSheet from './components/modals/ContactSheet';
 import EditEventModal from './components/modals/EditEventModal';
+import { REAL_DATA, SERVICE_CATEGORIES } from './data/realData';
+import { getBookingUrl, getBookingType } from './utils/bookingHelpers';
+import { generateSmartDealTitle, normalizeDealCategory, calculateDealScore, getDealSavingsDisplay, isRealDeal } from './utils/dealHelpers';
 import './styles/pulse-app.css';
 
 // All dates/times in this app are in Squamish (Pacific) time, regardless of user's location.
@@ -28,7 +31,6 @@ const PACIFIC_TZ = 'America/Vancouver';
 
 /** Get current Date adjusted to Pacific timezone */
 function getPacificNow() {
-  // Get current time string in Pacific, then parse it back to a Date
   const pacificStr = new Date().toLocaleString('en-US', { timeZone: PACIFIC_TZ });
   return new Date(pacificStr);
 }
@@ -44,11 +46,8 @@ function getPacificDateStr() {
 function pacificDate(dateStr, timeStr) {
   const [year, month, day] = dateStr.split('-').map(Number);
   const [hours, minutes] = (timeStr || '09:00').split(':').map(Number);
-  // Build an ISO string with Pacific offset, then let JS parse it
-  // Use toLocaleString roundtrip to get correct Pacific-local Date
   const fakeLocal = new Date(year, month - 1, day, hours, minutes, 0, 0);
   const localStr = fakeLocal.toLocaleString('en-US', { timeZone: PACIFIC_TZ });
-  // The offset between fakeLocal (user's TZ) and Pacific TZ
   const pacificEquiv = new Date(localStr);
   const offset = fakeLocal.getTime() - pacificEquiv.getTime();
   return new Date(fakeLocal.getTime() + offset);
@@ -56,12 +55,6 @@ function pacificDate(dateStr, timeStr) {
 
 /** Format options for displaying dates/times always in Pacific timezone */
 const PACIFIC_DATE_OPTS = { timeZone: PACIFIC_TZ };
-
-
-// Extracted data and utility imports
-import { REAL_DATA, SERVICE_CATEGORIES } from './data/realData';
-import { getBookingUrl, getBookingType } from './utils/bookingHelpers';
-import { generateSmartDealTitle, normalizeDealCategory, calculateDealScore, getDealSavingsDisplay, isRealDeal } from './utils/dealHelpers';
 
 export default function PulseApp() {
   const [view, setView] = useState('consumer');
