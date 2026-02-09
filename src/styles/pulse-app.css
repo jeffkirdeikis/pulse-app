@@ -1,10 +1,10 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        .pulse-app { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif; background: #fff; min-height: 100vh; color: #000; }
+        .pulse-app { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif; background: #fff; min-height: 100vh; color: #000; overflow-x: hidden; width: 100%; max-width: 100vw; }
         .view-switcher { position: fixed; top: 20px; right: 20px; background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 6px; display: flex; gap: 6px; z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
         .view-switcher button { background: transparent; border: none; color: #374151; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: 0.2s; }
         .view-switcher button:hover { background: #f9fafb; }
         .view-switcher button.active { background: #2563eb; color: #fff; box-shadow: 0 2px 8px rgba(37,99,235,0.2); }
-        .consumer-view { max-width: 420px; margin: 0 auto; background: #fff; min-height: 100vh; box-shadow: 0 0 0 1px #e5e7eb; }
+        .consumer-view { max-width: 420px; margin: 0 auto; background: #fff; min-height: 100vh; box-shadow: 0 0 0 1px #e5e7eb; overflow-x: clip; }
         
         /* ========== PREMIUM HEADER ========== */
         .app-header-premium {
@@ -1245,6 +1245,7 @@
           max-width: 420px;
           margin: 0 auto;
           padding: 0;
+          width: 100%;
         }
         
         .banner-tabs {
@@ -1447,9 +1448,9 @@
         
         .filters-row-top {
           display: grid;
-          grid-template-columns: 1fr 1.5fr 1fr;
-          gap: 10px;
-          margin-bottom: 10px;
+          grid-template-columns: 1fr 1fr;
+          gap: 8px;
+          margin-bottom: 8px;
         }
 
         .filters-row-single {
@@ -1464,8 +1465,8 @@
         
         .filters-row-bottom {
           display: grid;
-          grid-template-columns: 1.5fr 1fr auto;
-          gap: 10px;
+          grid-template-columns: 1fr 1fr;
+          gap: 8px;
           align-items: center;
         }
         
@@ -12671,6 +12672,341 @@
           .social-proof-arrow {
             width: 24px;
             height: 24px;
+          }
+        }
+
+        /* ========== MOBILE OVERFLOW FIXES (375px and below) ========== */
+
+        /* Ensure consumer view never exceeds viewport width */
+        @media (max-width: 480px) {
+          .consumer-view {
+            max-width: 100vw;
+            width: 100%;
+            box-shadow: none;
+          }
+
+          .header-container-premium {
+            padding: 0 12px;
+          }
+
+          .header-actions-premium {
+            gap: 8px;
+          }
+
+          .sign-in-btn {
+            padding: 8px 14px;
+            font-size: 13px;
+          }
+
+          .header-btn-icon {
+            width: 36px;
+            height: 36px;
+          }
+
+          .pulse-icon-premium {
+            width: 28px;
+            height: 34px;
+          }
+
+          .logo-text-premium {
+            font-size: 20px;
+          }
+
+          .pulse-logo-premium {
+            gap: 8px;
+          }
+
+          .banner-content-premium {
+            max-width: 100%;
+          }
+
+          .banner-tab {
+            padding: 12px 8px;
+            font-size: 13px;
+            gap: 4px;
+          }
+
+          .banner-tab svg {
+            width: 16px;
+            height: 16px;
+          }
+
+          .search-section-premium {
+            padding: 12px 12px;
+          }
+
+          .filters-toggle-section {
+            padding: 8px 12px;
+          }
+
+          .filters-section {
+            padding: 8px 12px;
+          }
+        }
+
+        /* Extra small phones (375px and below) */
+        @media (max-width: 375px) {
+          .consumer-view {
+            max-width: 100vw;
+            width: 100%;
+          }
+
+          .header-container-premium {
+            padding: 0 10px;
+          }
+
+          .header-actions-premium {
+            gap: 6px;
+          }
+
+          .sign-in-btn {
+            padding: 7px 12px;
+            font-size: 12px;
+          }
+
+          .header-btn-icon {
+            width: 34px;
+            height: 34px;
+          }
+
+          .pulse-icon-premium {
+            width: 24px;
+            height: 30px;
+          }
+
+          .logo-text-premium {
+            font-size: 18px;
+          }
+
+          .city-tag {
+            font-size: 10px;
+          }
+
+          .pulse-logo-premium {
+            gap: 6px;
+          }
+
+          .banner-tab {
+            padding: 10px 6px;
+            font-size: 12px;
+            gap: 3px;
+          }
+
+          .banner-tab svg {
+            width: 14px;
+            height: 14px;
+          }
+
+          .search-section-premium {
+            padding: 10px 10px;
+          }
+        }
+
+        /* ========== ADMIN VIEW MOBILE FIXES ========== */
+        @media (max-width: 768px) {
+          .admin-view-premium {
+            width: 100%;
+            max-width: 100vw;
+            overflow-x: hidden;
+          }
+
+          .admin-header-premium {
+            padding: 16px;
+          }
+
+          .admin-header-content {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 12px;
+          }
+
+          .admin-header-content h1 {
+            font-size: 22px;
+          }
+
+          .admin-header-actions {
+            width: 100%;
+            flex-direction: column;
+            gap: 8px;
+          }
+
+          .admin-impersonate-search {
+            width: 100%;
+          }
+
+          .admin-impersonate-search .search-box-admin {
+            min-width: 0;
+            width: 100%;
+          }
+
+          .admin-stats-premium {
+            padding: 16px;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+          }
+
+          .admin-stat-box {
+            padding: 16px;
+          }
+
+          .stat-icon-wrapper {
+            width: 44px;
+            height: 44px;
+          }
+
+          .stat-number {
+            font-size: 22px;
+          }
+
+          .scraping-dashboard {
+            margin: 0 16px;
+            padding: 16px;
+          }
+
+          .scrape-overview-cards {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+          }
+
+          .admin-search-filters {
+            flex-direction: column;
+          }
+
+          .venues-grid-admin {
+            gap: 12px;
+          }
+
+          .venue-card-admin {
+            padding: 16px;
+          }
+
+          .business-stats, .admin-stats {
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+          }
+
+          .premium-section {
+            padding: 0 16px;
+          }
+
+          .inbox-section {
+            margin-left: 16px;
+            margin-right: 16px;
+          }
+
+          .section-header-premium {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 12px;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .admin-header-premium {
+            padding: 12px;
+          }
+
+          .admin-header-content h1 {
+            font-size: 20px;
+          }
+
+          .admin-subtitle {
+            font-size: 12px;
+          }
+
+          .admin-stats-premium {
+            padding: 12px;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+          }
+
+          .admin-stat-box {
+            padding: 12px;
+            gap: 10px;
+          }
+
+          .stat-icon-wrapper {
+            width: 36px;
+            height: 36px;
+          }
+
+          .stat-number {
+            font-size: 18px;
+          }
+
+          .stat-label {
+            font-size: 11px;
+          }
+
+          .scraping-dashboard {
+            margin: 0 12px;
+            padding: 12px;
+          }
+
+          .scrape-overview-cards {
+            grid-template-columns: 1fr;
+          }
+
+          .venues-grid-admin {
+            grid-template-columns: 1fr;
+          }
+
+          .business-stats, .admin-stats {
+            grid-template-columns: 1fr;
+            gap: 10px;
+          }
+
+          .btn-large-admin {
+            font-size: 14px;
+            padding: 12px 20px;
+          }
+
+          .form-grid-admin {
+            grid-template-columns: 1fr;
+          }
+
+          .premium-section {
+            padding: 0 12px;
+            margin-bottom: 20px;
+          }
+
+          .inbox-section {
+            margin-left: 12px;
+            margin-right: 12px;
+            padding: 16px;
+          }
+        }
+
+        @media (max-width: 375px) {
+          .admin-view-premium {
+            width: 100vw;
+            max-width: 100vw;
+            overflow-x: hidden;
+          }
+
+          .admin-stats-premium {
+            padding: 10px;
+            gap: 6px;
+          }
+
+          .admin-stat-box {
+            padding: 10px;
+            gap: 8px;
+            flex-direction: column;
+            align-items: flex-start;
+          }
+
+          .stat-icon-wrapper {
+            width: 32px;
+            height: 32px;
+          }
+
+          .scrape-overview-cards {
+            grid-template-columns: 1fr;
+          }
+
+          .scrape-card {
+            padding: 14px;
           }
         }
 

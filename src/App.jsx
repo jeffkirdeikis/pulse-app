@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Calendar, CalendarPlus, MapPin, Clock, Star, Check, Bell, Search, Filter, ChevronRight, ChevronLeft, X, Plus, Edit2, Trash2, Eye, Users, DollarSign, AlertCircle, CheckCircle, XCircle, SlidersHorizontal, Building, Wrench, TrendingUp, Phone, Globe, Navigation, Mail, Share2, Ticket, Percent, Tag, Repeat, ExternalLink, Heart, Copy, Info, Gift, Sparkles, Zap, Camera, MessageCircle, Send } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import { useUserData } from './hooks/useUserData';
@@ -8532,7 +8532,14 @@ export default function PulseApp() {
   // Admin Business Impersonation State
   const [impersonatedBusiness, setImpersonatedBusiness] = useState(null);
   const [adminSearchQuery, setAdminSearchQuery] = useState('');
+  const [impersonateSearchQuery, setImpersonateSearchQuery] = useState('');
   const [previousAdminState, setPreviousAdminState] = useState(null);
+  // Admin venue management filter state
+  const [adminCategoryFilter, setAdminCategoryFilter] = useState('');
+  const [adminStatusFilter, setAdminStatusFilter] = useState('');
+  // Admin stats: claimed businesses count
+  const [adminClaimedCount, setAdminClaimedCount] = useState(0);
+  const [adminVerifiedCount, setAdminVerifiedCount] = useState(0);
   const activeBusiness = impersonatedBusiness || (userClaimedBusinesses.length > 0 ? userClaimedBusinesses[0] : null);
   const isImpersonating = !!impersonatedBusiness;
 
@@ -8616,6 +8623,49 @@ export default function PulseApp() {
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
+
+  // Fetch admin stats (claimed/verified business counts) when admin panel is shown
+  useEffect(() => {
+    if (!user?.isAdmin) return;
+    const fetchAdminStats = async () => {
+      try {
+        // Count all claims (each unique business_id with a claim)
+        const { data: claimsData, error: claimsError } = await supabase
+          .from('business_claims')
+          .select('business_id, status');
+        if (!claimsError && claimsData) {
+          // Count unique claimed business IDs
+          const uniqueClaimed = new Set(claimsData.map(c => c.business_id).filter(Boolean));
+          setAdminClaimedCount(uniqueClaimed.size);
+          // Count verified claims
+          const uniqueVerified = new Set(claimsData.filter(c => c.status === 'verified').map(c => c.business_id).filter(Boolean));
+          setAdminVerifiedCount(uniqueVerified.size);
+        }
+      } catch (err) {
+        console.error('Error fetching admin stats:', err);
+      }
+    };
+    fetchAdminStats();
+  }, [user?.isAdmin]);
+
+  // Browser history management for tab navigation
+  useEffect(() => {
+    const hash = window.location.hash.replace('#', '');
+    const validSections = ['classes', 'events', 'deals', 'services', 'wellness'];
+    if (validSections.includes(hash)) {
+      setCurrentSection(hash);
+    } else {
+      window.history.replaceState({ section: 'classes' }, '', '#classes');
+    }
+    const handlePopState = (e) => {
+      const section = e.state?.section || window.location.hash.replace('#', '') || 'classes';
+      if (validSections.includes(section)) {
+        setCurrentSection(section);
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
   // ESC key handler to close modals
@@ -8718,6 +8768,9 @@ export default function PulseApp() {
           start: startDate,
           end: endDate,
           tags: event.tags || [event.category || 'Community'],
+          category: event.category
+            ? event.category.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+            : 'Community',
           ageGroup: 'All Ages',
           price: event.is_free ? 'Free' : (event.price_description || (event.price ? `$${event.price}` : 'Free')),
           recurrence: 'none',
@@ -9186,6 +9239,7 @@ export default function PulseApp() {
       email: venue.email || '',
       logo_url: venue.logo_url || null
     });
+    setImpersonateSearchQuery('');
     setAdminSearchQuery('');
     setView('business');
     window.scrollTo(0, 0);
@@ -9338,7 +9392,21 @@ export default function PulseApp() {
   const [businessMessagesLoading, setBusinessMessagesLoading] = useState(false);
   const [businessReplyInput, setBusinessReplyInput] = useState('');
 
-  const categories = ['All', 'Music', 'Fitness', 'Arts', 'Community', 'Games', 'Wellness', 'Outdoors & Nature', 'Nightlife', 'Family', 'Food & Drink'];
+  // Build categories dynamically from actual event data, filtered by current section
+  const categories = useMemo(() => {
+    const catSet = new Set();
+    let events = [...REAL_DATA.events, ...dbEvents];
+    // Only show categories relevant to the current section
+    if (currentSection === 'classes') {
+      events = events.filter(e => e.eventType === 'class');
+    } else if (currentSection === 'events') {
+      events = events.filter(e => e.eventType === 'event');
+    }
+    events.forEach(e => {
+      if (e.category) catSet.add(e.category);
+    });
+    return ['All', ...Array.from(catSet).sort()];
+  }, [dbEvents, currentSection]);
 
   // Helper to close Add Event modal
   const closeAddEventModal = () => {
@@ -10062,7 +10130,7 @@ export default function PulseApp() {
 
     // Category
     if (filters.category !== 'all') {
-      filtered = filtered.filter(e => e.tags.includes(filters.category));
+      filtered = filtered.filter(e => e.category === filters.category || (e.tags && e.tags.includes(filters.category)));
     }
 
     // Time of day
@@ -10523,6 +10591,7 @@ export default function PulseApp() {
           className={`save-star-btn ${isSaved ? 'saved' : ''}`}
           onClick={handleSave}
           data-tooltip={isSaved ? "Saved" : "Save"}
+          aria-label={isSaved ? "Remove from saved" : "Save to favorites"}
         >
           <Star size={24} fill={isSaved ? "#f59e0b" : "none"} stroke={isSaved ? "#f59e0b" : "#9ca3af"} strokeWidth={2} />
         </button>
@@ -10616,21 +10685,21 @@ export default function PulseApp() {
               <div className="banner-tabs">
                 <button
                   className={`banner-tab ${currentSection === 'classes' ? 'active' : ''}`}
-                  onClick={() => { setCurrentSection('classes'); setServicesSubView('directory'); }}
+                  onClick={() => { setCurrentSection('classes'); setServicesSubView('directory'); setFilters(f => ({...f, category: 'all'})); window.history.pushState({ section: 'classes' }, '', '#classes'); }}
                 >
                   <Calendar size={18} />
                   <span>Classes</span>
                 </button>
                 <button
                   className={`banner-tab ${currentSection === 'events' ? 'active' : ''}`}
-                  onClick={() => { setCurrentSection('events'); setServicesSubView('directory'); }}
+                  onClick={() => { setCurrentSection('events'); setServicesSubView('directory'); setFilters(f => ({...f, category: 'all'})); window.history.pushState({ section: 'events' }, '', '#events'); }}
                 >
                   <Star size={18} />
                   <span>Events</span>
                 </button>
                 <button
                   className={`banner-tab ${currentSection === 'deals' ? 'active' : ''}`}
-                  onClick={() => { setCurrentSection('deals'); setServicesSubView('directory'); }}
+                  onClick={() => { setCurrentSection('deals'); setServicesSubView('directory'); setFilters(f => ({...f, category: 'all'})); window.history.pushState({ section: 'deals' }, '', '#deals'); }}
                 >
                   <DollarSign size={18} />
                   <span>Deals</span>
@@ -10639,14 +10708,14 @@ export default function PulseApp() {
               <div className="banner-tabs banner-tabs-row2">
                 <button
                   className={`banner-tab ${currentSection === 'services' ? 'active' : ''}`}
-                  onClick={() => setCurrentSection('services')}
+                  onClick={() => { setCurrentSection('services'); window.history.pushState({ section: 'services' }, '', '#services'); }}
                 >
                   <Wrench size={18} />
                   <span>Services</span>
                 </button>
                 <button
                   className={`banner-tab ${currentSection === 'wellness' ? 'active' : ''}`}
-                  onClick={() => setCurrentSection('wellness')}
+                  onClick={() => { setCurrentSection('wellness'); window.history.pushState({ section: 'wellness' }, '', '#wellness'); }}
                 >
                   <Heart size={18} />
                   <span>Wellness</span>
@@ -10709,7 +10778,7 @@ export default function PulseApp() {
                       onChange={(e) => setFilters({...filters, day: e.target.value})}
                       className="filter-dropdown"
                     >
-                      <option value="today">📅 Today</option>
+                      <option value="today">📅 Upcoming</option>
                       <option value="tomorrow">Tomorrow</option>
                       <option value="thisWeekend">This Weekend</option>
                       <option value="nextWeek">Next Week</option>
@@ -10888,21 +10957,15 @@ export default function PulseApp() {
               {currentSection === 'deals' ? (
                 dealsLoading ? 'Loading...' : `${filterDeals().filter(d => dealCategoryFilter === 'All' || normalizeDealCategory(d.category) === dealCategoryFilter).length} results`
               ) : currentSection === 'services' ? (
-                `${REAL_DATA.services.filter(s => {
+                `${services.filter(s => {
+                  if (debouncedSearch) {
+                    const query = debouncedSearch.toLowerCase().trim();
+                    if (!s.name.toLowerCase().includes(query) && !s.category.toLowerCase().includes(query) && !s.address?.toLowerCase().includes(query)) return false;
+                  }
                   if (serviceCategoryFilter === 'All') return true;
-                  const normalizedCategory = s.category.toLowerCase();
-                  const filterLower = serviceCategoryFilter.toLowerCase();
-                  if (filterLower.includes('construction')) return normalizedCategory.includes('construction') || normalizedCategory.includes('contractor') || normalizedCategory.includes('home builder');
-                  if (filterLower.includes('electrical')) return normalizedCategory.includes('electric');
-                  if (filterLower.includes('plumbing')) return normalizedCategory.includes('plumb') || normalizedCategory.includes('hvac') || normalizedCategory.includes('heating');
-                  if (filterLower.includes('landscaping')) return normalizedCategory.includes('landscap') || normalizedCategory.includes('lawn');
-                  if (filterLower.includes('painting')) return normalizedCategory.includes('paint');
-                  if (filterLower.includes('roofing')) return normalizedCategory.includes('roof');
-                  if (filterLower.includes('flooring')) return normalizedCategory.includes('floor');
-                  if (filterLower.includes('cleaning')) return normalizedCategory.includes('clean');
-                  if (filterLower.includes('tree')) return normalizedCategory.includes('tree');
-                  if (serviceCategoryFilter === 'Other') return !normalizedCategory.includes('construction') && !normalizedCategory.includes('electric') && !normalizedCategory.includes('plumb') && !normalizedCategory.includes('hvac') && !normalizedCategory.includes('landscap') && !normalizedCategory.includes('paint') && !normalizedCategory.includes('roof') && !normalizedCategory.includes('floor') && !normalizedCategory.includes('clean') && !normalizedCategory.includes('tree');
-                  return normalizedCategory.includes(filterLower);
+                  const mainCategories = ['Restaurants & Dining', 'Retail & Shopping', 'Cafes & Bakeries', 'Outdoor Adventures', 'Auto Services', 'Real Estate', 'Fitness & Gyms', 'Recreation & Sports', 'Health & Wellness', 'Construction & Building', 'Outdoor Gear & Shops', 'Community Services', 'Hotels & Lodging', 'Web & Marketing', 'Financial Services', 'Medical Clinics', 'Photography', 'Attractions', 'Churches & Religious', 'Salons & Spas', 'Arts & Culture'];
+                  if (serviceCategoryFilter === 'Other') return !mainCategories.includes(s.category);
+                  return s.category === serviceCategoryFilter;
                 }).length} results`
               ) : (
                 eventsLoading ? 'Loading...' : `${filterEvents().length} results`
@@ -11004,6 +11067,7 @@ export default function PulseApp() {
                         toggleSave(deal.id, 'deal', deal.title, { venue: getVenueName(deal.venueId, deal) });
                       }}
                       data-tooltip={isItemSavedLocal('deal', deal.id) ? "Saved" : "Save"}
+                      aria-label={isItemSavedLocal('deal', deal.id) ? "Remove from saved" : "Save to favorites"}
                     >
                       <Star size={24} fill={isItemSavedLocal('deal', deal.id) ? "#f59e0b" : "none"} stroke={isItemSavedLocal('deal', deal.id) ? "#f59e0b" : "#9ca3af"} strokeWidth={2} />
                     </button>
@@ -11356,7 +11420,11 @@ export default function PulseApp() {
                       {selectedEvent.start.toLocaleString('en-US', { timeZone: PACIFIC_TZ, weekday: 'long', month: 'long', day: 'numeric' })}
                     </div>
                     <div className="datetime-time">
-                      {selectedEvent.start.toLocaleString('en-US', { timeZone: PACIFIC_TZ, hour: 'numeric', minute: '2-digit' })} - {selectedEvent.end.toLocaleString('en-US', { timeZone: PACIFIC_TZ, hour: 'numeric', minute: '2-digit' })}
+                      {(() => {
+                        const startStr = selectedEvent.start.toLocaleString('en-US', { timeZone: PACIFIC_TZ, hour: 'numeric', minute: '2-digit' });
+                        const endStr = selectedEvent.end.toLocaleString('en-US', { timeZone: PACIFIC_TZ, hour: 'numeric', minute: '2-digit' });
+                        return startStr === endStr ? startStr : `${startStr} - ${endStr}`;
+                      })()}
                     </div>
                   </div>
                   <button
@@ -11429,7 +11497,9 @@ export default function PulseApp() {
                           setTimeout(() => setShowCalendarToast(false), 2000);
                         }
                       } catch (err) {
-                        console.error('Error sharing:', err);
+                        setCalendarToastMessage('Link copied!');
+                        setShowCalendarToast(true);
+                        setTimeout(() => setShowCalendarToast(false), 2000);
                       }
                     }}
                   >
@@ -11493,7 +11563,10 @@ export default function PulseApp() {
                       <div className="event-detail-content">
                         <span className="event-detail-label">Duration</span>
                         <span className="event-detail-value">
-                          {Math.round((selectedEvent.end - selectedEvent.start) / (1000 * 60))} min
+                          {(() => {
+                            const mins = Math.round((selectedEvent.end - selectedEvent.start) / (1000 * 60));
+                            return mins > 0 ? `${mins} min` : 'See details';
+                          })()}
                         </span>
                       </div>
                     </div>
@@ -11623,7 +11696,9 @@ export default function PulseApp() {
                           setTimeout(() => setShowCalendarToast(false), 2000);
                         }
                       } catch (err) {
-                        console.error('Error sharing:', err);
+                        setCalendarToastMessage('Link copied!');
+                        setShowCalendarToast(true);
+                        setTimeout(() => setShowCalendarToast(false), 2000);
                       }
                     }}
                   >
@@ -12051,7 +12126,7 @@ export default function PulseApp() {
           )}
 
           {/* Floating Action Button - Premium */}
-          <button className="fab-premium" onClick={() => setShowAddEventModal(true)}>
+          <button className="fab-premium" onClick={() => { if (user.isGuest) { setShowAuthModal(true); return; } setShowAddEventModal(true); }}>
             <Plus size={24} strokeWidth={2.5} />
             <span className="fab-label">Add Event</span>
           </button>
@@ -15440,14 +15515,14 @@ export default function PulseApp() {
                     <input
                       type="text"
                       placeholder="View as business..."
-                      value={adminSearchQuery}
-                      onChange={(e) => setAdminSearchQuery(e.target.value)}
+                      value={impersonateSearchQuery}
+                      onChange={(e) => setImpersonateSearchQuery(e.target.value)}
                     />
                   </div>
-                  {adminSearchQuery.length > 1 && (
+                  {impersonateSearchQuery.length > 1 && (
                     <div className="admin-search-dropdown">
                       {services
-                        .filter(s => s.name.toLowerCase().includes(adminSearchQuery.toLowerCase()))
+                        .filter(s => s.name.toLowerCase().includes(impersonateSearchQuery.toLowerCase()))
                         .slice(0, 8)
                         .map(venue => (
                           <div key={venue.id} className="admin-search-result" onClick={() => enterImpersonation(venue)}>
@@ -15460,7 +15535,7 @@ export default function PulseApp() {
                           </div>
                         ))
                       }
-                      {services.filter(s => s.name.toLowerCase().includes(adminSearchQuery.toLowerCase())).length === 0 && (
+                      {services.filter(s => s.name.toLowerCase().includes(impersonateSearchQuery.toLowerCase())).length === 0 && (
                         <div className="admin-search-empty">No businesses found</div>
                       )}
                     </div>
@@ -15479,9 +15554,9 @@ export default function PulseApp() {
                 <CheckCircle size={24} />
               </div>
               <div className="stat-content">
-                <div className="stat-number">{REAL_DATA.venues.length}</div>
+                <div className="stat-number">{services.length}</div>
                 <div className="stat-label">Total Venues</div>
-                <div className="stat-change">0 verified businesses</div>
+                <div className="stat-change">{adminVerifiedCount} verified businesses</div>
               </div>
             </div>
 
@@ -15501,9 +15576,9 @@ export default function PulseApp() {
                 <AlertCircle size={24} />
               </div>
               <div className="stat-content">
-                <div className="stat-number">{REAL_DATA.venues.length}</div>
+                <div className="stat-number">{services.length - adminClaimedCount}</div>
                 <div className="stat-label">Unclaimed Venues</div>
-                <div className="stat-change">Awaiting business claims</div>
+                <div className="stat-change">{adminClaimedCount} claimed of {services.length}</div>
               </div>
             </div>
 
@@ -15514,7 +15589,7 @@ export default function PulseApp() {
               <div className="stat-content">
                 <div className="stat-number">{REAL_DATA.deals.length + dbDeals.length}</div>
                 <div className="stat-label">Active Deals</div>
-                <div className="stat-change">0 verified</div>
+                <div className="stat-change">{dbDeals.length} from verified owners</div>
               </div>
             </div>
           </div>
@@ -15624,17 +15699,18 @@ export default function PulseApp() {
                   <Search size={18} />
                   <input type="text" placeholder="Search venues..." value={adminSearchQuery} onChange={(e) => setAdminSearchQuery(e.target.value)} />
                 </div>
-                <select className="filter-select-admin">
-                  <option>All Categories</option>
-                  <option>Fitness</option>
-                  <option>Martial Arts</option>
-                  <option>Arts & Culture</option>
+                <select className="filter-select-admin" value={adminCategoryFilter} onChange={(e) => setAdminCategoryFilter(e.target.value)}>
+                  <option value="">All Categories</option>
+                  {[...new Set(services.map(s => s.category).filter(Boolean))].sort().map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
                 </select>
-                <select className="filter-select-admin">
-                  <option>All Status</option>
-                  <option>Verified</option>
-                  <option>Pending</option>
-                  <option>Unverified</option>
+                <select className="filter-select-admin" value={adminStatusFilter} onChange={(e) => setAdminStatusFilter(e.target.value)}>
+                  <option value="">All Status</option>
+                  <option value="has_classes">Has Classes</option>
+                  <option value="no_classes">No Classes</option>
+                  <option value="has_website">Has Website</option>
+                  <option value="no_website">No Website</option>
                 </select>
               </div>
             </div>
@@ -15642,7 +15718,17 @@ export default function PulseApp() {
             <div className="venues-grid-admin">
               {services
                 .filter(s => !adminSearchQuery || s.name.toLowerCase().includes(adminSearchQuery.toLowerCase()) || (s.category && s.category.toLowerCase().includes(adminSearchQuery.toLowerCase())))
-                .slice(0, adminSearchQuery ? 50 : 12).map((venue, idx) => {
+                .filter(s => !adminCategoryFilter || s.category === adminCategoryFilter)
+                .filter(s => {
+                  if (!adminStatusFilter) return true;
+                  const classCount = dbEvents.filter(e => e.venueId === s.id).length;
+                  if (adminStatusFilter === 'has_classes') return classCount > 0;
+                  if (adminStatusFilter === 'no_classes') return classCount === 0;
+                  if (adminStatusFilter === 'has_website') return !!s.website;
+                  if (adminStatusFilter === 'no_website') return !s.website;
+                  return true;
+                })
+                .slice(0, (adminSearchQuery || adminCategoryFilter || adminStatusFilter) ? 50 : 12).map((venue, idx) => {
                 const classCount = dbEvents.filter(e => e.venueId === venue.id).length;
                 return (
                   <div key={venue.id} className="venue-card-admin" ref={(el) => venueCardRefs.current[idx] = el}>
