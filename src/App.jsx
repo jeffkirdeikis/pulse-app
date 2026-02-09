@@ -11141,6 +11141,19 @@ export default function PulseApp() {
                   </div>
                 ))}
               </div>
+              {/* Deals empty state */}
+              {!dealsLoading && filterDeals().filter(d => dealCategoryFilter === 'All' || normalizeDealCategory(d.category) === dealCategoryFilter).length === 0 && (
+                <div className="no-results-state" style={{textAlign: 'center', padding: '40px 20px', color: '#6b7280'}}>
+                  <DollarSign size={48} style={{color: '#d1d5db', marginBottom: '12px'}} />
+                  <h3 style={{color: '#374151', marginBottom: '8px'}}>No deals found</h3>
+                  <p>{searchQuery ? `No deals matching "${searchQuery}"` : 'No deals in this category'}</p>
+                  {(searchQuery || dealCategoryFilter !== 'All') && (
+                    <button onClick={() => { setSearchQuery(''); setDealCategoryFilter('All'); }} className="clear-search-btn" style={{marginTop: '12px', padding: '8px 16px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600}}>
+                      Clear Filters
+                    </button>
+                  )}
+                </div>
+              )}
               </>
             ) : currentSection === 'services' ? (
               <>
