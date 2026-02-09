@@ -10266,7 +10266,9 @@ export default function PulseApp() {
       const query = searchQuery.trim().toLowerCase();
       filtered = filtered.filter(d =>
         d.title?.toLowerCase().includes(query) ||
-        d.description?.toLowerCase().includes(query)
+        d.description?.toLowerCase().includes(query) ||
+        d.venueName?.toLowerCase().includes(query) ||
+        getVenueName(d.venueId, d).toLowerCase().includes(query)
       );
     }
 
