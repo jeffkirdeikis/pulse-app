@@ -12,6 +12,9 @@ import BusinessDashboard from './components/BusinessDashboard';
 import AdminDashboard from './components/AdminDashboard';
 import ProfileModal from './components/modals/ProfileModal';
 import SubmissionModal from './components/modals/SubmissionModal';
+import ClaimBusinessModal from './components/modals/ClaimBusinessModal';
+import MyCalendarModal from './components/modals/MyCalendarModal';
+import MessagesModal from './components/modals/MessagesModal';
 import './styles/pulse-app.css';
 
 // All dates/times in this app are in Squamish (Pacific) time, regardless of user's location.
@@ -11533,250 +11536,37 @@ export default function PulseApp() {
 
           {/* Claim Business Modal - Premium Purple Theme */}
           {showClaimBusinessModal && (
-            <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Claim business" onClick={() => { setShowClaimBusinessModal(false); setClaimFormData({ businessName: '', ownerName: '', email: '', phone: '', role: 'owner', address: '' }); }}>
-              <div className="claim-modal-premium" onClick={(e) => e.stopPropagation()}>
-                <button className="claim-modal-close" onClick={() => { setShowClaimBusinessModal(false); setClaimFormData({ businessName: '', ownerName: '', email: '', phone: '', role: 'owner', address: '' }); }}><X size={24} /></button>
-
-                {/* Purple Gradient Header */}
-                <div className="claim-modal-header">
-                  <div className="claim-modal-icon">
-                    <Building size={32} />
-                  </div>
-                  <h2>Claim Your Business</h2>
-                  <p>Get access to analytics, manage your listings, and connect with customers</p>
-                </div>
-
-                {/* Form Body */}
-                <div className="claim-modal-body">
-                  {!session?.user ? (
-                    <div className="claim-signin-prompt">
-                      <div className="signin-message">
-                        <AlertCircle size={24} />
-                        <p>Please sign in to claim your business</p>
-                      </div>
-                      <button className="claim-signin-btn" onClick={() => { setShowClaimBusinessModal(false); setShowAuthModal(true); }}>
-                        Sign In to Continue
-                      </button>
-                    </div>
-                  ) : (
-                    <>
-                      {/* Business Search */}
-                      <div style={{ marginBottom: '16px' }}>
-                        <label style={{ display: 'block', fontWeight: 600, marginBottom: '6px', color: '#374151' }}>Find your business</label>
-                        <input
-                          type="text"
-                          placeholder="Search Squamish businesses..."
-                          value={claimSelectedBusiness ? claimSelectedBusiness.name : claimSearchQuery}
-                          onChange={(e) => { setClaimSearchQuery(e.target.value); setClaimSelectedBusiness(null); }}
-                          style={{ width: '100%', padding: '10px 14px', border: '1px solid #d1d5db', borderRadius: '8px', fontSize: '14px' }}
-                        />
-                        {claimSearchQuery.length >= 2 && !claimSelectedBusiness && (
-                          <div style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid #e5e7eb', borderRadius: '8px', marginTop: '4px', background: '#fff' }}>
-                            {services.filter(s => s.name.toLowerCase().includes(claimSearchQuery.toLowerCase())).slice(0, 8).map(biz => (
-                              <div key={biz.id} style={{ padding: '10px 14px', cursor: 'pointer', borderBottom: '1px solid #f3f4f6', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
-                                onClick={() => {
-                                  setClaimSelectedBusiness(biz);
-                                  setClaimFormData(prev => ({ ...prev, businessName: biz.name, address: biz.address || '' }));
-                                  setClaimSearchQuery('');
-                                }}
-                                onMouseEnter={(e) => e.currentTarget.style.background = '#f9fafb'}
-                                onMouseLeave={(e) => e.currentTarget.style.background = '#fff'}
-                              >
-                                <div>
-                                  <div style={{ fontWeight: 600, color: '#111827' }}>{biz.name}</div>
-                                  <div style={{ fontSize: '12px', color: '#6b7280' }}>{biz.category} {biz.address ? '· ' + biz.address : ''}</div>
-                                </div>
-                                <CheckCircle size={16} style={{ color: '#9ca3af' }} />
-                              </div>
-                            ))}
-                            {services.filter(s => s.name.toLowerCase().includes(claimSearchQuery.toLowerCase())).length === 0 && (
-                              <div style={{ padding: '12px 14px', color: '#6b7280', textAlign: 'center' }}>No businesses found</div>
-                            )}
-                          </div>
-                        )}
-                        {claimSelectedBusiness && (
-                          <div style={{ marginTop: '8px', padding: '10px 14px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <CheckCircle size={16} style={{ color: '#16a34a' }} />
-                            <span style={{ fontWeight: 600, color: '#166534' }}>{claimSelectedBusiness.name}</span>
-                            <button onClick={() => { setClaimSelectedBusiness(null); setClaimSearchQuery(''); }} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer' }}><X size={14} /></button>
-                          </div>
-                        )}
-                        <p style={{ fontSize: '12px', color: '#9ca3af', marginTop: '6px' }}>Select from the directory above, or fill in the form below for unlisted businesses</p>
-                      </div>
-
-                      <div className="claim-form-grid">
-                        <div className="claim-form-group full">
-                          <label>Business Name *</label>
-                          <input type="text" placeholder="e.g., The Sound Martial Arts" value={claimFormData.businessName} onChange={(e) => setClaimFormData({...claimFormData, businessName: e.target.value})} />
-                        </div>
-                        <div className="claim-form-group">
-                          <label>Your Name *</label>
-                          <input type="text" placeholder="Full name" value={claimFormData.ownerName} onChange={(e) => setClaimFormData({...claimFormData, ownerName: e.target.value})} />
-                        </div>
-                        <div className="claim-form-group">
-                          <label>Email *</label>
-                          <input type="email" placeholder="your@email.com" value={claimFormData.email} onChange={(e) => setClaimFormData({...claimFormData, email: e.target.value})} />
-                        </div>
-                        <div className="claim-form-group">
-                          <label>Phone</label>
-                          <input type="tel" placeholder="(604) 555-1234" value={claimFormData.phone} onChange={(e) => setClaimFormData({...claimFormData, phone: e.target.value})} />
-                        </div>
-                        <div className="claim-form-group">
-                          <label>Role</label>
-                          <select value={claimFormData.role} onChange={(e) => setClaimFormData({...claimFormData, role: e.target.value})}>
-                            <option value="owner">Owner</option>
-                            <option value="manager">Manager</option>
-                            <option value="representative">Authorized Representative</option>
-                          </select>
-                        </div>
-                        <div className="claim-form-group full">
-                          <label>Business Address</label>
-                          <input type="text" placeholder="Street address in Squamish" value={claimFormData.address} onChange={(e) => setClaimFormData({...claimFormData, address: e.target.value})} />
-                        </div>
-                      </div>
-
-                      <div className="claim-benefits">
-                        <div className="claim-benefit">
-                          <CheckCircle size={18} />
-                          <span>Manage your business profile</span>
-                        </div>
-                        <div className="claim-benefit">
-                          <CheckCircle size={18} />
-                          <span>View analytics & insights</span>
-                        </div>
-                        <div className="claim-benefit">
-                          <CheckCircle size={18} />
-                          <span>Respond to reviews</span>
-                        </div>
-                        <div className="claim-benefit">
-                          <CheckCircle size={18} />
-                          <span>Create deals & promotions</span>
-                        </div>
-                      </div>
-
-                      <div className="claim-modal-actions">
-                        <button className="claim-cancel-btn" onClick={() => { setShowClaimBusinessModal(false); setClaimFormData({ businessName: '', ownerName: '', email: '', phone: '', role: 'owner', address: '' }); }}>Cancel</button>
-                        <button className="claim-submit-btn" onClick={handleClaimBusiness} disabled={claimSubmitting}>{claimSubmitting ? 'Submitting...' : 'Submit Claim'}</button>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
+            <ClaimBusinessModal
+              claimSearchQuery={claimSearchQuery}
+              setClaimSearchQuery={setClaimSearchQuery}
+              claimSelectedBusiness={claimSelectedBusiness}
+              setClaimSelectedBusiness={setClaimSelectedBusiness}
+              claimFormData={claimFormData}
+              setClaimFormData={setClaimFormData}
+              claimSubmitting={claimSubmitting}
+              session={session}
+              services={services}
+              onClose={() => { setShowClaimBusinessModal(false); setClaimFormData({ businessName: '', ownerName: '', email: '', phone: '', role: 'owner', address: '' }); }}
+              setShowAuthModal={setShowAuthModal}
+              handleClaimBusiness={handleClaimBusiness}
+            />
           )}
 
           {/* My Calendar Modal - Premium */}
           {showMyCalendarModal && (
-            <div className="modal-overlay calendar-modal-overlay" role="dialog" aria-modal="true" aria-label="My calendar" onClick={() => setShowMyCalendarModal(false)}>
-              <div className="calendar-modal" onClick={(e) => e.stopPropagation()}>
-                <button className="close-btn calendar-close" onClick={() => setShowMyCalendarModal(false)}><X size={24} /></button>
-                
-                {/* Calendar Header */}
-                <div className="calendar-header">
-                  <div className="calendar-header-content">
-                    <div className="calendar-icon-wrapper">
-                      <Calendar size={28} />
-                    </div>
-                    <div>
-                      <h1>My Calendar</h1>
-                      <p>{myCalendar.length} upcoming event{myCalendar.length !== 1 ? 's' : ''}</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Calendar Content */}
-                <div className="calendar-content">
-                  {myCalendar.length === 0 ? (
-                    <div className="calendar-empty">
-                      <div className="empty-calendar-icon">
-                        <Calendar size={48} />
-                      </div>
-                      <h3>No Events Yet</h3>
-                      <p>Add events from the Events & Classes section to build your personal calendar</p>
-                      <button 
-                        className="browse-events-btn"
-                        onClick={() => { setShowMyCalendarModal(false); setCurrentSection('events'); }}
-                      >
-                        Browse Events
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="calendar-events-list">
-                      {getCalendarEventsByDate().map(({ date, events }) => (
-                        <div key={date.toISOString()} className="calendar-date-group">
-                          <div className="calendar-date-header">
-                            <div className="calendar-date-badge">
-                              <span className="date-day">{date.getDate()}</span>
-                              <span className="date-month">{date.toLocaleString('en-US', { timeZone: PACIFIC_TZ, month: 'short' })}</span>
-                            </div>
-                            <div className="calendar-date-info">
-                              <span className="date-weekday">{date.toLocaleString('en-US', { timeZone: PACIFIC_TZ, weekday: 'long' })}</span>
-                              <span className="date-full">{date.toLocaleString('en-US', { timeZone: PACIFIC_TZ, month: 'long', day: 'numeric', year: 'numeric' })}</span>
-                            </div>
-                          </div>
-                          <div className="calendar-date-events">
-                            {events.map(event => (
-                              <div key={event.id} className={`calendar-event-card ${event.eventType === 'class' ? 'class' : 'event'}`}>
-                                <div className="calendar-event-time">
-                                  <span>{event.start.toLocaleString('en-US', { timeZone: PACIFIC_TZ, hour: 'numeric', minute: '2-digit' })}</span>
-                                  <span className="time-separator">-</span>
-                                  <span>{event.end.toLocaleString('en-US', { timeZone: PACIFIC_TZ, hour: 'numeric', minute: '2-digit' })}</span>
-                                </div>
-                                <div className="calendar-event-details">
-                                  <div className="calendar-event-header">
-                                    <h4>{event.title}</h4>
-                                    {event.eventType === 'class' && (
-                                      <span className="calendar-event-badge class">Class</span>
-                                    )}
-                                  </div>
-                                  <div className="calendar-event-venue">
-                                    <MapPin size={14} />
-                                    <span>{getVenueName(event.venueId, event)}</span>
-                                  </div>
-                                </div>
-                                <div className="calendar-event-actions">
-                                  <a 
-                                    href={generateGoogleCalendarUrl(event)}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="calendar-action-btn google"
-                                    title="Open in Google Calendar"
-                                  >
-                                    <ExternalLink size={16} />
-                                  </a>
-                                  <button 
-                                    className="calendar-action-btn remove"
-                                    onClick={() => removeFromCalendar(event.id)}
-                                    title="Remove from calendar"
-                                  >
-                                    <Trash2 size={16} />
-                                  </button>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Calendar Footer */}
-                {myCalendar.length > 0 && (
-                  <div className="calendar-footer">
-                    <a 
-                      href="https://calendar.google.com"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="google-calendar-link"
-                    >
-                      <Globe size={16} />
-                      Open Google Calendar
-                    </a>
-                  </div>
-                )}
-              </div>
-            </div>
+            <MyCalendarModal
+              myCalendar={myCalendar}
+              showCalendarToast={showCalendarToast}
+              calendarToastMessage={calendarToastMessage}
+              onClose={() => setShowMyCalendarModal(false)}
+              setCurrentSection={setCurrentSection}
+              setCalendarToastMessage={setCalendarToastMessage}
+              setShowCalendarToast={setShowCalendarToast}
+              getCalendarEventsByDate={getCalendarEventsByDate}
+              getVenueName={getVenueName}
+              generateGoogleCalendarUrl={generateGoogleCalendarUrl}
+              removeFromCalendar={removeFromCalendar}
+            />
           )}
 
           {/* Calendar Toast Notification */}
@@ -12078,121 +11868,20 @@ export default function PulseApp() {
 
           {/* Messages Modal */}
           {showMessagesModal && (
-            <div className="modal-overlay messages-modal-overlay" role="dialog" aria-modal="true" aria-label="Messages" onClick={() => setShowMessagesModal(false)}>
-              <div className="messages-modal" onClick={(e) => e.stopPropagation()}>
-                <button className="close-btn messages-close" onClick={() => { setShowMessagesModal(false); setCurrentConversation(null); }}>
-                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                    <path d="M1 1L13 13M1 13L13 1" stroke="#374151" strokeWidth="2" strokeLinecap="round"/>
-                  </svg>
-                </button>
-
-                {!currentConversation ? (
-                  <>
-                    <div className="messages-header">
-                      <MessageCircle size={24} />
-                      <h2>Messages</h2>
-                    </div>
-
-                    <div className="conversations-list">
-                      {conversationsLoading ? (
-                        <div className="loading-state">
-                          <div className="spinner" />
-                          <p>Loading conversations...</p>
-                        </div>
-                      ) : conversations.length === 0 ? (
-                        <div className="empty-state">
-                          <MessageCircle size={48} />
-                          <h3>No messages yet</h3>
-                          <p>Start a conversation by contacting a business</p>
-                        </div>
-                      ) : (
-                        conversations.map(conv => (
-                          <div
-                            key={conv.id}
-                            className={`conversation-item ${conv.unread_count > 0 ? 'unread' : ''}`}
-                            onClick={() => {
-                              setCurrentConversation(conv);
-                              fetchMessages(conv.id);
-                            }}
-                          >
-                            <div className="conv-avatar">
-                              {conv.business_name?.charAt(0) || 'B'}
-                            </div>
-                            <div className="conv-content">
-                              <div className="conv-header">
-                                <span className="conv-name">{conv.business_name}</span>
-                                <span className="conv-time">
-                                  {conv.last_message_at ? new Date(conv.last_message_at).toLocaleDateString() : ''}
-                                </span>
-                              </div>
-                              <p className="conv-preview">
-                                {conv.last_message_preview || conv.subject || 'No messages yet'}
-                              </p>
-                            </div>
-                            {conv.unread_count > 0 && (
-                              <div className="unread-badge">{conv.unread_count}</div>
-                            )}
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="chat-header">
-                      <button className="back-btn" onClick={() => setCurrentConversation(null)}>
-                        <ChevronLeft size={20} />
-                      </button>
-                      <div className="chat-info">
-                        <h3>{currentConversation.business_name}</h3>
-                        <span className="chat-subject">{currentConversation.subject}</span>
-                      </div>
-                    </div>
-
-                    <div className="messages-container">
-                      {messagesLoading ? (
-                        <div className="loading-state">
-                          <div className="spinner" />
-                        </div>
-                      ) : conversationMessages.length === 0 ? (
-                        <div className="empty-chat">
-                          <p>No messages in this conversation yet</p>
-                        </div>
-                      ) : (
-                        conversationMessages.map(msg => (
-                          <div
-                            key={msg.id}
-                            className={`message-bubble ${msg.sender_type === 'user' ? 'sent' : 'received'}`}
-                          >
-                            <p>{msg.content}</p>
-                            <span className="message-time">
-                              {new Date(msg.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
-                            </span>
-                          </div>
-                        ))
-                      )}
-                    </div>
-
-                    <div className="message-input-container">
-                      <input
-                        type="text"
-                        placeholder="Type a message..."
-                        value={messageInput}
-                        onChange={(e) => setMessageInput(e.target.value)}
-                        onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-                      />
-                      <button
-                        className="send-btn"
-                        onClick={sendMessage}
-                        disabled={!messageInput.trim() || sendingMessage}
-                      >
-                        <Send size={20} />
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
+            <MessagesModal
+              currentConversation={currentConversation}
+              setCurrentConversation={setCurrentConversation}
+              conversationsLoading={conversationsLoading}
+              conversations={conversations}
+              messagesLoading={messagesLoading}
+              conversationMessages={conversationMessages}
+              messageInput={messageInput}
+              setMessageInput={setMessageInput}
+              sendingMessage={sendingMessage}
+              onClose={() => { setShowMessagesModal(false); setCurrentConversation(null); }}
+              fetchMessages={fetchMessages}
+              sendMessage={sendMessage}
+            />
           )}
 
           {/* Admin Panel Modal */}
