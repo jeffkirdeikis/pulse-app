@@ -10202,6 +10202,7 @@ export default function PulseApp() {
           <button onClick={() => {
             setFilters({ day: 'today', age: 'all', category: 'all', time: 'all', price: 'all', location: 'all' });
             setKidsAgeRange([0, 18]);
+            setSearchQuery('');
           }}>
             Clear Filters
           </button>
@@ -11659,6 +11660,7 @@ export default function PulseApp() {
                 </div>
 
                 {/* Schedule Card */}
+                {selectedDeal.schedule && (
                 <div className="deal-schedule-card">
                   <div className="schedule-icon">
                     <Clock size={24} />
@@ -11668,6 +11670,7 @@ export default function PulseApp() {
                     <div className="schedule-value">{selectedDeal.schedule}</div>
                   </div>
                 </div>
+                )}
 
                 {/* Quick Actions */}
                 <div className="deal-quick-actions">
@@ -11743,6 +11746,7 @@ export default function PulseApp() {
                         <span className="deal-detail-value">{getVenueName(selectedDeal.venueId, selectedDeal)}</span>
                       </div>
                     </div>
+                    {selectedDeal.schedule && (
                     <div className="deal-detail-card">
                       <div className="deal-detail-icon time-icon">
                         <Clock size={20} />
@@ -11752,11 +11756,12 @@ export default function PulseApp() {
                         <span className="deal-detail-value">{selectedDeal.schedule}</span>
                       </div>
                     </div>
+                    )}
                   </div>
                 </div>
 
                 {/* Terms Section */}
-                {selectedDeal.terms && (
+                {selectedDeal.terms && selectedDeal.terms !== 'N/A' && (
                   <div className="deal-section">
                     <h2 className="deal-section-title">Terms & Conditions</h2>
                     <div className="deal-terms-card">
@@ -15223,68 +15228,14 @@ export default function PulseApp() {
                 })()}
               </div>
 
-              {/* Audience Insights */}
-              <div className="premium-section audience-section">
+              {/* Audience Insights - Coming Soon */}
+              <div className="premium-section audience-section" style={{ opacity: 0.6 }}>
                 <div className="section-header-premium">
                   <h2>👥 Audience Insights</h2>
+                  <span style={{ background: '#fef3c7', border: '1px solid #fde68a', borderRadius: '6px', padding: '4px 10px', fontSize: '12px', color: '#92400e', fontWeight: 600 }}>Coming Soon</span>
                 </div>
-                
-                <div className="audience-grid">
-                  <div className="audience-card">
-                    <h4>Peak Activity Times</h4>
-                    <div className="peak-times">
-                      <div className="peak-time">
-                        <span className="peak-day">Friday</span>
-                        <span className="peak-hour">6-8 PM</span>
-                        <span className="peak-badge">Most Active</span>
-                      </div>
-                      <div className="peak-time">
-                        <span className="peak-day">Saturday</span>
-                        <span className="peak-hour">12-2 PM</span>
-                      </div>
-                      <div className="peak-time">
-                        <span className="peak-day">Thursday</span>
-                        <span className="peak-hour">5-7 PM</span>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="audience-card">
-                    <h4>Customer Demographics</h4>
-                    <div className="demo-bars">
-                      <div className="demo-bar">
-                        <span className="demo-label">25-34</span>
-                        <div className="demo-progress"><div style={{width: '45%'}}></div></div>
-                        <span className="demo-pct">45%</span>
-                      </div>
-                      <div className="demo-bar">
-                        <span className="demo-label">35-44</span>
-                        <div className="demo-progress"><div style={{width: '28%'}}></div></div>
-                        <span className="demo-pct">28%</span>
-                      </div>
-                      <div className="demo-bar">
-                        <span className="demo-label">18-24</span>
-                        <div className="demo-progress"><div style={{width: '18%'}}></div></div>
-                        <span className="demo-pct">18%</span>
-                      </div>
-                      <div className="demo-bar">
-                        <span className="demo-label">45+</span>
-                        <div className="demo-progress"><div style={{width: '9%'}}></div></div>
-                        <span className="demo-pct">9%</span>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="audience-card">
-                    <h4>Top Interests</h4>
-                    <div className="interest-tags">
-                      <span className="interest-tag-sm">Food & Drink</span>
-                      <span className="interest-tag-sm">Live Music</span>
-                      <span className="interest-tag-sm">Nightlife</span>
-                      <span className="interest-tag-sm">Local Events</span>
-                      <span className="interest-tag-sm">Happy Hour</span>
-                    </div>
-                  </div>
+                <div style={{ padding: '24px', textAlign: 'center', color: '#6b7280', fontSize: '14px' }}>
+                  <p>Audience insights will be available once analytics tracking is connected.</p>
                 </div>
               </div>
 
@@ -15609,17 +15560,19 @@ export default function PulseApp() {
               </div>
             </div>
 
-            <div className="scraping-dashboard">
+            <div className="scraping-dashboard" style={{ position: 'relative', opacity: 0.6 }}>
+              <div style={{ background: '#fef3c7', border: '1px solid #fde68a', borderRadius: '8px', padding: '8px 12px', marginBottom: '12px', fontSize: '13px', color: '#92400e', fontWeight: 600 }}>
+                Sample Data — Connect scraping system to display real metrics
+              </div>
               <div className="scrape-overview-cards">
                 <div className="scrape-card success-card">
                   <div className="scrape-card-header">
                     <Clock size={20} />
                     <span>Next Scheduled Run</span>
                   </div>
-                  <div className="scrape-card-value">Tonight at 2:00 AM</div>
+                  <div className="scrape-card-value">--</div>
                   <div className="scrape-card-footer">
-                    <CheckCircle size={14} />
-                    <span>System ready</span>
+                    <span>Not connected</span>
                   </div>
                 </div>
 
@@ -15628,10 +15581,9 @@ export default function PulseApp() {
                     <Clock size={20} />
                     <span>Last Run Duration</span>
                   </div>
-                  <div className="scrape-card-value">47 minutes</div>
+                  <div className="scrape-card-value">--</div>
                   <div className="scrape-card-footer">
-                    <CheckCircle size={14} />
-                    <span>Completed 2hrs ago</span>
+                    <span>Not connected</span>
                   </div>
                 </div>
 
@@ -15640,9 +15592,9 @@ export default function PulseApp() {
                     <CheckCircle size={20} />
                     <span>Changes Detected</span>
                   </div>
-                  <div className="scrape-card-value">23 updates</div>
+                  <div className="scrape-card-value">--</div>
                   <div className="scrape-card-footer">
-                    <span>12 new, 11 modified</span>
+                    <span>Not connected</span>
                   </div>
                 </div>
 
@@ -15651,42 +15603,10 @@ export default function PulseApp() {
                     <XCircle size={20} />
                     <span>Failed Scrapes</span>
                   </div>
-                  <div className="scrape-card-value">3 errors</div>
+                  <div className="scrape-card-value">--</div>
                   <div className="scrape-card-footer">
-                    <AlertCircle size={14} />
-                    <span>Review required</span>
+                    <span>Not connected</span>
                   </div>
-                </div>
-              </div>
-
-              {/* Recent Activity Log */}
-              <div className="activity-log">
-                <h3>Recent Scraping Activity</h3>
-                <div className="log-list">
-                  {[
-                    { time: '2:15 AM', venue: 'The Sound Martial Arts', status: 'success', changes: 2, color: 'success' },
-                    { time: '2:14 AM', venue: 'Breathe Fitness Studio', status: 'success', changes: 0, color: 'success' },
-                    { time: '2:13 AM', venue: 'Oxygen Yoga & Fitness', status: 'success', changes: 1, color: 'success' },
-                    { time: '2:12 AM', venue: 'Ground Up Climbing', status: 'error', changes: 0, color: 'error' },
-                    { time: '2:11 AM', venue: 'Mountain Fitness Center', status: 'success', changes: 3, color: 'success' },
-                  ].map((log, i) => (
-                    <div key={i} className={`log-item log-${log.color}`}>
-                      <div className="log-icon">
-                        {log.status === 'success' ? <CheckCircle size={16} /> : <XCircle size={16} />}
-                      </div>
-                      <div className="log-content">
-                        <div className="log-venue">{log.venue}</div>
-                        <div className="log-meta">
-                          <span className="log-time">{log.time}</span>
-                          <span className="log-separator">•</span>
-                          <span className="log-changes">{log.changes} changes detected</span>
-                        </div>
-                      </div>
-                      <div className={`log-status status-${log.status}`}>
-                        {log.status}
-                      </div>
-                    </div>
-                  ))}
                 </div>
               </div>
             </div>
@@ -15810,7 +15730,7 @@ export default function PulseApp() {
                     setQuickAddForm(prev => ({ ...prev, venueId: e.target.value, venueName: venue?.name || '' }));
                   }}>
                     <option value="">Select venue...</option>
-                    {services.slice(0, 50).map(v => (
+                    {services.map(v => (
                       <option key={v.id} value={v.id}>{v.name}</option>
                     ))}
                   </select>
