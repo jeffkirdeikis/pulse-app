@@ -10016,7 +10016,12 @@ export default function PulseApp() {
     // For database events that have venueName directly
     if (event?.venueName) return event.venueName;
     // For hardcoded events with venueId
-    return REAL_DATA.venues.find(v => v.id === venueId)?.name || 'Squamish';
+    if (venueId) {
+      const venue = REAL_DATA.venues.find(v => v.id === venueId);
+      if (venue?.name) return venue.name;
+    }
+    // Fallback to venue_name field or title-based name
+    return event?.venue_name || event?.title || '';
   };
   const isVerified = (venueId) => REAL_DATA.venues.find(v => v.id === venueId)?.verified || false;
   
@@ -10221,10 +10226,12 @@ export default function PulseApp() {
     let globalEventIndex = 0; // Global counter for refs
 
     return dateKeys.map((dateKey, index) => {
-      const date = new Date(dateKey);
-      const isToday = date.toDateString() === today.toDateString();
-      const isTomorrow = date.toDateString() === tomorrow.toDateString();
-      
+      // Use first event's date for formatting to avoid timezone re-parse issues
+      const firstEvent = groupedEvents[dateKey][0];
+      const date = firstEvent.start;
+      const isToday = dateKey === today.toDateString();
+      const isTomorrow = dateKey === tomorrow.toDateString();
+
       let dateLabelText;
       if (isToday) {
         dateLabelText = 'Today';
@@ -10233,7 +10240,7 @@ export default function PulseApp() {
       } else {
         dateLabelText = date.toLocaleDateString('en-US', { timeZone: PACIFIC_TZ, weekday: 'long', month: 'long', day: 'numeric' });
       }
-      
+
       const fullDateSubtext = date.toLocaleDateString('en-US', { timeZone: PACIFIC_TZ, weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
 
       return (
