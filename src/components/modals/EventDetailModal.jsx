@@ -202,13 +202,13 @@ const EventDetailModal = memo(function EventDetailModal({
         {/* CTA Section */}
         <div className="event-cta-section">
           {event.eventType === 'class' && (
-            <a
-              href={event.bookingUrl || `https://www.google.com/search?q=${encodeURIComponent(getVenueName(event.venueId, event) + ' Squamish book class')}`}
-              target="_blank" rel="noopener noreferrer" className="event-cta-btn primary book-class-btn"
+            <button
+              className="event-cta-btn primary book-class-btn"
+              onClick={() => handleBookClick(event)}
             >
               <ExternalLink size={18} />
               Book Class
-            </a>
+            </button>
           )}
           <button
             className={`event-cta-btn ${event.eventType === 'class' ? 'secondary' : 'primary'} ${isInMyCalendar(event.id) ? 'added' : ''}`}
