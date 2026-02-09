@@ -19,6 +19,8 @@ import BookingSheet from './components/modals/BookingSheet';
 import AdminPanelModal from './components/modals/AdminPanelModal';
 import EditVenueModal from './components/modals/EditVenueModal';
 import ImageCropperModal from './components/modals/ImageCropperModal';
+import ContactSheet from './components/modals/ContactSheet';
+import EditEventModal from './components/modals/EditEventModal';
 import './styles/pulse-app.css';
 
 // All dates/times in this app are in Squamish (Pacific) time, regardless of user's location.
@@ -11706,59 +11708,16 @@ export default function PulseApp() {
 
           {/* Contact Business Sheet */}
           {showContactSheet && contactBusiness && (
-            <div className="modal-overlay contact-sheet-overlay" role="dialog" aria-modal="true" aria-label="Contact business" onClick={() => setShowContactSheet(false)}>
-              <div className="contact-bottom-sheet" onClick={(e) => e.stopPropagation()}>
-                <div className="sheet-handle" />
-                <button className="close-btn sheet-close" onClick={() => setShowContactSheet(false)}>
-                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                    <path d="M1 1L13 13M1 13L13 1" stroke="#6b7280" strokeWidth="2" strokeLinecap="round"/>
-                  </svg>
-                </button>
-
-                <div className="sheet-header">
-                  <h2>Contact Business</h2>
-                  <p className="sheet-subtitle">{contactBusiness.name}</p>
-                </div>
-
-                <div className="contact-form">
-                  <div className="form-field">
-                    <label>Subject (optional)</label>
-                    <input
-                      type="text"
-                      placeholder="e.g., Class inquiry, Booking question"
-                      value={contactSubject}
-                      onChange={(e) => setContactSubject(e.target.value)}
-                    />
-                  </div>
-                  <div className="form-field">
-                    <label>Message</label>
-                    <textarea
-                      placeholder="Write your message here..."
-                      value={contactMessage}
-                      onChange={(e) => setContactMessage(e.target.value)}
-                      rows={4}
-                    />
-                  </div>
-                  <button
-                    className="send-message-btn"
-                    onClick={submitContactForm}
-                    disabled={!contactMessage.trim() || sendingMessage}
-                  >
-                    {sendingMessage ? (
-                      <>
-                        <div className="spinner-small" />
-                        Sending...
-                      </>
-                    ) : (
-                      <>
-                        <Send size={18} />
-                        Send Message
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-            </div>
+            <ContactSheet
+              contactBusiness={contactBusiness}
+              contactSubject={contactSubject}
+              setContactSubject={setContactSubject}
+              contactMessage={contactMessage}
+              setContactMessage={setContactMessage}
+              sendingMessage={sendingMessage}
+              onClose={() => setShowContactSheet(false)}
+              submitContactForm={submitContactForm}
+            />
           )}
 
           {/* Messages Modal */}
@@ -11884,79 +11843,14 @@ export default function PulseApp() {
 
       {/* Edit Event/Class Modal */}
       {showEditEventModal && editingEvent && (
-        <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Edit event" onClick={() => { setShowEditEventModal(false); setEditingEvent(null); }}>
-          <div className="claim-modal-premium" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header-premium">
-              <h2>Edit {editingEvent.eventType === 'class' ? 'Class' : 'Event'}</h2>
-              <button className="modal-close-btn" onClick={() => { setShowEditEventModal(false); setEditingEvent(null); }}><X size={20} /></button>
-            </div>
-            <div className="modal-body-premium">
-              <div className="form-group">
-                <label>Title</label>
-                <input type="text" value={editEventForm.title} onChange={(e) => setEditEventForm(prev => ({ ...prev, title: e.target.value }))} />
-              </div>
-              <div className="form-group">
-                <label>Description</label>
-                <textarea rows={3} value={editEventForm.description} onChange={(e) => setEditEventForm(prev => ({ ...prev, description: e.target.value }))} />
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
-                <div className="form-group">
-                  <label>Date</label>
-                  <input type="date" value={editEventForm.date} onChange={(e) => setEditEventForm(prev => ({ ...prev, date: e.target.value }))} />
-                </div>
-                <div className="form-group">
-                  <label>Start Time</label>
-                  <input type="time" value={editEventForm.startTime} onChange={(e) => setEditEventForm(prev => ({ ...prev, startTime: e.target.value }))} />
-                </div>
-                <div className="form-group">
-                  <label>End Time</label>
-                  <input type="time" value={editEventForm.endTime} onChange={(e) => setEditEventForm(prev => ({ ...prev, endTime: e.target.value }))} />
-                </div>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div className="form-group">
-                  <label>Price</label>
-                  <input type="text" placeholder="Free or $20" value={editEventForm.price} onChange={(e) => setEditEventForm(prev => ({ ...prev, price: e.target.value }))} />
-                </div>
-                <div className="form-group">
-                  <label>Category</label>
-                  <input type="text" value={editEventForm.category} onChange={(e) => setEditEventForm(prev => ({ ...prev, category: e.target.value }))} />
-                </div>
-              </div>
-            </div>
-            <div className="modal-actions-premium">
-              <button className="btn-secondary" onClick={() => { setShowEditEventModal(false); setEditingEvent(null); }}>Cancel</button>
-              <button className="btn-primary-gradient" onClick={async () => {
-                try {
-                  const updateData = {
-                    title: editEventForm.title,
-                    description: editEventForm.description,
-                    start_date: editEventForm.date,
-                    start_time: editEventForm.startTime,
-                    end_time: editEventForm.endTime,
-                    category: editEventForm.category
-                  };
-                  if (editEventForm.price && editEventForm.price.toLowerCase() !== 'free') {
-                    updateData.price = editEventForm.price.replace(/[^0-9.]/g, '');
-                    updateData.is_free = false;
-                  } else {
-                    updateData.is_free = true;
-                    updateData.price = null;
-                  }
-                  const { error } = await supabase.from('events').update(updateData).eq('id', editingEvent.id);
-                  if (error) throw error;
-                  showToast(`"${editEventForm.title}" updated!`, 'success');
-                  setShowEditEventModal(false);
-                  setEditingEvent(null);
-                  setEventsRefreshKey(k => k + 1);
-                } catch (err) {
-                  console.error('Error updating event:', err);
-                  showToast('Failed to update', 'error');
-                }
-              }}>Save Changes</button>
-            </div>
-          </div>
-        </div>
+        <EditEventModal
+          editingEvent={editingEvent}
+          editEventForm={editEventForm}
+          setEditEventForm={setEditEventForm}
+          onClose={() => { setShowEditEventModal(false); setEditingEvent(null); }}
+          showToast={showToast}
+          setEventsRefreshKey={setEventsRefreshKey}
+        />
       )}
 
       {/* Global Image Cropper Modal - Works from any context */}
