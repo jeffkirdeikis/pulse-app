@@ -4,6 +4,55 @@
 
 ---
 
+## 🚨 QA PROTOCOL (NON-NEGOTIABLE — READ THIS BEFORE ANY QA TASK)
+
+**Full protocol: `PULSE_QA_PROTOCOL.md`** — Read it in its entirety before any QA task.
+
+When asked to perform QA, testing, or to "check if things work":
+
+### BEFORE YOU START
+1. **READ** `PULSE_QA_PROTOCOL.md` in its entirety. Do not skim it.
+2. **ENUMERATE** every element on the page before testing anything.
+3. **START THE APP** and interact with the live UI. Reading source code is NOT QA.
+
+### DURING QA
+4. Complete **EVERY** check in the protocol. No exceptions. No shortcuts.
+5. Provide **EVIDENCE** for every check. "Works fine" is not evidence. Describe what you did and what happened.
+6. If you **CANNOT VERIFY** something, mark it ❌ UNVERIFIED — never fake a ✅.
+7. **EVERY BUTTON** must be clicked. **EVERY LINK** must be followed. **EVERY INPUT** must be tested with valid, invalid, empty, and edge-case data.
+8. Test **ONE PAGE AT A TIME**. Finish all checks on Page A before moving to Page B.
+9. Try to **BREAK** things. Double-click, rapid-click, empty submit, refresh mid-action, long strings, special characters.
+10. If your QA found **zero issues**, you didn't look hard enough. Go back and look again.
+
+### AFTER QA
+11. Produce the **FULL REPORT** in the format specified in Phase 5 of the protocol.
+12. Categorize issues as **Critical / Major / Minor / Warning**.
+13. Include the **total count** of checks performed, passes, and failures.
+
+### TIME EXPECTATIONS
+- Single page QA: 15-30 minutes minimum
+- Full app QA: 2+ hours minimum
+- If you finish full QA in under 30 minutes, you did it wrong. Start over.
+
+### WHAT COUNTS AS A FAILURE
+- Button that does nothing when clicked → ❌
+- Link that goes to wrong page or 404 → ❌
+- Form that submits with empty required fields → ❌
+- Console error on page load → ❌
+- Data that doesn't match the database → ❌
+- Loading state missing (blank space while fetching) → ❌
+- No error handling when API fails → ❌
+- Element not visible or not interactive on mobile → ❌
+- Placeholder text visible to user ("Lorem ipsum", "TODO") → ❌
+
+### QA EXECUTION RULES
+- Write findings to qa-reports/[page-name].md INCREMENTALLY — every 5 checks, flush to disk.
+- If a page has 30+ interactive elements, split QA into sub-tasks (navigation, buttons, forms, data display).
+- Each agent/task must have a scope small enough to complete within its context window.
+- Before starting, estimate element count. If >25 elements, split the task.
+
+---
+
 ## 🚨🚨🚨 CRITICAL: COMMIT EVERY FIX IMMEDIATELY 🚨🚨🚨
 
 **On Feb 4, 2026, documented fixes in CLAUDE-ARCHIVE.md were NEVER actually committed, causing massive regressions.**
@@ -152,6 +201,14 @@ All AI-verified events are tagged `['auto-scraped', 'ai-verified', 'website-veri
 ### Mandatory Tests After Any UI Change
 
 ```
+FILTERS (Feb 8, 2026 lesson — MOST COMMONLY MISSED):
+1. Select each filter option
+2. Verify results COUNT CHANGES (not 0 unless expected)
+3. SPOT-CHECK 3 visible results — do they MATCH the filter?
+4. Reset filter — count returns to original
+5. Every dropdown option must produce >0 results
+6. Combine 2 filters — results match BOTH criteria
+
 BUTTONS:
 1. Click every button
 2. Verify action happens (not alert/console.log)
@@ -182,6 +239,33 @@ grep -n "TODO\|FIXME" src/App.jsx                                         # Inco
 
 **On Feb 4, 2026: Claimed icons were "fixed" 10+ times based on computed styles and code changes. Every time the icons were still visually broken. STOP CLAIMING THINGS ARE FIXED WITHOUT VISUAL PROOF.**
 
+**On Feb 7, 2026: Implemented entire Admin Impersonation feature, reported it as complete with only `npm run build` passing. App crashed immediately with a ReferenceError on load. The user had to find the bug, not Claude.**
+
+### HARD STOP RULE — NO EXCEPTIONS
+
+**After EVERY code change to src/App.jsx or any component file, you MUST:**
+
+```bash
+# OPTION A: Full automated QA (if dev server running on :5173)
+node qa.cjs
+# → Runs build, checks for crashes, error boundaries, console errors
+# → Takes screenshot, exits non-zero on failure
+# → Then: Read /tmp/qa-screenshot.png (ACTUALLY VIEW IT)
+
+# OPTION B: Manual (if dev server not running)
+npm run build
+node screenshot.cjs
+# Then: Read /tmp/classes-list.png (ACTUALLY VIEW IT)
+```
+
+**`node qa.cjs` catches what `npm run build` CANNOT:**
+- Runtime ReferenceError / TypeError (like the Feb 7 TDZ crash)
+- Error boundary rendering ("Something went wrong")
+- Blank screens
+- Critical console errors
+
+**Do NOT report a change as complete without running QA. If qa.cjs exits non-zero, the change is BROKEN — fix it before reporting to the user.**
+
 ### The Only Valid QA for Visual Changes
 
 1. Take screenshot
@@ -193,10 +277,11 @@ grep -n "TODO\|FIXME" src/App.jsx                                         # Inco
 
 | NOT Valid | Why |
 |-----------|-----|
-| `npm run build` passes | Build doesn't verify visual appearance |
+| `npm run build` passes | Build doesn't catch runtime errors, visual bugs, or crashes |
 | Computed styles show correct values | CSS can be "correct" but still not render |
 | Code review looks right | Code can be wrong even if it looks right |
 | "Should work now" | Assumptions are not verification |
+| Reporting to user without screenshot | You are guessing, not verifying |
 
 ### Screenshot Protocol
 
@@ -205,10 +290,11 @@ grep -n "TODO\|FIXME" src/App.jsx                                         # Inco
 node screenshot.cjs
 
 # 2. READ the screenshot file - actually view it
-Read tool on /tmp/app-modal.png
+Read tool on /tmp/classes-list.png
 
 # 3. LOOK at the image and ASK YOURSELF:
-#    - Can I clearly see the element that was broken?
+#    - Does the app render at all? (no error boundary, no blank screen)
+#    - Can I clearly see the element that was changed?
 #    - Is it now visually correct?
 #    - Would the user be satisfied?
 
@@ -318,6 +404,7 @@ When a bug is reported:
 | **AI Data Hallucination** | AI invented 1,471 fake events like "Yoga Class" at A&W, "MMA" at a pharmacy | ALWAYS verify AI-extracted data against source page text. Use `verified-extractor.js` with 5-layer anti-hallucination pipeline |
 | **Dedup Missing Key Fields** | `classExists()` checked title+date+venue but NOT time, dropping same-title classes at different times (Wild Life Gym lost 50%+ of classes) | Dedup checks MUST include ALL fields that make a record unique (title+date+time+venue) |
 | **Booking System ≠ Public Schedule** | Roundhouse has WellnessLiving but schedule shows "no classes" — they use it for member mgmt, not public scheduling | Always verify a detected booking system actually has public data before adding to scraper |
+| **Existence ≠ Correctness (Filters)** | Category filter UI worked (dropdown opened, options selectable, no crash) but checked `e.tags` (scraper metadata) instead of `e.category` (actual category). 9 QA agents missed it. | EVERY filter must be tested with data verification: select option → spot-check 3 results match → verify count changed → verify 0-result options don't exist in dropdown |
 | **UTC vs Local Timezone** | Supabase runs in UTC. `CURRENT_DATE`/`CURRENT_TIME` are UTC. At 9 PM Pacific (5 AM UTC+1), CURRENT_DATE is tomorrow, CURRENT_TIME is 05:00. "Filter past slots" check using UTC lets 8:30 AM morning slots through because `08:30 > 05:00` | ALWAYS use `(now() AT TIME ZONE 'America/Vancouver')` for Pacific time comparisons. JS `toISOString()` also converts to UTC — use `getFullYear()/getMonth()/getDate()` for local dates |
 | **Scraper Data Must Be Verified** | Added 547 slots to database without verifying each clinic's data against live API. Dr. Thea Lanoue appeared to have false data until verified | After EVERY scraper run, run QA verification script comparing DB against live JaneApp API for each clinic. Never trust scraper output without cross-checking |
 
@@ -435,5 +522,7 @@ npx playwright test e2e/complete-flows.spec.js --reporter=line
 
 ## 📁 RELATED DOCUMENTS
 
+- `PULSE_QA_PROTOCOL.md` - **Bulletproof QA protocol** (full checklists, phases, report format)
+- `qa-runner.sh` - **Automated QA runner** (runs full QA suite, generates reports)
 - `e2e/MASTER_QA_CHECKLIST.md` - 185+ test cases (keep in sync with this file)
 - `CLAUDE-ARCHIVE.md` - Detailed bug histories and lessons learned

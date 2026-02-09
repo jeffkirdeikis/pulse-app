@@ -83,6 +83,24 @@ This section tracks bugs that made it past QA and the lessons learned.
 - **Fix**: Changed to use `services` state, added `fetchServices()` after save
 - **Lesson**: After save, verify UI shows updated data
 
+### Bug #13: Category Filters Return 0 Results (Data Mismatch)
+- **Date**: 2026-02-08
+- **Reported By**: User
+- **Root Cause**: Filter checked `e.tags.includes(category)` but `tags` contained scraper metadata (`["auto-scraped", "mindbody-classic"]`) not category names. The actual category was in a separate `category` DB field that was never mapped to the frontend event objects.
+- **Why Missed**: **9 QA agents and 1000+ checks all missed this** because they verified "dropdown opens, has options, doesn't crash" but never verified "selecting Fitness shows only fitness results." This is the most dangerous QA gap: features that APPEAR to work but produce WRONG data.
+- **Fix**:
+  1. Added `category` field to mapped DB events from `event.category`
+  2. Changed filter to check `e.category` (with `e.tags` fallback for static data)
+  3. Generated categories dynamically from actual data per section
+  4. Normalized lowercase categories
+  5. Reset category filter when switching tabs
+  6. Fixed truncated filter text (CSS grid 3→2 columns)
+- **Lesson**:
+  1. **EXISTENCE ≠ CORRECTNESS** — A filter that opens and has options is NOT a working filter. You must verify the filtered results are actually correct.
+  2. **Every filter must be tested with data verification**: select an option, then spot-check 3 visible results to confirm they match the filter criteria.
+  3. **Every dropdown option must produce >0 results** — if an option shows 0 results, it shouldn't exist in the dropdown.
+  4. **Test data layer, not just UI layer** — the `tags` field looked like categories in REAL_DATA but was scraper metadata in the DB. Always verify what the actual database data looks like.
+
 ### COMPREHENSIVE QA AUDIT (2026-02-01)
 
 5 QA agents tested the entire app simultaneously. Here are ALL bugs found:
@@ -499,24 +517,71 @@ expect(value).toBe('test@example.com');
 
 ---
 
-# SECTION 6: FILTER FUNCTIONALITY
+# SECTION 6: FILTER & SEARCH CORRECTNESS (CRITICAL)
 
-## 6.1 Category Filters
+> **Bug #13 (Feb 8, 2026): Category filters returned 0 results for everything because code checked `e.tags` (scraper metadata like "auto-scraped") instead of `e.category` ("Fitness"). All QA agents marked filters as PASS because they only checked "dropdown opens and has options" — never verified results actually changed correctly. THIS SECTION NOW REQUIRES DATA CORRECTNESS VERIFICATION.**
 
-| ID | Filter | Action | Verification |
-|----|--------|--------|--------------|
-| FLT-001 | Deal category | Select "Food" | Only food deals show |
-| FLT-002 | Deal category | Select "All" | All deals show |
-| FLT-003 | Service category | Select category | Services filter |
-| FLT-004 | Results count | After filter | Count matches visible |
+## 6.1 Classes Tab Filters
 
-## 6.2 Age Group Filters
+| ID | Filter | Action | Verification | CORRECTNESS CHECK |
+|----|--------|--------|--------------|-------------------|
+| FLT-C01 | Default state | Load Classes tab | Count shows total classes | Record baseline count: ___ |
+| FLT-C02 | Category: Fitness | Select Fitness | Count decreases | Spot-check 3 cards: all show fitness-related classes |
+| FLT-C03 | Category: Martial Arts | Select Martial Arts | Count changes from Fitness | Spot-check 3 cards: all show martial arts classes |
+| FLT-C04 | Category: All | Select All | Count returns to baseline | Baseline count matches |
+| FLT-C05 | Date: Tomorrow | Select Tomorrow | Count changes | Spot-check: dates show tomorrow |
+| FLT-C06 | Date: Anytime | Select Anytime | Count >= Upcoming count | More results than Today/Upcoming |
+| FLT-C07 | Time: 6 PM | Select 6:00 PM | Count decreases | Spot-check: all times are 6 PM or later |
+| FLT-C08 | Age: Kids | Select Kids | Count changes | Spot-check: classes tagged for kids |
+| FLT-C09 | Age: Adults | Select Adults | Count changes | Spot-check: classes tagged for adults |
+| FLT-C10 | Price: Free | Select Free | Count changes | Spot-check: prices show "Free" |
+| FLT-C11 | Reset button | Click Reset | All filters back to default | Count returns to baseline |
+| FLT-C12 | Combined filters | Category + Time | Count <= min of individual | Results match BOTH criteria |
+| FLT-C13 | No empty options | Check all dropdown options | Each option returns >0 | No option produces "0 results" |
 
-| ID | Filter | Action | Verification |
-|----|--------|--------|--------------|
-| FLT-010 | Kids 0-4 | Click button | Events filter to that age |
-| FLT-011 | All Ages | Click button | All events show |
-| FLT-012 | Active state | Click filter | Button shows active style |
+## 6.2 Events Tab Filters
+
+| ID | Filter | Action | Verification | CORRECTNESS CHECK |
+|----|--------|--------|--------------|-------------------|
+| FLT-E01 | Default state | Load Events tab | Count shows total events | Record baseline: ___ |
+| FLT-E02 | Category: Community | Select Community | Count changes | Spot-check 3 cards: community events |
+| FLT-E03 | Category switch | Tab to Classes then back | Category resets to All | Baseline count restored |
+| FLT-E04 | Anytime | Select Anytime | Count >= Upcoming | Shows all future events |
+
+## 6.3 Deals Tab Filters
+
+| ID | Filter | Action | Verification | CORRECTNESS CHECK |
+|----|--------|--------|--------------|-------------------|
+| FLT-D01 | Default state | Load Deals tab | Count shows total deals | Record baseline: ___ |
+| FLT-D02 | Category filter | Select specific category | Count decreases | Spot-check: deals match category |
+| FLT-D03 | All categories | Select All | Count returns to baseline | Matches |
+
+## 6.4 Services Tab Filters
+
+| ID | Filter | Action | Verification | CORRECTNESS CHECK |
+|----|--------|--------|--------------|-------------------|
+| FLT-S01 | Default state | Load Services tab | Count shows total services | Record baseline: ___ |
+| FLT-S02 | Category filter | Select specific category | Count changes | Spot-check: services match category |
+| FLT-S03 | Search + Filter | Type query + select category | Count <= either alone | Results match BOTH |
+
+## 6.5 Search Correctness
+
+| ID | Search | Action | Verification | CORRECTNESS CHECK |
+|----|--------|--------|--------------|-------------------|
+| FLT-SH01 | Exact match | Search "CrossFit" | Results appear | All visible cards contain "CrossFit" |
+| FLT-SH02 | Partial match | Search "Cross" | Results appear | Cards contain "Cross" in title/venue |
+| FLT-SH03 | No match | Search "zzzxxxyyy" | 0 results | Empty state message shown |
+| FLT-SH04 | Clear search | Delete search text | All results return | Count matches baseline |
+| FLT-SH05 | Case insensitive | Search "crossfit" | Same results as "CrossFit" | Same count |
+| FLT-SH06 | Search + filter | Search "yoga" + Category:Fitness | Combined | Results are yoga AND fitness |
+
+## 6.6 Age Group Filters
+
+| ID | Filter | Action | Verification | CORRECTNESS CHECK |
+|----|--------|--------|--------------|-------------------|
+| FLT-A01 | Kids | Click Kids | Events filter | Spot-check: classes are kid-appropriate |
+| FLT-A02 | All Ages | Click All Ages | All events show | Count matches baseline |
+| FLT-A03 | Active state | Click filter | Active styling visible | Visual indicator present |
 
 ---
 
@@ -682,6 +747,96 @@ expect(value).toBe('test@example.com');
 | DATA-014 | Dedup includes start_time | `grep 'classExists' scripts/scrape-*.js` | All calls pass time parameter |
 | DATA-015 | Same-title classes preserved | `SELECT title, start_date, COUNT(*) FROM events WHERE event_type='class' GROUP BY title, start_date HAVING COUNT(*)>1 LIMIT 5` | Multi-time classes exist (e.g. "Train Wild" x3) |
 | DATA-016 | New booking source verified | Visit schedule URL in browser | Actual classes visible before adding to scraper |
+
+---
+
+---
+
+# SECTION 13: BULLETPROOF QA PROTOCOL REFERENCE
+
+**Full protocol document: `/PULSE_QA_PROTOCOL.md`** — Must be read in full before any QA session.
+
+## 13.1 Rules of Engagement (Summary)
+
+| Rule | Description |
+|------|-------------|
+| **NO ASSUMPTIONS** | You MUST run the app and interact with elements. Reading code is NOT QA. |
+| **ONE PAGE AT A TIME** | Complete ALL checks for a page before moving to the next. |
+| **EVIDENCE-BASED** | Every check needs: what you did, what happened, pass/fail. |
+| **TEST LIKE A USER** | Click buttons, type in inputs, follow links. Don't read source code. |
+| **BREAK THINGS** | Empty submit, special chars, long strings, rapid clicks, XSS patterns. |
+| **DOCUMENT EVERYTHING** | Even passes need detail. "Everything works" = failed QA. |
+
+## 13.2 Phase Checklist
+
+| Phase | Scope | Checks |
+|-------|-------|--------|
+| Phase 1 | Environment Verification | App starts, no console errors, DB connection, env vars |
+| Phase 2A | Page Load | No blank screen, no console errors, responsive, loading states |
+| Phase 2B | Navigation | Every link clicked and documented, back button, no dead links |
+| Phase 2C | Buttons | Every button clicked, correct behavior, double-click handling |
+| Phase 2D | Forms & Inputs | Valid data, empty submit, long text, special chars, tab order |
+| Phase 2E | Modals | Open, close (X, overlay, ESC), content correct, backdrop works |
+| Phase 2F | Images | All load, alt text, correct sizing |
+| Phase 2G | Data Display | Items showing, data correct, sort/filter/search, empty state |
+| Phase 2H | State Management | Refresh, navigate away/back, new tab, auth/guest states |
+| Phase 3A | Auth Flows | Sign up, sign in, sign out, session persistence |
+| Phase 3B | Gamification | XP, levels, leaderboard, edge cases |
+| Phase 3C | Business Directory | All load, search, filters, detail pages, contact info |
+| Phase 3D | Events | List, detail, timezone, RSVP |
+| Phase 3E | API Integrity | Network tab, failed requests, empty responses, duplicates |
+| Phase 3F | Performance | Load time, sluggish interactions, memory leaks |
+| Phase 3G | Visual Consistency | Fonts, colors, spacing, no overlap, no horizontal scroll |
+| Phase 4 | Edge Cases | Rapid clicks, multi-tab, offline, zoom, admin URL access |
+
+## 13.3 Enumeration Template
+
+Before starting QA on any page, enumerate ALL elements:
+
+```markdown
+## Page: [NAME] — Element Inventory
+
+### Buttons
+1. [Button text] — Location: [where on page]
+
+### Links
+1. [Link text] → [expected destination]
+
+### Inputs/Forms
+1. [Input label] — Type: [text/email/password/select/etc]
+
+### Dynamic Content
+1. [What it shows] — Source: [API/static/state]
+
+### Modals/Overlays
+1. [Modal name] — Trigger: [what opens it]
+```
+
+## 13.4 Report Format
+
+All QA reports MUST follow the Phase 5 format in `PULSE_QA_PROTOCOL.md`:
+- Summary (total checks, passes, failures, blocked)
+- Critical Failures (must fix)
+- Major Issues (should fix)
+- Minor Issues (fix when possible)
+- Warnings (potential issues)
+- Detailed Results by Page (table format)
+
+## 13.5 QA Execution Rules
+
+- Write findings to `qa-reports/[page-name].md` INCREMENTALLY — every 5 checks, flush to disk.
+- If a page has 30+ interactive elements, split QA into sub-tasks (navigation, buttons, forms, data display).
+- Each agent/task must have a scope small enough to complete within its context window.
+- Before starting, estimate element count. If >25 elements, split the task.
+
+## 13.6 Evidence Format
+
+```
+[✅ PASS] Button: "Sign Up" → Clicked → Modal opened with email/password fields
+[❌ FAIL] Button: "Sign Up" → Clicked → Nothing happened. No console errors. Handler is empty.
+[⚠️ PARTIAL] Button: "Sign Up" → Clicked → Modal opened but email field is not focusable
+[❌ UNVERIFIED] Button: "Sign Up" → Could not test (app crashed on page load)
+```
 
 ---
 
