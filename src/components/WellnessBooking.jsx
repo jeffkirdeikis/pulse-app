@@ -25,6 +25,7 @@ const TIME_RANGES = [
 const DURATIONS = [
   { key: null, label: 'Any' },
   { key: 30, label: '30 min' },
+  { key: 45, label: '45 min' },
   { key: 60, label: '60 min' },
   { key: 90, label: '90 min' },
 ];
@@ -720,11 +721,20 @@ function BookingSheet({ slot, onClose, onBook, onViewProfile }) {
   const dateObj = new Date(slot.date + 'T12:00:00');
   const dateStr = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 
+  useEffect(() => {
+    const handleEsc = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [onClose]);
+
   return (
     <>
       <div className="wb-sheet-backdrop" onClick={onClose} />
       <div className="wb-sheet">
         <div className="wb-sheet-handle" />
+        <button className="wb-sheet-close-btn" onClick={onClose} aria-label="Close">
+          <X size={18} />
+        </button>
         <div className="wb-sheet-content">
           <div className="wb-sheet-header">
             <div className="wb-sheet-avatar">
@@ -1563,6 +1573,7 @@ const wellnessBookingStyles = `
   max-height: 80vh;
   overflow-y: auto;
   animation: sheetUp 0.3s ease;
+  /* relative for close button positioning */
 }
 @keyframes sheetUp {
   from { transform: translateY(100%); }
@@ -1579,6 +1590,23 @@ const wellnessBookingStyles = `
   border-radius: 2px;
   margin: 12px auto;
 }
+.wb-sheet-close-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: #f3f4f6;
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #6b7280;
+  z-index: 1;
+}
+.wb-sheet-close-btn:hover { background: #e5e7eb; color: #374151; }
 .wb-sheet-content { padding: 0 20px 32px; }
 .wb-sheet-header {
   display: flex;
