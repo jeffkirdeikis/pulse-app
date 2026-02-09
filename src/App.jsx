@@ -8534,13 +8534,14 @@ export default function PulseApp() {
   const [adminSearchQuery, setAdminSearchQuery] = useState('');
   const [impersonateSearchQuery, setImpersonateSearchQuery] = useState('');
   const [previousAdminState, setPreviousAdminState] = useState(null);
+  const [selectedClaimedBusinessId, setSelectedClaimedBusinessId] = useState(null);
   // Admin venue management filter state
   const [adminCategoryFilter, setAdminCategoryFilter] = useState('');
   const [adminStatusFilter, setAdminStatusFilter] = useState('');
   // Admin stats: claimed businesses count
   const [adminClaimedCount, setAdminClaimedCount] = useState(0);
   const [adminVerifiedCount, setAdminVerifiedCount] = useState(0);
-  const activeBusiness = impersonatedBusiness || (userClaimedBusinesses.length > 0 ? userClaimedBusinesses[0] : null);
+  const activeBusiness = impersonatedBusiness || (selectedClaimedBusinessId ? userClaimedBusinesses.find(b => b.id === selectedClaimedBusinessId) : null) || (userClaimedBusinesses.length > 0 ? userClaimedBusinesses[0] : null);
   const isImpersonating = !!impersonatedBusiness;
 
   // Profile modal state
@@ -10130,7 +10131,7 @@ export default function PulseApp() {
         return true;
       });
     } else if (filters.age === 'adults') {
-      filtered = filtered.filter(e => e.ageGroup?.includes('Adults') || e.ageGroup === '19+' || e.ageGroup === 'Teens & Adults');
+      filtered = filtered.filter(e => e.ageGroup?.includes('Adults') || e.ageGroup === 'All Ages' || e.ageGroup === '19+' || e.ageGroup === 'Teens & Adults');
     }
 
     // Category
@@ -11840,7 +11841,8 @@ export default function PulseApp() {
                       });
                       if (error) {
                         console.error('Error tracking redemption:', error);
-                        setCalendarToastMessage(`Deal saved! Show this to ${getVenueName(selectedDeal.venueId, selectedDeal)} to redeem.`);
+                        showToast('Could not process redemption. Please try again.', 'error');
+                        return;
                       } else {
                         setCalendarToastMessage(`Redemption code: ${redemptionCode} - Show this to ${getVenueName(selectedDeal.venueId, selectedDeal)}!`);
                       }
@@ -11911,7 +11913,7 @@ export default function PulseApp() {
                 {/* Quick Actions */}
                 <div className="service-quick-actions">
                   <a 
-                    href={`tel:${selectedService.phone}`} 
+                    href={selectedService.phone ? `tel:${selectedService.phone.replace(/[^\d+]/g, '')}` : '#'}
                     className={`quick-action-btn ${!selectedService.phone ? 'disabled' : ''}`}
                     onClick={(e) => !selectedService.phone && e.preventDefault()}
                   >
@@ -11932,7 +11934,7 @@ export default function PulseApp() {
                     <span>Directions</span>
                   </a>
                   <a 
-                    href={selectedService.website || `https://www.google.com/search?q=${encodeURIComponent(selectedService.name + ' Squamish BC')}`}
+                    href={selectedService.website ? (selectedService.website.startsWith('http') ? selectedService.website : `https://${selectedService.website}`) : `https://www.google.com/search?q=${encodeURIComponent(selectedService.name + ' Squamish BC')}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="quick-action-btn"
@@ -12120,7 +12122,7 @@ export default function PulseApp() {
                     View on Google Maps
                   </a>
                   <a 
-                    href={selectedService.website || `https://www.google.com/search?q=${encodeURIComponent(selectedService.name + ' Squamish BC')}`}
+                    href={selectedService.website ? (selectedService.website.startsWith('http') ? selectedService.website : `https://${selectedService.website}`) : `https://www.google.com/search?q=${encodeURIComponent(selectedService.name + ' Squamish BC')}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="service-cta-btn secondary"
@@ -14516,7 +14518,10 @@ export default function PulseApp() {
                             </button>
                             <button 
                               className="admin-btn reject"
-                              onClick={() => rejectSubmission(submission.id, 'Does not meet guidelines')}
+                              onClick={() => {
+                                const reason = prompt('Rejection reason:', 'Does not meet guidelines');
+                                if (reason) rejectSubmission(submission.id, reason);
+                              }}
                             >
                               <X size={16} />
                               Reject
@@ -14664,7 +14669,7 @@ export default function PulseApp() {
                       </div>
                     )}
                     {!isImpersonating && userClaimedBusinesses.length > 1 && (
-                      <select className="business-selector">
+                      <select className="business-selector" value={activeBusiness?.id || ''} onChange={(e) => setSelectedClaimedBusinessId(e.target.value)}>
                         {userClaimedBusinesses.map(b => (
                           <option key={b.id} value={b.id}>{b.name}</option>
                         ))}
@@ -14757,9 +14762,9 @@ export default function PulseApp() {
                       {(businessAnalytics?.daily_breakdown?.slice(-7) || []).map((day, i) => (
                         <div key={i} className="mini-bar" style={{height: `${Math.min(100, (day.profile_views || 0) * 10)}%`}}></div>
                       ))}
-                      {!businessAnalytics?.daily_breakdown && [40, 20, 30, 25, 35, 40, 45].map((h, i) => (
-                        <div key={i} className="mini-bar" style={{height: `${h}%`, opacity: 0.3}}></div>
-                      ))}
+                      {!businessAnalytics?.daily_breakdown && (
+                        <div style={{display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', color: '#9ca3af', fontSize: '11px'}}>No data yet</div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -15501,8 +15506,7 @@ export default function PulseApp() {
                     </div>
                   )}
                 </div>
-                <button className="btn-secondary" onClick={() => showToast('Admin settings coming soon', 'info')}><SlidersHorizontal size={18} /> Settings</button>
-                <button className="btn-primary-gradient" onClick={() => showToast('Use the business directory to manage venues', 'info')}><Plus size={18} /> Add Venue</button>
+                <button className="btn-secondary" disabled style={{opacity: 0.5, cursor: 'not-allowed'}}><SlidersHorizontal size={18} /> Settings <span style={{fontSize: '10px', background: '#fef3c7', color: '#92400e', padding: '2px 6px', borderRadius: '4px', marginLeft: '4px'}}>Soon</span></button>
               </div>
             </div>
           </div>
@@ -15657,7 +15661,7 @@ export default function PulseApp() {
                   if (adminStatusFilter === 'no_website') return !s.website;
                   return true;
                 })
-                .slice(0, (adminSearchQuery || adminCategoryFilter || adminStatusFilter) ? 50 : 12).map((venue, idx) => {
+                .slice(0, (adminSearchQuery || adminCategoryFilter || adminStatusFilter) ? 100 : 50).map((venue, idx) => {
                 const classCount = dbEvents.filter(e => e.venueId === venue.id).length;
                 return (
                   <div key={venue.id} className="venue-card-admin" ref={(el) => venueCardRefs.current[idx] = el}>
@@ -15697,7 +15701,7 @@ export default function PulseApp() {
                       }}><Edit2 size={14} /></button>
                       <button className="action-btn-mini impersonate" title="View as this business" onClick={() => enterImpersonation(venue)}><Eye size={14} /></button>
                       <button className="action-btn-mini danger" onClick={async () => {
-                        if (confirm(`Delete ${venue.name}? This cannot be undone.`)) {
+                        if (confirm(`Deactivate ${venue.name}? This will hide it from the directory. It can be reactivated later.`)) {
                           try {
                             const { error } = await supabase
                               .from('businesses')
