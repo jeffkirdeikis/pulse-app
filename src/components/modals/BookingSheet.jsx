@@ -1,0 +1,150 @@
+import React, { memo } from 'react';
+import { Calendar, Clock, ExternalLink, Info, Send, Ticket } from 'lucide-react';
+
+const PACIFIC_TZ = 'America/Vancouver';
+
+const BookingSheet = memo(function BookingSheet({
+  bookingEvent,
+  bookingStep,
+  bookingRequestMessage,
+  setBookingRequestMessage,
+  sendingMessage,
+  onClose,
+  getVenueName,
+  getBusinessForEvent,
+  trackAnalytics,
+  addToCalendar,
+  submitBookingRequest,
+  setCalendarToastMessage,
+  setShowCalendarToast,
+}) {
+  if (!bookingEvent) return null;
+  return (
+    <div className="modal-overlay booking-sheet-overlay" role="dialog" aria-modal="true" aria-label="Book class" onClick={onClose}>
+      <div className={`booking-bottom-sheet ${bookingStep === 'iframe' ? 'full-height' : ''}`} onClick={(e) => e.stopPropagation()}>
+        <div className="sheet-handle" />
+        <button className="close-btn sheet-close" onClick={onClose}>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <path d="M1 1L13 13M1 13L13 1" stroke="#6b7280" strokeWidth="2" strokeLinecap="round"/>
+          </svg>
+        </button>
+
+        {/* Header - always shown */}
+        <div className="sheet-header">
+          <h2>{bookingStep === 'request' ? 'Request to Book' : 'Book Now'}</h2>
+          <p className="sheet-subtitle">{getVenueName(bookingEvent.venueId, bookingEvent)}</p>
+          <div className="sheet-event-details">
+            <div className="event-title-row">{bookingEvent.title}</div>
+            <div className="sheet-event-info">
+              <Calendar size={14} />
+              <span>{bookingEvent.start.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+              <span className="dot">•</span>
+              <Clock size={14} />
+              <span>{bookingEvent.start.toLocaleTimeString('en-US', { timeZone: PACIFIC_TZ, hour: 'numeric', minute: '2-digit' })}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* External booking view - for businesses with booking URLs */}
+        {bookingStep === 'iframe' && (() => {
+          const business = getBusinessForEvent(bookingEvent);
+          const bookingUrl = business?.booking_url;
+          const bookingType = business?.booking_type;
+          const systemName = bookingType === 'mindbody' ? 'Mindbody' :
+                            bookingType === 'wellnessliving' ? 'WellnessLiving' :
+                            bookingType === 'janeapp' ? 'JaneApp' : 'their website';
+
+          return (
+            <div className="external-booking-container">
+              <div className="booking-system-badge">
+                {bookingType === 'mindbody' && (
+                  <img src="https://www.mindbodyonline.com/sites/default/files/public/favicon.ico" alt="" />
+                )}
+                {bookingType === 'wellnessliving' && (
+                  <img src="https://www.wellnessliving.com/favicon.ico" alt="" />
+                )}
+                {!bookingType && <ExternalLink size={20} />}
+                <span>Book via {systemName}</span>
+              </div>
+
+              <p className="booking-instruction">
+                Click below to complete your booking on {getVenueName(bookingEvent.venueId, bookingEvent)}'s booking page.
+              </p>
+
+              <a
+                href={bookingUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="open-booking-btn"
+                onClick={() => {
+                  // Track that they opened the booking page
+                  trackAnalytics('booking_click', business?.id, bookingEvent.id);
+                }}
+              >
+                <Ticket size={20} />
+                Open Booking Page
+              </a>
+
+              <button
+                className="add-calendar-secondary"
+                onClick={() => {
+                  addToCalendar(bookingEvent);
+                  setCalendarToastMessage('Added to your calendar!');
+                  setShowCalendarToast(true);
+                  setTimeout(() => setShowCalendarToast(false), 2000);
+                }}
+              >
+                <Calendar size={18} />
+                Add to Calendar
+              </button>
+
+              <p className="booking-note">
+                After booking, come back and let us know so we can track it for you.
+              </p>
+            </div>
+          );
+        })()}
+
+        {/* Request to book form */}
+        {bookingStep === 'request' && (
+          <div className="booking-request-form">
+            <div className="request-info-card">
+              <Info size={18} />
+              <p>This business doesn't have online booking. Send them a request and they'll get back to you.</p>
+            </div>
+
+            <div className="form-field">
+              <label>Add a message (optional)</label>
+              <textarea
+                placeholder="Any special requests or questions..."
+                value={bookingRequestMessage}
+                onChange={(e) => setBookingRequestMessage(e.target.value)}
+                rows={3}
+              />
+            </div>
+
+            <button
+              className="send-request-btn"
+              onClick={submitBookingRequest}
+              disabled={sendingMessage}
+            >
+              {sendingMessage ? (
+                <>
+                  <div className="spinner-small" />
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <Send size={18} />
+                  Send Booking Request
+                </>
+              )}
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+});
+
+export default BookingSheet;

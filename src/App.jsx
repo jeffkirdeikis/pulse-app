@@ -15,6 +15,10 @@ import SubmissionModal from './components/modals/SubmissionModal';
 import ClaimBusinessModal from './components/modals/ClaimBusinessModal';
 import MyCalendarModal from './components/modals/MyCalendarModal';
 import MessagesModal from './components/modals/MessagesModal';
+import BookingSheet from './components/modals/BookingSheet';
+import AdminPanelModal from './components/modals/AdminPanelModal';
+import EditVenueModal from './components/modals/EditVenueModal';
+import ImageCropperModal from './components/modals/ImageCropperModal';
 import './styles/pulse-app.css';
 
 // All dates/times in this app are in Squamish (Pacific) time, regardless of user's location.
@@ -11655,130 +11659,21 @@ export default function PulseApp() {
           )}
           {/* Booking Bottom Sheet */}
           {showBookingSheet && bookingEvent && (
-            <div className="modal-overlay booking-sheet-overlay" role="dialog" aria-modal="true" aria-label="Book class" onClick={closeBookingSheet}>
-              <div className={`booking-bottom-sheet ${bookingStep === 'iframe' ? 'full-height' : ''}`} onClick={(e) => e.stopPropagation()}>
-                <div className="sheet-handle" />
-                <button className="close-btn sheet-close" onClick={closeBookingSheet}>
-                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                    <path d="M1 1L13 13M1 13L13 1" stroke="#6b7280" strokeWidth="2" strokeLinecap="round"/>
-                  </svg>
-                </button>
-
-                {/* Header - always shown */}
-                <div className="sheet-header">
-                  <h2>{bookingStep === 'request' ? 'Request to Book' : 'Book Now'}</h2>
-                  <p className="sheet-subtitle">{getVenueName(bookingEvent.venueId, bookingEvent)}</p>
-                  <div className="sheet-event-details">
-                    <div className="event-title-row">{bookingEvent.title}</div>
-                    <div className="sheet-event-info">
-                      <Calendar size={14} />
-                      <span>{bookingEvent.start.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
-                      <span className="dot">•</span>
-                      <Clock size={14} />
-                      <span>{bookingEvent.start.toLocaleTimeString('en-US', { timeZone: PACIFIC_TZ, hour: 'numeric', minute: '2-digit' })}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* External booking view - for businesses with booking URLs */}
-                {bookingStep === 'iframe' && (() => {
-                  const business = getBusinessForEvent(bookingEvent);
-                  const bookingUrl = business?.booking_url;
-                  const bookingType = business?.booking_type;
-                  const systemName = bookingType === 'mindbody' ? 'Mindbody' :
-                                    bookingType === 'wellnessliving' ? 'WellnessLiving' :
-                                    bookingType === 'janeapp' ? 'JaneApp' : 'their website';
-
-                  return (
-                    <div className="external-booking-container">
-                      <div className="booking-system-badge">
-                        {bookingType === 'mindbody' && (
-                          <img src="https://www.mindbodyonline.com/sites/default/files/public/favicon.ico" alt="" />
-                        )}
-                        {bookingType === 'wellnessliving' && (
-                          <img src="https://www.wellnessliving.com/favicon.ico" alt="" />
-                        )}
-                        {!bookingType && <ExternalLink size={20} />}
-                        <span>Book via {systemName}</span>
-                      </div>
-
-                      <p className="booking-instruction">
-                        Click below to complete your booking on {getVenueName(bookingEvent.venueId, bookingEvent)}'s booking page.
-                      </p>
-
-                      <a
-                        href={bookingUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="open-booking-btn"
-                        onClick={() => {
-                          // Track that they opened the booking page
-                          trackAnalytics('booking_click', business?.id, bookingEvent.id);
-                        }}
-                      >
-                        <Ticket size={20} />
-                        Open Booking Page
-                      </a>
-
-                      <button
-                        className="add-calendar-secondary"
-                        onClick={() => {
-                          addToCalendar(bookingEvent);
-                          setCalendarToastMessage('Added to your calendar!');
-                          setShowCalendarToast(true);
-                          setTimeout(() => setShowCalendarToast(false), 2000);
-                        }}
-                      >
-                        <Calendar size={18} />
-                        Add to Calendar
-                      </button>
-
-                      <p className="booking-note">
-                        After booking, come back and let us know so we can track it for you.
-                      </p>
-                    </div>
-                  );
-                })()}
-
-                {/* Request to book form */}
-                {bookingStep === 'request' && (
-                  <div className="booking-request-form">
-                    <div className="request-info-card">
-                      <Info size={18} />
-                      <p>This business doesn't have online booking. Send them a request and they'll get back to you.</p>
-                    </div>
-
-                    <div className="form-field">
-                      <label>Add a message (optional)</label>
-                      <textarea
-                        placeholder="Any special requests or questions..."
-                        value={bookingRequestMessage}
-                        onChange={(e) => setBookingRequestMessage(e.target.value)}
-                        rows={3}
-                      />
-                    </div>
-
-                    <button
-                      className="send-request-btn"
-                      onClick={submitBookingRequest}
-                      disabled={sendingMessage}
-                    >
-                      {sendingMessage ? (
-                        <>
-                          <div className="spinner-small" />
-                          Sending...
-                        </>
-                      ) : (
-                        <>
-                          <Send size={18} />
-                          Send Booking Request
-                        </>
-                      )}
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
+            <BookingSheet
+              bookingEvent={bookingEvent}
+              bookingStep={bookingStep}
+              bookingRequestMessage={bookingRequestMessage}
+              setBookingRequestMessage={setBookingRequestMessage}
+              sendingMessage={sendingMessage}
+              onClose={closeBookingSheet}
+              getVenueName={getVenueName}
+              getBusinessForEvent={getBusinessForEvent}
+              trackAnalytics={trackAnalytics}
+              addToCalendar={addToCalendar}
+              submitBookingRequest={submitBookingRequest}
+              setCalendarToastMessage={setCalendarToastMessage}
+              setShowCalendarToast={setShowCalendarToast}
+            />
           )}
 
           {/* Booking Confirmation Dialog */}
@@ -11886,106 +11781,15 @@ export default function PulseApp() {
 
           {/* Admin Panel Modal */}
           {showAdminPanel && user.isAdmin && (
-            <div className="modal-overlay admin-modal-overlay" role="dialog" aria-modal="true" aria-label="Admin panel" onClick={() => setShowAdminPanel(false)}>
-              <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
-                <button className="close-btn admin-close" onClick={() => setShowAdminPanel(false)}><X size={24} /></button>
-                
-                <div className="admin-header">
-                  <div className="admin-header-content">
-                    <div className="admin-icon-wrapper">
-                      <Eye size={28} />
-                    </div>
-                    <div>
-                      <h1>Admin Panel</h1>
-                      <p>Review and approve submissions</p>
-                    </div>
-                  </div>
-                  <button className="admin-btn approve" style={{ marginTop: '12px', display: 'flex', alignItems: 'center', gap: '8px' }} onClick={() => { setShowAdminPanel(false); setView('admin'); }}>
-                    <SlidersHorizontal size={16} />
-                    Open Full Dashboard
-                  </button>
-                </div>
-
-                <div className="admin-content">
-                  <div className="admin-tabs">
-                    <button className={`admin-tab ${adminTab === 'pending' ? 'active' : ''}`} onClick={() => setAdminTab('pending')}>
-                      Pending
-                      {pendingSubmissions.filter(s => s.status === 'pending').length > 0 && (
-                        <span className="tab-badge">{pendingSubmissions.filter(s => s.status === 'pending').length}</span>
-                      )}
-                    </button>
-                    <button className={`admin-tab ${adminTab === 'approved' ? 'active' : ''}`} onClick={() => setAdminTab('approved')}>
-                      Approved
-                      {pendingSubmissions.filter(s => s.status === 'approved').length > 0 && (
-                        <span className="tab-badge">{pendingSubmissions.filter(s => s.status === 'approved').length}</span>
-                      )}
-                    </button>
-                    <button className={`admin-tab ${adminTab === 'rejected' ? 'active' : ''}`} onClick={() => setAdminTab('rejected')}>
-                      Rejected
-                      {pendingSubmissions.filter(s => s.status === 'rejected').length > 0 && (
-                        <span className="tab-badge">{pendingSubmissions.filter(s => s.status === 'rejected').length}</span>
-                      )}
-                    </button>
-                  </div>
-
-                  <div className="admin-submissions">
-                    {pendingSubmissions.filter(s => s.status === adminTab).length === 0 ? (
-                      <div className="admin-empty">
-                        <CheckCircle size={48} />
-                        <h3>{adminTab === 'pending' ? 'All caught up!' : `No ${adminTab} submissions`}</h3>
-                        <p>{adminTab === 'pending' ? 'No pending submissions to review' : `There are no ${adminTab} submissions yet`}</p>
-                      </div>
-                    ) : (
-                      pendingSubmissions.filter(s => s.status === adminTab).map(submission => (
-                        <div key={submission.id} className="admin-submission-card">
-                          <div className="submission-card-header">
-                            <div className={`submission-type-badge ${submission.type}`}>
-                              {submission.type === 'event' && <Zap size={14} />}
-                              {submission.type === 'class' && <Sparkles size={14} />}
-                              {submission.type === 'deal' && <Percent size={14} />}
-                              {submission.type}
-                            </div>
-                            <span className="submission-time">
-                              {new Date(submission.submittedAt).toLocaleDateString()}
-                            </span>
-                          </div>
-                          <h4>{submission.data.title}</h4>
-                          <p className="submission-business">
-                            <Building size={14} />
-                            {submission.business.name}
-                            {submission.business.verified && <Check size={12} className="verified-mini" />}
-                          </p>
-                          <p className="submission-desc">{submission.data.description}</p>
-                          <div className="submission-meta">
-                            <span>By: {submission.submittedBy.name}</span>
-                            <span>{submission.submittedBy.email}</span>
-                          </div>
-                          <div className="admin-actions">
-                            <button 
-                              className="admin-btn approve"
-                              onClick={() => approveSubmission(submission.id)}
-                            >
-                              <Check size={16} />
-                              Approve
-                            </button>
-                            <button 
-                              className="admin-btn reject"
-                              onClick={() => {
-                                const reason = prompt('Rejection reason:', 'Does not meet guidelines');
-                                if (reason) rejectSubmission(submission.id, reason);
-                              }}
-                            >
-                              <X size={16} />
-                              Reject
-                            </button>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
+            <AdminPanelModal
+              adminTab={adminTab}
+              setAdminTab={setAdminTab}
+              pendingSubmissions={pendingSubmissions}
+              onClose={() => setShowAdminPanel(false)}
+              setView={setView}
+              approveSubmission={approveSubmission}
+              rejectSubmission={rejectSubmission}
+            />
           )}
         </div>
       )}
@@ -12068,120 +11872,14 @@ export default function PulseApp() {
 
       {/* Edit Venue Modal - Global (works from any view) */}
       {showEditVenueModal && editingVenue && (
-        <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Edit venue" onClick={() => { setShowEditVenueModal(false); setEditingVenue(null); }}>
-          <div className="claim-modal-premium" onClick={(e) => e.stopPropagation()}>
-            <button className="claim-modal-close" onClick={() => { setShowEditVenueModal(false); setEditingVenue(null); }}><X size={24} /></button>
-
-            <div className="claim-modal-header">
-              <div className="claim-modal-icon">
-                <Edit2 size={32} />
-              </div>
-              <h2>Edit Business</h2>
-              <p>Update information for {editingVenue.name}</p>
-            </div>
-
-            <div className="claim-modal-body">
-              <div className="claim-form-grid">
-                <div className="claim-form-group full">
-                  <label>Business Name</label>
-                  <input
-                    type="text"
-                    placeholder="Business name"
-                    value={editVenueForm.name}
-                    onChange={(e) => setEditVenueForm({...editVenueForm, name: e.target.value})}
-                  />
-                </div>
-                <div className="claim-form-group full">
-                  <label>Address</label>
-                  <input
-                    type="text"
-                    placeholder="Street address"
-                    value={editVenueForm.address}
-                    onChange={(e) => setEditVenueForm({...editVenueForm, address: e.target.value})}
-                  />
-                </div>
-                <div className="claim-form-group">
-                  <label>Phone</label>
-                  <input
-                    type="tel"
-                    placeholder="(604) 555-1234"
-                    value={editVenueForm.phone}
-                    onChange={(e) => setEditVenueForm({...editVenueForm, phone: e.target.value})}
-                  />
-                </div>
-                <div className="claim-form-group">
-                  <label>Email</label>
-                  <input
-                    type="email"
-                    placeholder="contact@business.com"
-                    value={editVenueForm.email}
-                    onChange={(e) => setEditVenueForm({...editVenueForm, email: e.target.value})}
-                  />
-                </div>
-                <div className="claim-form-group">
-                  <label>Website</label>
-                  <input
-                    type="url"
-                    placeholder="https://..."
-                    value={editVenueForm.website}
-                    onChange={(e) => setEditVenueForm({...editVenueForm, website: e.target.value})}
-                  />
-                </div>
-                <div className="claim-form-group">
-                  <label>Category</label>
-                  <input
-                    type="text"
-                    placeholder="e.g., Fitness, Restaurant"
-                    value={editVenueForm.category}
-                    onChange={(e) => setEditVenueForm({...editVenueForm, category: e.target.value})}
-                  />
-                </div>
-              </div>
-
-              <div className="claim-modal-actions">
-                <button className="claim-cancel-btn" onClick={() => { setShowEditVenueModal(false); setEditingVenue(null); }}>Cancel</button>
-                <button className="claim-submit-btn" onClick={async () => {
-                  if (!editingVenue?.id) {
-                    showToast('Error: No venue ID found', 'error');
-                    return;
-                  }
-
-                  try {
-                    const { data, error } = await supabase
-                      .from('businesses')
-                      .update({
-                        name: editVenueForm.name,
-                        address: editVenueForm.address,
-                        phone: editVenueForm.phone,
-                        email: editVenueForm.email,
-                        website: editVenueForm.website,
-                        category: editVenueForm.category
-                      })
-                      .eq('id', editingVenue.id)
-                      .select();
-
-                    if (error) throw error;
-
-                    // Check if any rows were actually updated
-                    if (!data || data.length === 0) {
-                      showToast('Update blocked - check database permissions', 'error');
-                      return;
-                    }
-
-                    showToast('Business updated successfully!', 'success');
-                    setShowEditVenueModal(false);
-                    setEditingVenue(null);
-                    // Refetch services to show updated data
-                    await fetchServices(true);
-                  } catch (err) {
-                    console.error('Error updating business:', err);
-                    showToast('Failed to update business', 'error');
-                  }
-                }}>Save Changes</button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <EditVenueModal
+          editingVenue={editingVenue}
+          editVenueForm={editVenueForm}
+          setEditVenueForm={setEditVenueForm}
+          onClose={() => { setShowEditVenueModal(false); setEditingVenue(null); }}
+          showToast={showToast}
+          fetchServices={fetchServices}
+        />
       )}
 
       {/* Edit Event/Class Modal */}
@@ -12263,162 +11961,16 @@ export default function PulseApp() {
 
       {/* Global Image Cropper Modal - Works from any context */}
       {showImageCropper && cropperImage && (
-        <div className="cropper-overlay-global" onClick={() => { setShowImageCropper(false); setCropPosition({ x: 0, y: 0 }); setCropZoom(1); }}>
-          <div className="cropper-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="cropper-header">
-              <h3>{cropperType === 'profileAvatar' ? 'Crop Profile Photo' : cropperType === 'profileCover' ? 'Crop Cover Photo' : 'Crop Image'}</h3>
-              <span className="cropper-ratio">{(cropperType === 'square' || cropperType === 'profileAvatar') ? '1:1 Square' : '3:1 Banner'}</span>
-            </div>
-            <div className="cropper-content">
-              <div className="cropper-container">
-                <div 
-                  className={`cropper-frame ${cropperType === 'profileAvatar' ? 'square profileAvatar' : cropperType === 'profileCover' ? 'banner' : cropperType}`}
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    const img = e.currentTarget.querySelector('.cropper-image');
-                    img.dataset.dragging = 'true';
-                    img.dataset.startX = e.clientX;
-                    img.dataset.startY = e.clientY;
-                    img.dataset.origX = cropPosition.x;
-                    img.dataset.origY = cropPosition.y;
-                    img.style.cursor = 'grabbing';
-                    img.style.transition = 'none'; // Disable transition during drag
-                  }}
-                  onMouseMove={(e) => {
-                    const img = e.currentTarget.querySelector('.cropper-image');
-                    if (img.dataset.dragging !== 'true') return;
-                    const dx = e.clientX - parseFloat(img.dataset.startX);
-                    const dy = e.clientY - parseFloat(img.dataset.startY);
-                    const newX = parseFloat(img.dataset.origX) + dx;
-                    const newY = parseFloat(img.dataset.origY) + dy;
-                    img.style.transform = `translate(calc(-50% + ${newX}px), calc(-50% + ${newY}px)) scale(${cropZoom})`;
-                    img.dataset.currentX = newX;
-                    img.dataset.currentY = newY;
-                  }}
-                  onMouseUp={(e) => {
-                    const img = e.currentTarget.querySelector('.cropper-image');
-                    if (img.dataset.dragging === 'true') {
-                      img.dataset.dragging = 'false';
-                      img.style.cursor = 'grab';
-                      img.style.transition = 'transform 0.1s ease-out'; // Re-enable transition
-                      setCropPosition({ 
-                        x: parseFloat(img.dataset.currentX || cropPosition.x), 
-                        y: parseFloat(img.dataset.currentY || cropPosition.y) 
-                      });
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    const img = e.currentTarget.querySelector('.cropper-image');
-                    if (img && img.dataset.dragging === 'true') {
-                      img.dataset.dragging = 'false';
-                      img.style.cursor = 'grab';
-                      img.style.transition = 'transform 0.1s ease-out'; // Re-enable transition
-                      setCropPosition({ 
-                        x: parseFloat(img.dataset.currentX || cropPosition.x), 
-                        y: parseFloat(img.dataset.currentY || cropPosition.y) 
-                      });
-                    }
-                  }}
-                  onTouchStart={(e) => {
-                    const img = e.currentTarget.querySelector('.cropper-image');
-                    const touch = e.touches[0];
-                    img.dataset.dragging = 'true';
-                    img.dataset.startX = touch.clientX;
-                    img.style.transition = 'none'; // Disable transition during drag
-                    img.dataset.startY = touch.clientY;
-                    img.dataset.origX = cropPosition.x;
-                    img.dataset.origY = cropPosition.y;
-                  }}
-                  onTouchMove={(e) => {
-                    const img = e.currentTarget.querySelector('.cropper-image');
-                    if (img.dataset.dragging !== 'true') return;
-                    const touch = e.touches[0];
-                    const dx = touch.clientX - parseFloat(img.dataset.startX);
-                    const dy = touch.clientY - parseFloat(img.dataset.startY);
-                    const newX = parseFloat(img.dataset.origX) + dx;
-                    const newY = parseFloat(img.dataset.origY) + dy;
-                    img.style.transform = `translate(calc(-50% + ${newX}px), calc(-50% + ${newY}px)) scale(${cropZoom})`;
-                    img.dataset.currentX = newX;
-                    img.dataset.currentY = newY;
-                  }}
-                  onTouchEnd={(e) => {
-                    const img = e.currentTarget.querySelector('.cropper-image');
-                    if (img.dataset.dragging === 'true') {
-                      img.dataset.dragging = 'false';
-                      img.style.transition = 'transform 0.1s ease-out'; // Re-enable transition
-                      setCropPosition({ 
-                        x: parseFloat(img.dataset.currentX || cropPosition.x), 
-                        y: parseFloat(img.dataset.currentY || cropPosition.y) 
-                      });
-                    }
-                  }}
-                  onWheel={(e) => {
-                    e.preventDefault();
-                    const delta = e.deltaY > 0 ? -0.05 : 0.05;
-                    const newZoom = Math.max(1, Math.min(3, cropZoom + delta));
-                    setCropZoom(newZoom);
-                  }}
-                >
-                  <img 
-                    src={cropperImage} 
-                    alt="Crop preview"
-                    className="cropper-image global-cropper-img"
-                    style={{
-                      transform: `translate(calc(-50% + ${cropPosition.x}px), calc(-50% + ${cropPosition.y}px)) scale(${cropZoom})`,
-                      cursor: 'grab',
-                      transition: 'transform 0.1s ease-out'
-                    }}
-                    draggable={false}
-                  />
-                  <div className="cropper-grid-overlay">
-                    <div className="grid-h-1"></div>
-                    <div className="grid-h-2"></div>
-                    <div className="grid-v-1"></div>
-                    <div className="grid-v-2"></div>
-                  </div>
-                </div>
-              </div>
-              <p className="cropper-hint">Drag to reposition • Scroll to zoom</p>
-              <div className="cropper-controls smooth-zoom">
-                <button 
-                  className="zoom-btn"
-                  onClick={() => setCropZoom(prev => Math.max(1, prev - 0.15))}
-                >−</button>
-                <input 
-                  type="range" 
-                  min="1" 
-                  max="3" 
-                  step="0.005"
-                  value={cropZoom}
-                  onChange={(e) => {
-                    const newZoom = parseFloat(e.target.value);
-                    // Direct DOM update for smooth visual feedback
-                    const img = document.querySelector('.global-cropper-img');
-                    if (img) {
-                      const x = cropPosition.x;
-                      const y = cropPosition.y;
-                      img.style.transform = `translate(calc(-50% + ${x}px), calc(-50% + ${y}px)) scale(${newZoom})`;
-                    }
-                    setCropZoom(newZoom);
-                  }}
-                  className="zoom-slider"
-                />
-                <button 
-                  className="zoom-btn"
-                  onClick={() => setCropZoom(prev => Math.min(3, prev + 0.15))}
-                >+</button>
-              </div>
-            </div>
-            <div className="cropper-actions">
-              <button className="cropper-btn cancel" onClick={() => { setShowImageCropper(false); setCropPosition({ x: 0, y: 0 }); setCropZoom(1); }}>
-                Cancel
-              </button>
-              <button className="cropper-btn apply" onClick={handleCropComplete}>
-                Apply Crop
-              </button>
-            </div>
-          </div>
-        </div>
+        <ImageCropperModal
+          cropperImage={cropperImage}
+          cropperType={cropperType}
+          cropPosition={cropPosition}
+          setCropPosition={setCropPosition}
+          cropZoom={cropZoom}
+          setCropZoom={setCropZoom}
+          onClose={() => { setShowImageCropper(false); setCropPosition({ x: 0, y: 0 }); setCropZoom(1); }}
+          handleCropComplete={handleCropComplete}
+        />
       )}
 
       {/* ========== GLOBAL MODALS (render regardless of view) ========== */}
