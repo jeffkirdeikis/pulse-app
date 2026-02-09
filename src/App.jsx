@@ -8575,8 +8575,16 @@ export default function PulseApp() {
   const [eventsRefreshKey, setEventsRefreshKey] = useState(0);
   const [eventsLoading, setEventsLoading] = useState(true);
 
+  // Cache timestamps to prevent duplicate API requests within 30s
+  const fetchTimestamps = useRef({ services: 0, events: 0, deals: 0 });
+  const CACHE_TTL = 30000; // 30 seconds
+
   // Fetch services from Supabase - extracted to be reusable
-  const fetchServices = async () => {
+  const fetchServices = async (force = false) => {
+    const now = Date.now();
+    if (!force && now - fetchTimestamps.current.services < CACHE_TTL && services.length > 0) return;
+    fetchTimestamps.current.services = now;
+
     setServicesLoading(true);
     const { data, error } = await supabase
       .from('businesses')
@@ -8708,7 +8716,11 @@ export default function PulseApp() {
 
   // Fetch events from Supabase on mount
   useEffect(() => {
-    async function fetchEvents() {
+    async function fetchEvents(force = false) {
+      const now = Date.now();
+      if (!force && now - fetchTimestamps.current.events < CACHE_TTL && dbEvents.length > 0) return;
+      fetchTimestamps.current.events = now;
+
       setEventsLoading(true);
       // Always use Squamish (Pacific) date, regardless of user's timezone
       const localDateStr = getPacificDateStr();
@@ -8795,7 +8807,11 @@ export default function PulseApp() {
 
   // Fetch deals from Supabase on mount
   useEffect(() => {
-    async function fetchDeals() {
+    async function fetchDeals(force = false) {
+      const now = Date.now();
+      if (!force && now - fetchTimestamps.current.deals < CACHE_TTL && dbDeals.length > 0) return;
+      fetchTimestamps.current.deals = now;
+
       setDealsLoading(true);
       const { data, error } = await supabase
         .from('deals')
@@ -14677,7 +14693,7 @@ export default function PulseApp() {
                               .update({ logo_url: publicUrl })
                               .eq('id', activeBusiness.id);
                             if (updateError) throw updateError;
-                            fetchServices();
+                            fetchServices(true);
                             showToast('Logo updated!', 'success');
                           } catch (err) {
                             showToast('Failed to upload logo: ' + err.message, 'error');
@@ -15748,7 +15764,7 @@ export default function PulseApp() {
                               .eq('id', venue.id);
                             if (error) throw error;
                             showToast(`${venue.name} deleted`, 'success');
-                            await fetchServices();
+                            await fetchServices(true);
                           } catch (err) {
                             console.error('Error deleting:', err);
                             showToast('Failed to delete business', 'error');
@@ -15958,7 +15974,7 @@ export default function PulseApp() {
                     setShowEditVenueModal(false);
                     setEditingVenue(null);
                     // Refetch services to show updated data
-                    await fetchServices();
+                    await fetchServices(true);
                   } catch (err) {
                     console.error('Error updating business:', err);
                     showToast('Failed to update business', 'error');
