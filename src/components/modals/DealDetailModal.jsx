@@ -3,6 +3,7 @@ import {
   Check, ChevronRight, Clock, Building, Info, MapPin,
   Navigation, Share2, Star, Ticket
 } from 'lucide-react';
+import { generateSmartDealTitle, generateEnhancedDealDescription, getRelatedDeals } from '../../utils/dealHelpers';
 
 const DealDetailModal = memo(function DealDetailModal({
   deal,
@@ -11,9 +12,6 @@ const DealDetailModal = memo(function DealDetailModal({
   isItemSavedLocal,
   toggleSave,
   showToast,
-  generateSmartDealTitle,
-  generateEnhancedDealDescription,
-  getRelatedDeals,
   onSelectDeal,
   session,
   onAuthRequired,
