@@ -7,16 +7,29 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "scrape": "node scripts/scrape-orchestrator.js",
+    "scrape:discover": "node scripts/scrape-orchestrator.js --discover-only",
+    "scrape:reliable": "node scripts/scrape-reliable-sources.js",
+    "scrape:all": "node scripts/scrape-all-v2.js",
+    "scrape:fitness": "node scripts/scrape-fitness-classes.js",
+    "scrape:mindbody": "node scripts/scrape-mindbody-classic.js",
+    "scrape:setup": "node scripts/setup-scraping-tables.js"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.72.1",
+    "@sentry/react": "^10.38.0",
     "@supabase/supabase-js": "^2.93.3",
     "lucide-react": "^0.563.0",
+    "puppeteer": "^24.36.1",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
+    "@playwright/test": "^1.58.2",
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
