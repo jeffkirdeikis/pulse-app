@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Calendar, CalendarPlus, MapPin, Clock, Star, Check, Bell, Search, Filter, ChevronRight, ChevronLeft, X, Plus, Edit2, Trash2, Eye, Users, DollarSign, AlertCircle, CheckCircle, XCircle, SlidersHorizontal, Building, Wrench, TrendingUp, Phone, Globe, Navigation, Mail, Share2, Ticket, Percent, Tag, Repeat, ExternalLink, Heart, Copy, Info, Gift, Sparkles, Zap, Camera, MessageCircle, Send } from 'lucide-react';
+import { Calendar, CalendarPlus, MapPin, Clock, Star, Check, Bell, Search, Filter, ChevronRight, ChevronLeft, X, Plus, Edit2, Trash2, Eye, Users, DollarSign, AlertCircle, CheckCircle, XCircle, SlidersHorizontal, Building, Wrench, TrendingUp, Phone, Globe, Navigation, Mail, Share2, Ticket, Percent, Tag, Repeat, ExternalLink, Heart, Copy, Info, Gift, Sparkles, Zap, Camera, MessageCircle, Send, WifiOff } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import { useUserData } from './hooks/useUserData';
 import { formatResponseTime } from './lib/businessAnalytics';
@@ -9328,6 +9328,19 @@ export default function PulseApp() {
   const [_dragStart, _setDragStart] = useState({ x: 0, y: 0 });
   const _cropperRef = useRef(null);
 
+  // Offline detection
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  useEffect(() => {
+    const goOffline = () => setIsOffline(true);
+    const goOnline = () => setIsOffline(false);
+    window.addEventListener('offline', goOffline);
+    window.addEventListener('online', goOnline);
+    return () => {
+      window.removeEventListener('offline', goOffline);
+      window.removeEventListener('online', goOnline);
+    };
+  }, []);
+
   // User authentication state
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState('signin'); // 'signin' or 'signup'
@@ -10690,11 +10703,21 @@ export default function PulseApp() {
             </div>
           </header>
 
+          {/* Offline Banner */}
+          {isOffline && (
+            <div role="alert" style={{background: '#fef2f2', color: '#991b1b', padding: '8px 16px', textAlign: 'center', fontSize: '13px', fontWeight: 500, borderBottom: '1px solid #fecaca', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'}}>
+              <WifiOff size={14} />
+              You're offline. Some features may be unavailable.
+            </div>
+          )}
+
           {/* Top Banner Navigation - Premium */}
-          <div className="top-banner-premium">
+          <nav className="top-banner-premium" aria-label="Main navigation">
             <div className="banner-content-premium">
-              <div className="banner-tabs">
+              <div className="banner-tabs" role="tablist" aria-label="Content sections">
                 <button
+                  role="tab"
+                  aria-selected={currentSection === 'classes'}
                   className={`banner-tab ${currentSection === 'classes' ? 'active' : ''}`}
                   onClick={() => { setCurrentSection('classes'); setServicesSubView('directory'); setFilters(f => ({...f, category: 'all'})); window.history.pushState({ section: 'classes' }, '', '#classes'); }}
                 >
@@ -10702,6 +10725,8 @@ export default function PulseApp() {
                   <span>Classes</span>
                 </button>
                 <button
+                  role="tab"
+                  aria-selected={currentSection === 'events'}
                   className={`banner-tab ${currentSection === 'events' ? 'active' : ''}`}
                   onClick={() => { setCurrentSection('events'); setServicesSubView('directory'); setFilters(f => ({...f, category: 'all'})); window.history.pushState({ section: 'events' }, '', '#events'); }}
                 >
@@ -10709,6 +10734,8 @@ export default function PulseApp() {
                   <span>Events</span>
                 </button>
                 <button
+                  role="tab"
+                  aria-selected={currentSection === 'deals'}
                   className={`banner-tab ${currentSection === 'deals' ? 'active' : ''}`}
                   onClick={() => { setCurrentSection('deals'); setServicesSubView('directory'); setFilters(f => ({...f, category: 'all'})); window.history.pushState({ section: 'deals' }, '', '#deals'); }}
                 >
@@ -10716,8 +10743,10 @@ export default function PulseApp() {
                   <span>Deals</span>
                 </button>
               </div>
-              <div className="banner-tabs banner-tabs-row2">
+              <div className="banner-tabs banner-tabs-row2" role="tablist" aria-label="More sections">
                 <button
+                  role="tab"
+                  aria-selected={currentSection === 'services'}
                   className={`banner-tab ${currentSection === 'services' ? 'active' : ''}`}
                   onClick={() => { setCurrentSection('services'); window.history.pushState({ section: 'services' }, '', '#services'); }}
                 >
@@ -10725,6 +10754,8 @@ export default function PulseApp() {
                   <span>Services</span>
                 </button>
                 <button
+                  role="tab"
+                  aria-selected={currentSection === 'wellness'}
                   className={`banner-tab ${currentSection === 'wellness' ? 'active' : ''}`}
                   onClick={() => { setCurrentSection('wellness'); window.history.pushState({ section: 'wellness' }, '', '#wellness'); }}
                 >
@@ -10733,17 +10764,18 @@ export default function PulseApp() {
                 </button>
               </div>
             </div>
-          </div>
+          </nav>
 
           {/* Search Bar - Premium (hidden for wellness which has its own UI) */}
           <div className="search-section-premium" style={currentSection === 'wellness' ? { display: 'none' } : undefined}>
             <div className="search-bar-premium">
               <Search size={20} className="search-icon-premium" />
-              <input 
-                type="text" 
-                placeholder={`Search ${currentSection}...`} 
-                value={searchQuery} 
-                onChange={(e) => setSearchQuery(e.target.value)} 
+              <input
+                type="text"
+                placeholder={`Search ${currentSection}...`}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                aria-label={`Search ${currentSection}`}
               />
               {searchQuery && (
                 <button 
@@ -10784,10 +10816,11 @@ export default function PulseApp() {
                 <div className="filters-row-top">
                   {/* Day Filter */}
                   <div className="filter-group">
-                    <select 
-                      value={filters.day} 
+                    <select
+                      value={filters.day}
                       onChange={(e) => setFilters({...filters, day: e.target.value})}
                       className="filter-dropdown"
+                      aria-label="Filter by day"
                     >
                       <option value="today">📅 Upcoming</option>
                       <option value="tomorrow">Tomorrow</option>
@@ -10799,10 +10832,11 @@ export default function PulseApp() {
 
                   {/* Time Filter - Dynamic 30-min slots */}
                   <div className="filter-group">
-                    <select 
-                      value={filters.time} 
+                    <select
+                      value={filters.time}
                       onChange={(e) => setFilters({...filters, time: e.target.value})}
                       className="filter-dropdown"
+                      aria-label="Filter by time"
                     >
                       <option value="all">🕐 All Times</option>
                       {getAvailableTimeSlots().map(timeSlot => {
@@ -10824,6 +10858,7 @@ export default function PulseApp() {
                   <div className="filter-group">
                     <select
                       value={filters.age}
+                      aria-label="Filter by age group"
                       onChange={(e) => {
                         setFilters({...filters, age: e.target.value});
                         if (e.target.value !== 'kids') {
@@ -10916,10 +10951,11 @@ export default function PulseApp() {
                 <div className="filters-row-bottom">
                   {/* Category Filter */}
                   <div className="filter-group">
-                    <select 
-                      value={filters.category} 
+                    <select
+                      value={filters.category}
                       onChange={(e) => setFilters({...filters, category: e.target.value})}
                       className="filter-dropdown"
+                      aria-label="Filter by category"
                     >
                       <option value="all">🏷️ All Categories</option>
                       {categories.slice(1).map(cat => <option key={cat} value={cat}>{cat}</option>)}
@@ -10928,10 +10964,11 @@ export default function PulseApp() {
 
                   {/* Price Filter */}
                   <div className="filter-group">
-                    <select 
-                      value={filters.price} 
+                    <select
+                      value={filters.price}
                       onChange={(e) => setFilters({...filters, price: e.target.value})}
                       className="filter-dropdown"
+                      aria-label="Filter by price"
                     >
                       <option value="all">💵 All Prices</option>
                       <option value="free">Free</option>
@@ -10962,9 +10999,9 @@ export default function PulseApp() {
             </>
           )}
 
-          <div className="content">
+          <main className="content">
             {currentSection !== 'wellness' && (
-            <div className="results-count">
+            <div className="results-count" aria-live="polite" aria-atomic="true">
               {currentSection === 'deals' ? (
                 dealsLoading ? 'Loading...' : `${filterDeals().filter(d => dealCategoryFilter === 'All' || normalizeDealCategory(d.category) === dealCategoryFilter).length} results`
               ) : currentSection === 'services' ? (
@@ -10994,6 +11031,7 @@ export default function PulseApp() {
                         value={dealCategoryFilter}
                         onChange={(e) => setDealCategoryFilter(e.target.value)}
                         className="filter-dropdown"
+                        aria-label="Filter deals by category"
                       >
                         <option value="All">💰 All Deals</option>
                         <option value="Food & Drink">🍔 Food & Drink</option>
@@ -11107,6 +11145,7 @@ export default function PulseApp() {
                         value={serviceCategoryFilter}
                         onChange={(e) => setServiceCategoryFilter(e.target.value)}
                         className="filter-dropdown"
+                        aria-label="Filter services by category"
                       >
                         <option value="All">🔧 All Services</option>
                         <option value="Restaurants & Dining">🍽️ Restaurants & Dining</option>
@@ -11374,11 +11413,11 @@ export default function PulseApp() {
                 {renderEventsWithDividers()}
               </div>
             )}
-          </div>
+          </main>
 
           {/* Event/Class Detail Modal - Premium */}
           {selectedEvent && (
-            <div className="modal-overlay event-modal-overlay" onClick={() => setSelectedEvent(null)}>
+            <div className="modal-overlay event-modal-overlay" role="dialog" aria-modal="true" aria-label="Event details" onClick={() => setSelectedEvent(null)}>
               <div className="event-detail-modal" onClick={(e) => e.stopPropagation()}>
                 <button className="close-btn event-close" onClick={() => setSelectedEvent(null)}>
                   <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -11640,7 +11679,7 @@ export default function PulseApp() {
 
           {/* Deal Detail Modal - Premium */}
           {selectedDeal && (
-            <div className="modal-overlay deal-modal-overlay" onClick={() => setSelectedDeal(null)}>
+            <div className="modal-overlay deal-modal-overlay" role="dialog" aria-modal="true" aria-label="Deal details" onClick={() => setSelectedDeal(null)}>
               <div className="deal-detail-modal" onClick={(e) => e.stopPropagation()}>
                 <button className="close-btn deal-close" onClick={() => setSelectedDeal(null)}>
                   <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{display: 'block'}}>
@@ -11874,7 +11913,7 @@ export default function PulseApp() {
 
           {/* Service Detail Modal - Premium */}
           {selectedService && (
-            <div className="modal-overlay service-modal-overlay" onClick={() => { setSelectedService(null); setUserServiceRating(0); setHoverServiceRating(0); }}>
+            <div className="modal-overlay service-modal-overlay" role="dialog" aria-modal="true" aria-label="Service details" onClick={() => { setSelectedService(null); setUserServiceRating(0); setHoverServiceRating(0); }}>
               <div className="service-detail-modal" onClick={(e) => e.stopPropagation()}>
                 <button className="close-btn service-close" onClick={() => { setSelectedService(null); setUserServiceRating(0); setHoverServiceRating(0); }}><X size={24} /></button>
                 
@@ -12210,7 +12249,7 @@ export default function PulseApp() {
 
           {/* Add Event Modal */}
           {showAddEventModal && (
-            <div className="modal-overlay" onClick={closeAddEventModal}>
+            <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Add event" onClick={closeAddEventModal}>
               <div className="modal-content add-event-modal" onClick={(e) => e.stopPropagation()}>
                 <button className="close-btn" onClick={closeAddEventModal}><X size={24} /></button>
                 <div className="modal-header-premium">
@@ -12248,7 +12287,7 @@ export default function PulseApp() {
 
           {/* Claim Business Modal - Premium Purple Theme */}
           {showClaimBusinessModal && (
-            <div className="modal-overlay" onClick={() => { setShowClaimBusinessModal(false); setClaimFormData({ businessName: '', ownerName: '', email: '', phone: '', role: 'owner', address: '' }); }}>
+            <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Claim business" onClick={() => { setShowClaimBusinessModal(false); setClaimFormData({ businessName: '', ownerName: '', email: '', phone: '', role: 'owner', address: '' }); }}>
               <div className="claim-modal-premium" onClick={(e) => e.stopPropagation()}>
                 <button className="claim-modal-close" onClick={() => { setShowClaimBusinessModal(false); setClaimFormData({ businessName: '', ownerName: '', email: '', phone: '', role: 'owner', address: '' }); }}><X size={24} /></button>
 
@@ -12382,7 +12421,7 @@ export default function PulseApp() {
 
           {/* My Calendar Modal - Premium */}
           {showMyCalendarModal && (
-            <div className="modal-overlay calendar-modal-overlay" onClick={() => setShowMyCalendarModal(false)}>
+            <div className="modal-overlay calendar-modal-overlay" role="dialog" aria-modal="true" aria-label="My calendar" onClick={() => setShowMyCalendarModal(false)}>
               <div className="calendar-modal" onClick={(e) => e.stopPropagation()}>
                 <button className="close-btn calendar-close" onClick={() => setShowMyCalendarModal(false)}><X size={24} /></button>
                 
@@ -12496,7 +12535,7 @@ export default function PulseApp() {
 
           {/* Calendar Toast Notification */}
           {showCalendarToast && (
-            <div className="calendar-toast">
+            <div className="calendar-toast" role="alert" aria-live="assertive">
               <div className="toast-icon">
                 <Calendar size={20} />
               </div>
@@ -12506,7 +12545,7 @@ export default function PulseApp() {
 
           {/* Submission Modal - Add Event/Class/Deal */}
           {showSubmissionModal && (
-            <div className="modal-overlay submission-modal-overlay" onClick={closeSubmissionModal}>
+            <div className="modal-overlay submission-modal-overlay" role="dialog" aria-modal="true" aria-label="Submit event" onClick={closeSubmissionModal}>
               <div className="submission-modal" onClick={(e) => e.stopPropagation()}>
                 <button className="close-btn submission-close" onClick={closeSubmissionModal}><X size={24} /></button>
                 
@@ -13203,7 +13242,7 @@ export default function PulseApp() {
 
           {/* Premium Profile Modal */}
           {showProfileModal && (
-            <div className="modal-overlay profile-modal-overlay" onClick={() => setShowProfileModal(false)}>
+            <div className="modal-overlay profile-modal-overlay" role="dialog" aria-modal="true" aria-label="Profile" onClick={() => setShowProfileModal(false)}>
               <div className="profile-modal" onClick={(e) => e.stopPropagation()}>
                 <button className="close-btn profile-close" onClick={() => setShowProfileModal(false)}><X size={24} /></button>
                 
@@ -14102,7 +14141,7 @@ export default function PulseApp() {
 
           {/* Booking Bottom Sheet */}
           {showBookingSheet && bookingEvent && (
-            <div className="modal-overlay booking-sheet-overlay" onClick={closeBookingSheet}>
+            <div className="modal-overlay booking-sheet-overlay" role="dialog" aria-modal="true" aria-label="Book class" onClick={closeBookingSheet}>
               <div className={`booking-bottom-sheet ${bookingStep === 'iframe' ? 'full-height' : ''}`} onClick={(e) => e.stopPropagation()}>
                 <div className="sheet-handle" />
                 <button className="close-btn sheet-close" onClick={closeBookingSheet}>
@@ -14230,7 +14269,7 @@ export default function PulseApp() {
 
           {/* Booking Confirmation Dialog */}
           {showBookingConfirmation && (
-            <div className="modal-overlay confirmation-overlay">
+            <div className="modal-overlay confirmation-overlay" role="dialog" aria-modal="true" aria-label="Confirm booking">
               <div className="confirmation-dialog">
                 <div className="confirmation-icon">
                   <CheckCircle size={48} />
@@ -14258,7 +14297,7 @@ export default function PulseApp() {
 
           {/* Contact Business Sheet */}
           {showContactSheet && contactBusiness && (
-            <div className="modal-overlay contact-sheet-overlay" onClick={() => setShowContactSheet(false)}>
+            <div className="modal-overlay contact-sheet-overlay" role="dialog" aria-modal="true" aria-label="Contact business" onClick={() => setShowContactSheet(false)}>
               <div className="contact-bottom-sheet" onClick={(e) => e.stopPropagation()}>
                 <div className="sheet-handle" />
                 <button className="close-btn sheet-close" onClick={() => setShowContactSheet(false)}>
@@ -14315,7 +14354,7 @@ export default function PulseApp() {
 
           {/* Messages Modal */}
           {showMessagesModal && (
-            <div className="modal-overlay messages-modal-overlay" onClick={() => setShowMessagesModal(false)}>
+            <div className="modal-overlay messages-modal-overlay" role="dialog" aria-modal="true" aria-label="Messages" onClick={() => setShowMessagesModal(false)}>
               <div className="messages-modal" onClick={(e) => e.stopPropagation()}>
                 <button className="close-btn messages-close" onClick={() => { setShowMessagesModal(false); setCurrentConversation(null); }}>
                   <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -14434,7 +14473,7 @@ export default function PulseApp() {
 
           {/* Admin Panel Modal */}
           {showAdminPanel && user.isAdmin && (
-            <div className="modal-overlay admin-modal-overlay" onClick={() => setShowAdminPanel(false)}>
+            <div className="modal-overlay admin-modal-overlay" role="dialog" aria-modal="true" aria-label="Admin panel" onClick={() => setShowAdminPanel(false)}>
               <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
                 <button className="close-btn admin-close" onClick={() => setShowAdminPanel(false)}><X size={24} /></button>
                 
@@ -15815,7 +15854,7 @@ export default function PulseApp() {
 
       {/* Edit Venue Modal - Global (works from any view) */}
       {showEditVenueModal && editingVenue && (
-        <div className="modal-overlay" onClick={() => { setShowEditVenueModal(false); setEditingVenue(null); }}>
+        <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Edit venue" onClick={() => { setShowEditVenueModal(false); setEditingVenue(null); }}>
           <div className="claim-modal-premium" onClick={(e) => e.stopPropagation()}>
             <button className="claim-modal-close" onClick={() => { setShowEditVenueModal(false); setEditingVenue(null); }}><X size={24} /></button>
 
@@ -15933,7 +15972,7 @@ export default function PulseApp() {
 
       {/* Edit Event/Class Modal */}
       {showEditEventModal && editingEvent && (
-        <div className="modal-overlay" onClick={() => { setShowEditEventModal(false); setEditingEvent(null); }}>
+        <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Edit event" onClick={() => { setShowEditEventModal(false); setEditingEvent(null); }}>
           <div className="claim-modal-premium" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header-premium">
               <h2>Edit {editingEvent.eventType === 'class' ? 'Class' : 'Event'}</h2>
@@ -16172,7 +16211,7 @@ export default function PulseApp() {
 
       {/* Auth Modal */}
       {showAuthModal && (
-        <div className="modal-overlay" onClick={() => { setShowAuthModal(false); setAuthError(''); setAuthEmail(''); setAuthPassword(''); setAuthName(''); }}>
+        <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Sign in" onClick={() => { setShowAuthModal(false); setAuthError(''); setAuthEmail(''); setAuthPassword(''); setAuthName(''); }}>
           <div className="auth-modal" onClick={(e) => e.stopPropagation()}>
             <button className="auth-modal-close" onClick={() => { setShowAuthModal(false); setAuthError(''); setAuthEmail(''); setAuthPassword(''); setAuthName(''); }}><X size={24} /></button>
             <div className="auth-modal-header">

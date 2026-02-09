@@ -703,20 +703,30 @@ expect(value).toBe('test@example.com');
 
 | Section | Tests |
 |---------|-------|
-| Search | 7 |
-| Form Inputs | 25 |
-| Modal Open/Close | 12 |
-| Modal Content | 8 |
-| Buttons | 37 |
-| Complete Flows | 6 flows (60+ steps) |
-| Filters | 6 |
-| Toasts | 8 |
-| Error States | 10 |
-| Keyboard | 4 |
-| Mobile | 4 |
-| Persistence | 4 |
+| 1. Search | 7 |
+| 2. Form Inputs | 25 |
+| 3. Modal Open/Close | 12 |
+| 3. Modal Content | 8 |
+| 4. Buttons | 37 |
+| 5. Complete Flows | 6 flows (60+ steps) |
+| 6. Filters & Correctness | 26 |
+| 7. Toasts | 8 |
+| 8. Error States | 10 |
+| 9. Keyboard | 4 |
+| 10. Mobile | 4 |
+| 11. Persistence | 4 |
+| 12. Data Integrity | 16 |
+| 14. Performance | 15 |
+| 15. Network & API | 9 |
+| 16. Offline & Network Failure | 5 |
+| 17. Multi-Tab & Session | 10 |
+| 18. Browser Zoom & Viewport | 8 |
+| 19. Stress Testing | 10 |
+| 20. External Links & URLs | 10 |
+| 21. Accessibility | 16 |
+| 22. Visual Consistency | 10 |
 
-**TOTAL: 185+ individual verifications**
+**TOTAL: 310+ individual verifications**
 
 ---
 
@@ -749,6 +759,198 @@ expect(value).toBe('test@example.com');
 | DATA-016 | New booking source verified | Visit schedule URL in browser | Actual classes visible before adding to scraper |
 
 ---
+
+---
+
+# SECTION 14: PERFORMANCE
+
+## 14.1 Page Load Performance
+
+| ID | Check | How to Verify | Pass Criteria |
+|----|-------|---------------|---------------|
+| PERF-001 | Initial page load time | DevTools Network tab → DOMContentLoaded | < 3 seconds |
+| PERF-002 | Classes tab load | Navigate to Classes, measure time to first card render | < 2 seconds |
+| PERF-003 | Events tab load | Navigate to Events, measure time to first card render | < 2 seconds |
+| PERF-004 | Deals tab load | Navigate to Deals, measure time to first card render | < 2 seconds |
+| PERF-005 | Services tab load | Navigate to Services, measure time to first card render | < 2 seconds |
+| PERF-006 | Wellness tab load | Navigate to Wellness, measure time to first card render | < 2 seconds |
+
+## 14.2 Interaction Performance
+
+| ID | Check | How to Verify | Pass Criteria |
+|----|-------|---------------|---------------|
+| PERF-010 | Tab switching | Click between tabs, measure delay | < 500ms, no visible lag |
+| PERF-011 | Filter selection | Select a filter, measure time to results update | < 500ms |
+| PERF-012 | Search typing | Type in search, measure debounce + results update | Results appear within 300ms of stop typing |
+| PERF-013 | Modal open | Click card to open modal, measure time | < 300ms |
+| PERF-014 | Modal close | Close modal, measure time | < 200ms |
+| PERF-015 | Scroll performance | Scroll through 100+ cards, check for jank | Smooth 60fps, no stuttering |
+
+## 14.3 Memory & Resource
+
+| ID | Check | How to Verify | Pass Criteria |
+|----|-------|---------------|---------------|
+| PERF-020 | Memory leak — navigation | DevTools → Performance Monitor → JS Heap → navigate all 5 tabs 3x | Heap returns to baseline (±20%) |
+| PERF-021 | Memory leak — modals | Open and close 20 modals, check heap | Heap returns to baseline (±20%) |
+| PERF-022 | Memory leak — filters | Toggle filters 20 times, check heap | Heap returns to baseline (±20%) |
+| PERF-023 | Bundle size | Check network transfer size | Main JS bundle < 500KB gzipped |
+| PERF-024 | Unnecessary re-renders | React DevTools Profiler → navigate app | No component renders >10ms without interaction |
+
+---
+
+# SECTION 15: NETWORK & API INTEGRITY
+
+## 15.1 Request Monitoring
+
+| ID | Check | How to Verify | Pass Criteria |
+|----|-------|---------------|---------------|
+| NET-001 | No failed requests on load | DevTools → Network → load app → filter 4xx/5xx | Zero failed requests |
+| NET-002 | No failed requests on navigation | Navigate all 5 tabs → filter 4xx/5xx | Zero failed requests |
+| NET-003 | No duplicate requests | Watch Network tab during tab switch | No same-URL called 2+ times within 1 second |
+| NET-004 | No hanging requests | Watch Network tab for 30 seconds | No requests with "pending" status > 10 seconds |
+| NET-005 | Supabase queries efficient | Check query timing in Network tab | No single query > 2 seconds |
+
+## 15.2 Error Handling
+
+| ID | Check | How to Verify | Pass Criteria |
+|----|-------|---------------|---------------|
+| NET-010 | API timeout handling | Throttle network to Slow 3G, interact with app | Timeout message shown, no crash |
+| NET-011 | Empty response handling | Check what happens when Supabase returns `[]` | Empty state message, not blank/crash |
+| NET-012 | Malformed response | (Code review) Check `.catch()` on all fetch calls | All Supabase calls have error handling |
+| NET-013 | CORS errors | Check console for CORS-related errors | Zero CORS errors |
+
+---
+
+# SECTION 16: OFFLINE & NETWORK FAILURE
+
+| ID | Check | How to Verify | Pass Criteria |
+|----|-------|---------------|---------------|
+| OFF-001 | Disconnect on page load | DevTools → Network → Offline → refresh | Error message shown, not blank white screen |
+| OFF-002 | Disconnect mid-navigation | Load app → go offline → click new tab | Graceful failure, no crash |
+| OFF-003 | Disconnect during save | Start saving item → go offline mid-action | Error toast, not silent failure |
+| OFF-004 | Reconnect recovery | Go offline → go online → interact | App recovers, data loads |
+| OFF-005 | Disconnect during form submit | Fill form → go offline → submit | Error message, form data preserved |
+
+---
+
+# SECTION 17: MULTI-TAB & SESSION PERSISTENCE
+
+## 17.1 Multi-Tab
+
+| ID | Check | How to Verify | Pass Criteria |
+|----|-------|---------------|---------------|
+| TAB-001 | Two tabs same page | Open app in 2 tabs on same tab | Both render correctly |
+| TAB-002 | Save in tab A, check tab B | Save item in tab A → refresh tab B | Saved item appears in tab B |
+| TAB-003 | Login in tab A, check tab B | Log in tab A → refresh tab B | Tab B shows logged-in state |
+| TAB-004 | Logout in tab A, check tab B | Log out tab A → interact in tab B | Tab B handles gracefully (redirect or show guest) |
+| TAB-005 | 5 tabs simultaneously | Open 5 tabs, navigate each differently | No conflicts, no console errors, no memory crash |
+
+## 17.2 Session Persistence
+
+| ID | Check | How to Verify | Pass Criteria |
+|----|-------|---------------|---------------|
+| SESS-001 | Refresh preserves auth | Log in → refresh page | Still logged in |
+| SESS-002 | Tab close/reopen preserves auth | Log in → close tab → open new tab to same URL | Still logged in (if expected) |
+| SESS-003 | Active tab preserved on refresh | Navigate to Events → refresh | Events tab still active |
+| SESS-004 | Filter state on refresh | Set filters → refresh | Filters reset (expected) or preserved (if implemented) |
+| SESS-005 | Auth state after 30 min idle | Log in → wait 30 min → interact | Session still valid or graceful re-auth prompt |
+
+---
+
+# SECTION 18: BROWSER ZOOM & VIEWPORT
+
+| ID | Check | How to Verify | Pass Criteria |
+|----|-------|---------------|---------------|
+| ZOOM-001 | 50% zoom | Browser zoom to 50% → navigate all tabs | Layout usable, no overlap, no cut-off text |
+| ZOOM-002 | 75% zoom | Browser zoom to 75% → navigate all tabs | Layout usable |
+| ZOOM-003 | 150% zoom | Browser zoom to 150% → navigate all tabs | Layout usable, scrollable |
+| ZOOM-004 | 200% zoom | Browser zoom to 200% → navigate all tabs | Layout usable, no horizontal overflow |
+| ZOOM-005 | 375px mobile viewport | DevTools → responsive → 375px | Full app usable, no overflow |
+| ZOOM-006 | 768px tablet viewport | DevTools → responsive → 768px | Layout adapts appropriately |
+| ZOOM-007 | 1920px desktop viewport | DevTools → responsive → 1920px | No excessive whitespace, centered layout |
+| ZOOM-008 | Landscape mobile (667x375) | DevTools → responsive → 667x375 | App usable in landscape |
+
+---
+
+# SECTION 19: LARGE INPUT & STRESS TESTING
+
+| ID | Check | How to Verify | Pass Criteria |
+|----|-------|---------------|---------------|
+| STRESS-001 | 10,000 char paste into search | Paste massive string into search input | No crash, input accepts or truncates gracefully |
+| STRESS-002 | 10,000 char paste into form inputs | Paste into each form field (auth, claim, submit) | No crash, validation or truncation |
+| STRESS-003 | Rapid tab switching (20x in 5s) | Click tabs as fast as possible | No crash, correct tab renders |
+| STRESS-004 | Rapid filter toggling (20x in 5s) | Toggle filters on/off rapidly | No crash, correct results shown at end |
+| STRESS-005 | Rapid modal open/close (10x) | Open and close same modal 10 times fast | No duplicate modals, no orphaned overlays |
+| STRESS-006 | Rapid save/unsave (10x) | Toggle save button 10 times fast | Final state correct (saved or unsaved), no duplicates in DB |
+| STRESS-007 | Rapid card clicks | Click 5 different cards in 2 seconds | No multiple modals stacked, last one wins |
+| STRESS-008 | XSS in search | Type `<script>alert('xss')</script>` in search | No alert fires, text displayed as-is or sanitized |
+| STRESS-009 | SQL injection in search | Type `'; DROP TABLE events; --` in search | No error, treated as text |
+| STRESS-010 | Emoji in inputs | Type emoji characters in all inputs | Accepted or gracefully rejected |
+
+---
+
+# SECTION 20: EXTERNAL LINKS & URLS
+
+| ID | Check | How to Verify | Pass Criteria |
+|----|-------|---------------|---------------|
+| LINK-001 | Service website links | Click "Website" on 5 random service modals | Opens correct URL in new tab, not 404 |
+| LINK-002 | Service phone links | Click "Call" on 5 random service modals | Opens tel: link with correct number |
+| LINK-003 | Service email links | Click "Email" on 5 random service modals | Opens mailto: link with correct address |
+| LINK-004 | Service directions links | Click "Directions" on 5 random service modals | Opens Google Maps with correct location |
+| LINK-005 | Event booking links | Click "Book" on 5 events with booking URLs | Opens correct booking page, not 404 |
+| LINK-006 | Deal redeem links | Click "Redeem" on 5 deals | Opens correct deal URL or shows code |
+| LINK-007 | Website URL protocol | Check services with websites missing http:// | URL has protocol prepended, link works |
+| LINK-008 | Phone number formatting | Check tel: links for special characters | Only digits and + in tel: href |
+| LINK-009 | External links open in new tab | Click external links | All open in new tab (target="_blank") |
+| LINK-010 | External links have rel="noopener" | Inspect external link elements | All have `rel="noopener noreferrer"` |
+
+---
+
+# SECTION 21: ACCESSIBILITY
+
+## 21.1 Keyboard Navigation
+
+| ID | Check | How to Verify | Pass Criteria |
+|----|-------|---------------|---------------|
+| A11Y-001 | Tab order logical | Tab through entire page | Focus moves in reading order |
+| A11Y-002 | All interactive elements focusable | Tab through — can reach every button, link, input | Nothing skipped |
+| A11Y-003 | Focus visible on all elements | Tab through — focus ring visible | Clear visual indicator on focused element |
+| A11Y-004 | Enter activates buttons | Focus button → press Enter | Button action fires |
+| A11Y-005 | Space activates checkboxes/toggles | Focus checkbox → press Space | Toggle state changes |
+| A11Y-006 | ESC closes modals/dropdowns | Open modal → press ESC | Modal closes |
+| A11Y-007 | Arrow keys in dropdowns | Open dropdown → arrow up/down | Options navigate correctly |
+| A11Y-008 | Focus trapped in modals | Open modal → Tab repeatedly | Focus stays within modal, doesn't go to background |
+| A11Y-009 | Focus returns after modal close | Open modal → close → check focus | Focus returns to trigger element |
+| A11Y-010 | Skip to content link | Press Tab on page load | "Skip to content" link appears (or n/a) |
+
+## 21.2 Screen Reader & ARIA
+
+| ID | Check | How to Verify | Pass Criteria |
+|----|-------|---------------|---------------|
+| A11Y-020 | All images have alt text | Inspect `<img>` elements | All have meaningful `alt` attribute |
+| A11Y-021 | Form inputs have labels | Inspect inputs | All have associated `<label>` or `aria-label` |
+| A11Y-022 | Buttons have accessible names | Inspect icon-only buttons | All have `aria-label` or visible text |
+| A11Y-023 | Modals have role="dialog" | Inspect modal elements | `role="dialog"` and `aria-modal="true"` |
+| A11Y-024 | Live regions for toasts | Inspect toast container | `role="alert"` or `aria-live="polite"` |
+| A11Y-025 | Color contrast ratio | Use DevTools accessibility audit | All text meets WCAG AA (4.5:1 normal, 3:1 large) |
+| A11Y-026 | No info conveyed by color alone | Check error states, status indicators | Text/icon accompanies color indicators |
+
+---
+
+# SECTION 22: VISUAL CONSISTENCY
+
+| ID | Check | How to Verify | Pass Criteria |
+|----|-------|---------------|---------------|
+| VIS-001 | Font consistency | Navigate all 5 tabs + modals | Same font family throughout |
+| VIS-002 | Color scheme consistency | Navigate all tabs | Primary/secondary colors match design system |
+| VIS-003 | Spacing consistency | Compare padding/margins across cards | Consistent spacing between similar elements |
+| VIS-004 | No element overlap | Scroll through all tabs at 375px | No elements covering other elements |
+| VIS-005 | No horizontal scroll | Check all tabs at 375px, 768px, 1440px | `document.body.scrollWidth <= window.innerWidth` |
+| VIS-006 | Card height consistency | View cards in grid layout | Similar cards have consistent heights |
+| VIS-007 | Icon consistency | Check icon sizes and styles across tabs | Same icon library, consistent sizing |
+| VIS-008 | Button styling consistency | Compare primary/secondary buttons | Same border-radius, padding, hover states |
+| VIS-009 | Loading state consistency | Trigger loading on multiple tabs | Same loading indicator style |
+| VIS-010 | Empty state consistency | Trigger empty states on multiple tabs | Same empty state pattern/style |
 
 ---
 
