@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Calendar, CalendarPlus, MapPin, Clock, Star, Check, Bell, Search, Filter, ChevronRight, ChevronLeft, X, Plus, Edit2, Trash2, Eye, Users, DollarSign, AlertCircle, CheckCircle, XCircle, SlidersHorizontal, Building, Wrench, TrendingUp, Phone, Globe, Navigation, Mail, Share2, Ticket, Percent, Tag, Repeat, ExternalLink, Heart, Copy, Info, Gift, Sparkles, Zap, Camera, MessageCircle, Send, WifiOff } from 'lucide-react';
+import { Calendar, MapPin, Clock, Star, Check, Bell, Search, Filter, ChevronRight, X, Plus, Eye, Users, DollarSign, CheckCircle, SlidersHorizontal, Building, Wrench, Navigation, Percent, Heart, Sparkles, MessageCircle, Send, WifiOff } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import { useUserData } from './hooks/useUserData';
 import { formatResponseTime } from './lib/businessAnalytics';
