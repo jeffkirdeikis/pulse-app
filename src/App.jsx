@@ -91,7 +91,6 @@ export default function PulseApp() {
   const {
     session,
     isAuthenticated,
-    loading: _userLoading,
     user,
     userStats,
     userAchievements,
@@ -129,8 +128,6 @@ export default function PulseApp() {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [profileTab, setProfileTab] = useState('overview'); // overview, activity, saved, businesses, settings
   const [activityFilter, setActivityFilter] = useState('all');
-  const [_editingProfile, _setEditingProfile] = useState(false);
-  const [_profileForm, _setProfileForm] = useState({});
 
   const [savedItemsFilter, setSavedItemsFilter] = useState('event');
   const [localSavedItems, setLocalSavedItems] = useState(() => {
@@ -648,27 +645,6 @@ export default function PulseApp() {
     }
   };
 
-  // Handle iframe load/error - kept for future use
-  const _handleIframeLoad = () => {
-    setIframeLoaded(true);
-  };
-
-  const _handleIframeError = () => {
-    setIframeFailed(true);
-  };
-
-  // Handle contact business - kept for future use
-  const _handleContactBusiness = (business) => {
-    if (user.isGuest) {
-      setShowAuthModal(true);
-      return;
-    }
-    setContactBusiness(business);
-    setContactSubject('');
-    setContactMessage('');
-    setShowContactSheet(true);
-  };
-
   // Submit contact form
   const submitContactForm = async () => {
     if (!contactMessage.trim() || !contactBusiness) return;
@@ -797,7 +773,7 @@ export default function PulseApp() {
 
   // Business Analytics State
   const [businessAnalytics, setBusinessAnalytics] = useState(null);
-  const [_analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [, setAnalyticsLoading] = useState(false);
   const [analyticsPeriod, setAnalyticsPeriod] = useState(30); // days
 
   // Fetch business analytics
@@ -921,9 +897,6 @@ export default function PulseApp() {
   const [cropperImage, setCropperImage] = useState(null);
   const [cropPosition, setCropPosition] = useState({ x: 0, y: 0 });
   const [cropZoom, setCropZoom] = useState(1);
-  const [_isDragging, _setIsDragging] = useState(false);
-  const [_dragStart, _setDragStart] = useState({ x: 0, y: 0 });
-  const _cropperRef = useRef(null);
 
   // Offline detection
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
@@ -968,8 +941,8 @@ export default function PulseApp() {
   const [showBookingSheet, setShowBookingSheet] = useState(false);
   const [bookingEvent, setBookingEvent] = useState(null);
   const [bookingStep, setBookingStep] = useState('iframe'); // iframe, request, confirmation
-  const [_iframeLoaded, setIframeLoaded] = useState(false);
-  const [_iframeFailed, setIframeFailed] = useState(false);
+  const [, setIframeLoaded] = useState(false);
+  const [, setIframeFailed] = useState(false);
   const [showBookingConfirmation, setShowBookingConfirmation] = useState(false);
   const [bookingRequestMessage, setBookingRequestMessage] = useState('');
   const [showMessagesModal, setShowMessagesModal] = useState(false);
@@ -1560,13 +1533,6 @@ export default function PulseApp() {
   };
   const isVerified = (venueId) => REAL_DATA.venues.find(v => v.id === venueId)?.verified || false;
   
-  const _getTimeUntil = (date) => {
-    const hours = Math.floor((date - getPacificNow()) / (1000 * 60 * 60));
-    if (hours < 0) return 'Past';
-    if (hours < 1) return 'Soon';
-    if (hours < 24) return `${hours}h`;
-    return `${Math.floor(hours / 24)}d`;
-  };
 
   const filterEvents = () => {
     const now = getPacificNow(); // Always filter based on Squamish time
