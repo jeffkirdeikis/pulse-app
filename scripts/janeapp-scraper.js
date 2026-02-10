@@ -14,6 +14,7 @@
 
 import puppeteer from 'puppeteer';
 import { createClient } from '@supabase/supabase-js';
+import { getTodayPacific } from './lib/scraper-utils.js';
 
 // Initialize Supabase with service role key for full access
 const supabase = createClient(
@@ -255,7 +256,11 @@ async function scrapeClinic(browser, clinic) {
               try {
                 const d = new Date(match[0]);
                 if (!isNaN(d.getTime())) {
-                  pageDate = d.toISOString().split('T')[0];
+                  // Use local date parts to avoid UTC conversion shifting the date
+                  const year = d.getFullYear();
+                  const month = String(d.getMonth() + 1).padStart(2, '0');
+                  const day = String(d.getDate()).padStart(2, '0');
+                  pageDate = `${year}-${month}-${day}`;
                   break;
                 }
               } catch { /* skip */ }
@@ -589,7 +594,7 @@ async function upsertSlots(allSlots, providerMap) {
     return;
   }
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = getTodayPacific();
   const records = [];
 
   let skippedNoDate = 0;
@@ -602,10 +607,19 @@ async function upsertSlots(allSlots, providerMap) {
       continue;
     }
 
-    // Default to today if date couldn't be extracted from the page
-    // JaneApp booking pages default to showing today's availability
+    // SAFETY: Skip records without a parseable date instead of defaulting to today.
+    // Defaulting to today can produce false data when the scraper fails to extract dates.
     if (!slot.date) {
-      slot.date = today;
+      skippedNoDate++;
+      console.warn(`   [janeapp] Skipping slot for ${slot.clinicName} - no date could be parsed from page`);
+      continue;
+    }
+
+    // Validate date format (YYYY-MM-DD)
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(slot.date)) {
+      skippedNoDate++;
+      console.warn(`   [janeapp] Skipping slot for ${slot.clinicName} - invalid date format: ${slot.date}`);
+      continue;
     }
 
     // Reject slots with past dates
@@ -721,6 +735,42 @@ async function upsertSlots(allSlots, providerMap) {
 }
 
 /**
+ * Post-scrape validation: check for suspicious duplication in availability slots.
+ * If a single provider has an unreasonable number of identical time slots across
+ * many dates, the scraper likely failed to navigate and duplicated data.
+ */
+async function validateJaneAppSlots() {
+  try {
+    const today = getTodayPacific();
+    const { data: slots, error } = await supabase
+      .from('pulse_availability_slots')
+      .select('provider_id, date, start_time')
+      .gte('date', today)
+      .eq('source', 'janeapp_scrape');
+
+    if (error || !slots || slots.length === 0) return;
+
+    // Group by provider and check for suspicious patterns
+    const byProvider = {};
+    for (const s of slots) {
+      if (!byProvider[s.provider_id]) byProvider[s.provider_id] = [];
+      byProvider[s.provider_id].push(s);
+    }
+
+    for (const [providerId, providerSlots] of Object.entries(byProvider)) {
+      const uniqueTimes = new Set(providerSlots.map(s => s.start_time));
+      const uniqueDates = new Set(providerSlots.map(s => s.date));
+      // If same time slots appear on every single date, likely duplication
+      if (uniqueDates.size > 20 && uniqueTimes.size < 5) {
+        console.warn(`   [janeapp] VALIDATION WARNING: Provider ${providerId} has ${providerSlots.length} slots with only ${uniqueTimes.size} unique times across ${uniqueDates.size} dates - possible duplication`);
+      }
+    }
+  } catch {
+    // Don't block on validation errors
+  }
+}
+
+/**
  * Main scrape orchestrator
  */
 async function main() {
@@ -764,6 +814,9 @@ async function main() {
 
   // Write all slots to Supabase
   await upsertSlots(allSlots, providerMap);
+
+  // Post-scrape validation: check for suspicious slot duplication per clinic
+  await validateJaneAppSlots();
 
   // Summary
   console.log('\n📊 Summary:');

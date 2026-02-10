@@ -13,6 +13,15 @@ import puppeteer from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import { SUPABASE_URL, SUPABASE_SERVICE_KEY } from './lib/env.js';
 import {
+  classExists,
+  insertClass,
+  deleteOldClasses,
+  parseTime,
+  getTodayPacific,
+  getEndDatePacific,
+  validateScrapedData
+} from './lib/scraper-utils.js';
+import {
   RELIABLE_SOURCES,
   getSourcesBySystem,
   recordScrapeSuccess,
@@ -35,148 +44,9 @@ const stats = {
   errors: []
 };
 
-// ============================================================
-// UTILITY FUNCTIONS
-// ============================================================
-
-function parseTime(timeStr) {
-  if (!timeStr) return '09:00';
-  const match = timeStr.match(/(\d{1,2}):(\d{2})\s*(am|pm|AM|PM)?/);
-  if (match) {
-    let hours = parseInt(match[1]);
-    const minutes = match[2];
-    const period = (match[3] || '').toUpperCase();
-    if (period === 'PM' && hours < 12) hours += 12;
-    if (period === 'AM' && hours === 12) hours = 0;
-    return `${hours.toString().padStart(2, '0')}:${minutes}`;
-  }
-  return '09:00';
-}
-
-function getTodayPacific() {
-  const formatter = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'America/Los_Angeles',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit'
-  });
-  return formatter.format(new Date());
-}
-
-function getEndDatePacific(daysFromNow) {
-  const date = new Date();
-  date.setDate(date.getDate() + daysFromNow);
-  const formatter = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'America/Los_Angeles',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit'
-  });
-  return formatter.format(date);
-}
-
-async function classExists(title, date, venueName, time) {
-  try {
-    let url = `${SUPABASE_URL}/rest/v1/events?title=eq.${encodeURIComponent(title)}&start_date=eq.${date}&venue_name=eq.${encodeURIComponent(venueName)}`;
-    if (time) {
-      const normalizedTime = time.length === 5 ? `${time}:00` : time;
-      url += `&start_time=eq.${encodeURIComponent(normalizedTime)}`;
-    }
-    url += '&limit=1';
-    const response = await fetch(url,
-      { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }
-    );
-    const data = await response.json();
-    return data.length > 0;
-  } catch { return false; }
-}
-
-async function insertClass(cls) {
-  // SAFETY: Reject classes without a valid parsed date.
-  // This prevents the bug where navigation fails and all classes get assigned
-  // a computed date from the loop counter instead of a real parsed date.
-  if (!cls.date || !/^\d{4}-\d{2}-\d{2}$/.test(cls.date)) {
-    console.warn(`   ⚠️ Skipping "${cls.title}" - invalid date: ${cls.date}`);
-    return false;
-  }
-
-  const eventData = {
-    title: cls.title,
-    description: cls.instructor ? `Instructor: ${cls.instructor}` : `${cls.category} class at ${cls.venueName}`,
-    venue_name: cls.venueName,
-    venue_address: cls.address,
-    category: cls.category,
-    event_type: 'class',
-    start_date: cls.date,
-    start_time: cls.time,
-    end_time: cls.endTime || null,
-    price: 0,
-    is_free: false,
-    price_description: 'See venue for pricing',
-    status: 'active',
-    tags: ['auto-scraped', cls.bookingSystem, cls.venueName.toLowerCase().replace(/\s+/g, '-')]
-  };
-
-  try {
-    const response = await fetch(`${SUPABASE_URL}/rest/v1/events`, {
-      method: 'POST',
-      headers: {
-        'apikey': SUPABASE_KEY,
-        'Authorization': `Bearer ${SUPABASE_KEY}`,
-        'Content-Type': 'application/json',
-        'Prefer': 'return=minimal'
-      },
-      body: JSON.stringify(eventData)
-    });
-    return response.ok;
-  } catch { return false; }
-}
-
-/**
- * Post-scrape validation: detect suspicious date duplication.
- * If a venue has too many records per unique class title, the scraper
- * likely failed to navigate and duplicated the same schedule across dates.
- */
-async function validateScrapedData(venueName, bookingSystemTag) {
-  try {
-    const todayStr = getTodayPacific();
-    const response = await fetch(
-      `${SUPABASE_URL}/rest/v1/events?select=title,start_date&venue_name=eq.${encodeURIComponent(venueName)}&event_type=eq.class&start_date=gte.${todayStr}&tags=cs.{auto-scraped,${bookingSystemTag}}`,
-      { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }
-    );
-    const data = await response.json();
-    if (!Array.isArray(data) || data.length === 0) return;
-
-    const titles = new Set(data.map(d => d.title));
-    const ratio = data.length / titles.size;
-
-    // A class running every day for 30 days = ratio of 30.
-    // Most classes run 2-5x/week = ratio of 8-20 over 30 days.
-    // Ratio > 25 strongly indicates duplication (same schedule stamped on every day).
-    if (ratio > 25) {
-      console.warn(`   🚨 VALIDATION FAIL: ${venueName} has ${data.length} records for ${titles.size} unique classes (ratio: ${ratio.toFixed(1)}x)`);
-      console.warn(`      This likely indicates failed navigation causing date duplication.`);
-      console.warn(`      Deleting suspicious data to prevent incorrect schedules.`);
-      await deleteOldClasses(venueName, todayStr, bookingSystemTag);
-      return false;
-    }
-    return true;
-  } catch {
-    return true; // Don't block on validation errors
-  }
-}
-
-async function deleteOldClasses(venueName, fromDate, bookingSystemTag) {
-  try {
-    await fetch(
-      `${SUPABASE_URL}/rest/v1/events?venue_name=eq.${encodeURIComponent(venueName)}&event_type=eq.class&start_date=gte.${fromDate}&tags=cs.{auto-scraped,${bookingSystemTag}}`,
-      {
-        method: 'DELETE',
-        headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
-      }
-    );
-  } catch {}
-}
+// All utility functions (parseTime, getTodayPacific, getEndDatePacific,
+// classExists, insertClass, deleteOldClasses, validateScrapedData) are
+// imported from ./lib/scraper-utils.js
 
 // ============================================================
 // MINDBODY WIDGET SCRAPER (HealCode)
@@ -387,6 +257,7 @@ async function scrapeMindbodyClassic(source, browser) {
     // Scrape multiple weeks
     const allClasses = [];
     const WEEKS_TO_SCRAPE = 5;
+    let lastClassicPageText = '';
 
     for (let week = 0; week < WEEKS_TO_SCRAPE; week++) {
       const text = await page.evaluate(() => document.body.innerText);
@@ -394,6 +265,13 @@ async function scrapeMindbodyClassic(source, browser) {
       if (text.includes('Security Check') || text.includes('Verifying you are human')) {
         throw new Error('Blocked by security check');
       }
+
+      // Stale page detection: if content didn't change after navigation, stop
+      if (week > 0 && text === lastClassicPageText) {
+        console.log(`   Week ${week + 1}: Page content unchanged after navigation, stopping`);
+        break;
+      }
+      lastClassicPageText = text;
 
       const weekClasses = parseClassicSchedule(text, source);
       allClasses.push(...weekClasses);
@@ -403,19 +281,33 @@ async function scrapeMindbodyClassic(source, browser) {
           const weekArrowRight = document.querySelector('#week-arrow-r');
           if (weekArrowRight) {
             weekArrowRight.click();
-            return true;
+            return 'week-arrow-r';
           }
-          const nextButtons = document.querySelectorAll('.date-arrow-r, a[href*="fw=1"], .next-week');
-          for (const btn of nextButtons) {
-            btn.click();
-            return true;
+          // Fallback selectors for navigation resilience
+          const fallbackSelectors = [
+            '.date-arrow-r',
+            'a[href*="fw=1"]',
+            '.next-week',
+            '[class*="arrow-right"]',
+            '[class*="next"]',
+            'a[title*="Next"]',
+            '.fa-chevron-right',
+            '.fa-arrow-right'
+          ];
+          for (const sel of fallbackSelectors) {
+            const btn = document.querySelector(sel);
+            if (btn) {
+              btn.click();
+              return sel;
+            }
           }
-          return false;
+          return null;
         });
 
         if (clicked) {
           await new Promise(r => setTimeout(r, 3000));
         } else {
+          console.log(`   Week ${week + 1}: Could not find next week button (tried all fallback selectors)`);
           break;
         }
       }
@@ -578,15 +470,18 @@ async function scrapeWellnessLiving(source, browser) {
     // WellnessLiving shows a weekly schedule with day headers.
     // Navigate week by week to cover DAYS_TO_SCRAPE days.
     const weeksNeeded = Math.ceil(DAYS_TO_SCRAPE / 7);
+    let lastWLPageText = '';
 
     for (let week = 0; week < weeksNeeded; week++) {
       if (week > 0) {
         // Navigate to next week using the forward arrow/button
+        let navSuccess = false;
         try {
           const nextWeekBtn = await page.$('button[aria-label*="Next"], button[aria-label*="next"], .rs-schedule-next, [class*="next-week"], [class*="arrow-right"], a[title*="Next"], .fa-chevron-right, .fa-arrow-right');
           if (nextWeekBtn) {
             await nextWeekBtn.click();
             await new Promise(r => setTimeout(r, 3000));
+            navSuccess = true;
           } else {
             // Try clicking a ">" or right arrow by text content
             const arrows = await page.$$('button, a, span');
@@ -595,17 +490,30 @@ async function scrapeWellnessLiving(source, browser) {
               if (text === '>' || text === '›' || text === '→' || text === '▶') {
                 await arrow.click();
                 await new Promise(r => setTimeout(r, 3000));
+                navSuccess = true;
                 break;
               }
             }
           }
         } catch (navErr) {
-          console.log(`   ⚠️ Could not navigate to week ${week + 1}: ${navErr.message}`);
+          console.log(`   [wellnessliving] Could not navigate to week ${week + 1}: ${navErr.message}`);
+        }
+
+        if (!navSuccess) {
+          console.log(`   [wellnessliving] No next-week button found for week ${week + 1}, stopping`);
+          break;
         }
       }
 
       // Extract the full page text and parse day-by-day
       const pageText = await page.evaluate(() => document.body.innerText);
+
+      // Stale page detection: if content didn't change after navigation, stop
+      if (week > 0 && pageText === lastWLPageText) {
+        console.log(`   [wellnessliving] Page content unchanged after navigation, stopping`);
+        break;
+      }
+      lastWLPageText = pageText;
       const classes = parseWellnessLivingSchedule(pageText, source);
 
       console.log(`   Week ${week + 1}: Found ${classes.length} classes across ${new Set(classes.map(c => c.date)).size} days`);
@@ -937,14 +845,9 @@ async function scrapeSendMoreGetBeta(source, browser) {
     const text = await page.evaluate(() => document.body.innerText);
     const allClasses = parseSendMoreClasses(text, source);
 
-    // Filter for fitness classes and date range
-    const today = new Date();
-    const endDate = new Date(today);
-    endDate.setDate(today.getDate() + DAYS_TO_SCRAPE);
-
+    // Filter for fitness classes and date range (string comparison avoids UTC issues)
     for (const cls of allClasses) {
-      const classDate = new Date(cls.date);
-      if (classDate < today || classDate > endDate) continue;
+      if (cls.date < todayStr || cls.date > endDateStr) continue;
       if (!isFitnessClass(cls.title)) continue;
 
       classesFound++;

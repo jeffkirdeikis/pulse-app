@@ -30,6 +30,11 @@ import { SUPABASE_URL, SUPABASE_SERVICE_KEY } from './lib/env.js';
 import { extractAndVerify } from './lib/verified-extractor.js';
 import { validateEvent, validateAIExtracted, ValidationError } from './lib/event-validator.js';
 import {
+  classExists,
+  validateScrapedData,
+  getTodayPacific,
+} from './lib/scraper-utils.js';
+import {
   getVerifiedSourceUrl,
   saveVerifiedSource,
   deactivateVerifiedSource,
@@ -125,8 +130,20 @@ async function detectBookingSystem(html, url) {
   return detected;
 }
 
-// Check if event already exists in database
+// Check if event already exists in database.
+// Uses the shared classExists() for events that have start_time,
+// falls back to title+date+venue check for events without time.
+// LESSON (Feb 6, 2026): Must include start_time in dedup check to avoid
+// dropping same-title events at different times.
 async function isDuplicate(event) {
+  // If the event has a start_time, use the shared utility which includes time in the check
+  if (event.start_time) {
+    // Normalize time format (shared utility expects HH:MM)
+    const time = event.start_time.length > 5 ? event.start_time.slice(0, 5) : event.start_time;
+    return classExists(event.title, event.start_date, event.venue_name, time);
+  }
+
+  // Fallback for events without start_time: check title+date+venue
   try {
     const params = new URLSearchParams({
       title: `eq.${event.title}`,
@@ -343,6 +360,11 @@ async function deepScrapeWebsite(browser, business, coveredIds) {
     // If verified mode and we had a saved URL but found nothing, track failure
     if (VERIFIED_MODE && savedUrl && results.verifiedEvents.length === 0) {
       await recordScrapeFailure(business.name, 'No verified events found');
+    }
+
+    // Post-scrape validation: detect and remove duplicated schedules
+    if (results.verifiedEvents.length > 0) {
+      await validateScrapedData(business.name, 'ai-verified');
     }
   } finally {
     await page.close();

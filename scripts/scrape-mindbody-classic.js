@@ -8,9 +8,15 @@
  */
 
 import puppeteer from 'puppeteer';
-import { SUPABASE_URL, SUPABASE_SERVICE_KEY } from './lib/env.js';
-
-const SUPABASE_KEY = SUPABASE_SERVICE_KEY();
+import {
+  classExists,
+  insertClass,
+  deleteOldClasses,
+  parseTime,
+  getTodayPacific,
+  getEndDatePacific,
+  validateScrapedData
+} from './lib/scraper-utils.js';
 
 // Studios using classic Mindbody interface
 const CLASSIC_STUDIOS = [
@@ -48,80 +54,6 @@ const stats = {
   errors: []
 };
 
-function parseTime(timeStr) {
-  if (!timeStr) return '09:00';
-  const match = timeStr.match(/(\d{1,2}):(\d{2})\s*(am|pm|AM|PM)/);
-  if (match) {
-    let hours = parseInt(match[1]);
-    const minutes = match[2];
-    const period = match[3].toUpperCase();
-    if (period === 'PM' && hours < 12) hours += 12;
-    if (period === 'AM' && hours === 12) hours = 0;
-    return `${hours.toString().padStart(2, '0')}:${minutes}`;
-  }
-  return '09:00';
-}
-
-async function classExists(title, date, studioName, time) {
-  try {
-    let url = `${SUPABASE_URL}/rest/v1/events?title=eq.${encodeURIComponent(title)}&start_date=eq.${date}&venue_name=eq.${encodeURIComponent(studioName)}`;
-    if (time) {
-      const normalizedTime = time.length === 5 ? `${time}:00` : time;
-      url += `&start_time=eq.${encodeURIComponent(normalizedTime)}`;
-    }
-    url += '&limit=1';
-    const response = await fetch(url,
-      { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }
-    );
-    const data = await response.json();
-    return data.length > 0;
-  } catch { return false; }
-}
-
-async function insertClass(cls) {
-  const eventData = {
-    title: cls.title,
-    description: cls.instructor ? `Instructor: ${cls.instructor}` : `${cls.category} class at ${cls.studioName}`,
-    venue_name: cls.studioName,
-    venue_address: cls.studioAddress,
-    category: cls.category,
-    event_type: 'class',
-    start_date: cls.date,
-    start_time: cls.time,
-    end_time: null,
-    price: 0,
-    is_free: false,
-    price_description: 'See studio for pricing',
-    status: 'active',
-    tags: ['auto-scraped', 'mindbody-classic', cls.studioName.toLowerCase().replace(/\s+/g, '-')]
-  };
-
-  try {
-    const response = await fetch(`${SUPABASE_URL}/rest/v1/events`, {
-      method: 'POST',
-      headers: {
-        'apikey': SUPABASE_KEY,
-        'Authorization': `Bearer ${SUPABASE_KEY}`,
-        'Content-Type': 'application/json',
-        'Prefer': 'return=minimal'
-      },
-      body: JSON.stringify(eventData)
-    });
-    return response.ok;
-  } catch { return false; }
-}
-
-async function deleteOldClasses(studioName, fromDate) {
-  try {
-    await fetch(
-      `${SUPABASE_URL}/rest/v1/events?venue_name=eq.${encodeURIComponent(studioName)}&event_type=eq.class&start_date=gte.${fromDate}&tags=cs.{auto-scraped}`,
-      {
-        method: 'DELETE',
-        headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
-      }
-    );
-  } catch {}
-}
 
 function parseClassicSchedule(text, studio) {
   const classes = [];
@@ -185,10 +117,11 @@ function parseClassicSchedule(text, studio) {
         title: className,
         time: parseTime(timeMatch[1]),
         instructor: instructor,
-        studioName: studio.name,
-        studioAddress: studio.address,
+        venueName: studio.name,
+        address: studio.address,
         category: studio.category,
-        date: currentDate
+        date: currentDate,
+        bookingSystem: 'mindbody-classic'
       });
     }
   }
@@ -219,20 +152,14 @@ async function scrapeStudio(browser, studio) {
   await page.setViewport({ width: 1280, height: 900 });
 
   // Use Pacific timezone for date calculations (Mindbody shows PST)
-  const today = new Date();
-  const pacificFormatter = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'America/Los_Angeles',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit'
-  });
-  const todayStr = pacificFormatter.format(today); // Returns YYYY-MM-DD
+  const todayStr = getTodayPacific();
+  const endDateStr = getEndDatePacific(30);
   let studioClassesFound = 0;
   let studioClassesAdded = 0;
 
   try {
     console.log('   Clearing old scraped classes...');
-    await deleteOldClasses(studio.name, todayStr);
+    await deleteOldClasses(studio.name, todayStr, 'mindbody-classic');
 
     console.log('   Loading schedule page...');
     // First load main page with studioid to establish session
@@ -257,14 +184,10 @@ async function scrapeStudio(browser, studio) {
     }, studio.tabId);
     await new Promise(r => setTimeout(r, 5000));
 
-    // Filter for next 30 days (use string comparison to avoid timezone issues)
-    const endDate = new Date(today);
-    endDate.setDate(today.getDate() + 30);
-    const endDateStr = pacificFormatter.format(endDate);
-
     // Scrape multiple weeks (Classic Mindbody shows one week at a time)
     const allClasses = [];
     const WEEKS_TO_SCRAPE = 5; // ~35 days of classes
+    let lastPageText = '';
 
     for (let week = 0; week < WEEKS_TO_SCRAPE; week++) {
       // Get page text
@@ -274,6 +197,13 @@ async function scrapeStudio(browser, studio) {
       if (text.includes('Security Check') || text.includes('Verifying you are human')) {
         throw new Error('Blocked by security check');
       }
+
+      // Stale page detection: if content didn't change after navigation, stop
+      if (week > 0 && text === lastPageText) {
+        console.log(`   Week ${week + 1}: Page content unchanged after navigation, stopping`);
+        break;
+      }
+      lastPageText = text;
 
       // Parse classes from current week view
       const weekClasses = parseClassicSchedule(text, studio);
@@ -286,21 +216,33 @@ async function scrapeStudio(browser, studio) {
           const weekArrowRight = document.querySelector('#week-arrow-r');
           if (weekArrowRight) {
             weekArrowRight.click();
-            return true;
+            return 'week-arrow-r';
           }
-          // Fallback selectors
-          const nextButtons = document.querySelectorAll('.date-arrow-r, a[href*="fw=1"], .next-week');
-          for (const btn of nextButtons) {
-            btn.click();
-            return true;
+          // Fallback selectors for navigation resilience
+          const fallbackSelectors = [
+            '.date-arrow-r',
+            'a[href*="fw=1"]',
+            '.next-week',
+            '[class*="arrow-right"]',
+            '[class*="next"]',
+            'a[title*="Next"]',
+            '.fa-chevron-right',
+            '.fa-arrow-right'
+          ];
+          for (const sel of fallbackSelectors) {
+            const btn = document.querySelector(sel);
+            if (btn) {
+              btn.click();
+              return sel;
+            }
           }
-          return false;
+          return null;
         });
 
         if (clicked) {
           await new Promise(r => setTimeout(r, 3000));
         } else {
-          console.log(`   Week ${week + 1}: Could not find next week button`);
+          console.log(`   Week ${week + 1}: Could not find next week button (tried all fallback selectors)`);
           break;
         }
       }
@@ -322,7 +264,7 @@ async function scrapeStudio(browser, studio) {
       studioClassesFound++;
       stats.classesFound++;
 
-      const exists = await classExists(cls.title, cls.date, cls.studioName, cls.time);
+      const exists = await classExists(cls.title, cls.date, cls.venueName, cls.time);
       if (exists) continue;
 
       const success = await insertClass(cls);
@@ -331,6 +273,9 @@ async function scrapeStudio(browser, studio) {
         studioClassesAdded++;
       }
     }
+
+    // Post-scrape validation: detect and remove duplicated schedules
+    await validateScrapedData(studio.name, 'mindbody-classic');
 
     console.log(`   ✅ Total: ${studioClassesFound} found, ${studioClassesAdded} added`);
     stats.studiosSuccessful++;
