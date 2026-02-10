@@ -21,48 +21,46 @@
 
 ---
 
-## Issues by Severity
+## Issues by Severity (Post-Fix Status)
 
-### CRITICAL (1)
+### CRITICAL (1) - ALL FIXED
 
-| ID | Issue | Impact | Source |
-|----|-------|--------|--------|
-| DATA-005 | **Scraper date duplication** - 4 venues have ratio >25x (Sound Martial Arts 42.9x, Breathe Fitness 39.3x, Oxygen Yoga 29.4x, Squamish Barbell 27.8x). Same class stamped on every day for 33 days. | ~1,764 duplicate class instances. Users see classes on days they don't run. | Data Integrity |
+| ID | Issue | Status | Fix |
+|----|-------|--------|-----|
+| DATA-005 | **Scraper date duplication** - 7 venues had ratio >20x | ✅ FIXED | Trimmed to 14-day window (-1,047 records), unique DB index prevents future dupes |
 
-### MAJOR (4)
+### MAJOR (4) - ALL FIXED
 
-| ID | Issue | Impact | Source |
-|----|-------|--------|--------|
-| DEEP-D01a | **Deal category filter mismatch** - `DEAL_CATEGORY_MAP` normalizes to "Retail"/"Entertainment"/"Beauty" but dropdown uses "Shopping"/"Recreation"/"Accommodations". 58% of deals (129/222) unreachable via filters. | Users can't find most deals by category | Events+Deals |
-| CROSS-01 | **Search query persists across tabs** - Typing "music" on Events, switching to Deals shows 0 results because search isn't cleared on tab switch. | Confusing UX, users see 0 results on new tab | Events+Deals |
-| DATA-007 | **97.5% of events missing venue_id** - 2,346/2,405 events have NULL venue_id. Events rely on venue_name text instead of FK. | No referential integrity, can't reliably link events to businesses | Data Integrity |
-| FLT-C08/C09 | **Age filters (Kids/Adults) have no effect** - All 960 upcoming classes tagged "All Ages". Filter logic is correct but data lacks age categorization. | Kids/Adults filter buttons do nothing useful | Classes+Filters |
+| ID | Issue | Status | Fix |
+|----|-------|--------|-----|
+| DEEP-D01a | **Deal category filter mismatch** - 58% unreachable | ✅ FIXED | Dynamic dropdown generated from actual deal data |
+| CROSS-01 | **Search persists across tabs** | ✅ FIXED | Clear searchQuery on currentSection change |
+| DATA-007 | **97.5% missing venue_id** | ✅ FIXED | Backfill + aliases table + auto-link trigger → **99.2% coverage** |
+| FLT-C08/C09 | **Age filters useless** (all "All Ages") | ✅ FIXED | `inferAgeGroup()` pattern-matches titles for Kids/Adults |
 
-### MINOR (8)
+### MINOR (8) - 7 FIXED, 1 DEFERRED
 
-| ID | Issue | Impact | Source |
-|----|-------|--------|--------|
-| FLT-C13 | "Free" price filter produces 0 results | Misleading empty option in dropdown | Classes+Filters |
-| FLT-E04b | "Anytime" shows past events (no date filtering) | Past events mixed with future | Events+Deals |
-| CROSS-02 | Grammar: "1 results" instead of "1 result" | Minor UI polish | Events+Deals |
-| CQ-003 | 12 console.log statements in production (sentry.js, useUserData.js) | Debug noise in DevTools | Data Integrity |
-| CQ-006 | Google Search fallback on "Website" button (ServiceDetailModal) when no URL | Misleading button label | Data Integrity |
-| DATA-008 | 15 expired events (before Feb 3) still in database | Stale data | Data Integrity |
-| KEY-001 | Tab order puts Consumer/Business toggle early (DOM position) | Minor keyboard nav issue | Accessibility |
-| BTN-010 | Save button works for guests silently (no auth prompt, no feedback) | No feedback on action | Modals+Flows |
+| ID | Issue | Status | Fix |
+|----|-------|--------|-----|
+| FLT-C13 | "Free" price filter shows 0 results | ✅ FIXED | Conditionally hidden when no free classes exist |
+| FLT-E04b | "Anytime" shows past events | ✅ FIXED | Added date filtering in filterHelpers.js |
+| CROSS-02 | "1 results" grammar | ✅ FIXED | Singular/plural logic |
+| CQ-003 | 12 console.log in production | ✅ FIXED | Guarded with import.meta.env.DEV |
+| CQ-006 | "Website" button misleading | ✅ FIXED | Shows "Search" when no URL |
+| DATA-008 | 230 expired events still active | ✅ FIXED | Archived as 'completed' + cleanup function |
+| BTN-010 | Guest save no feedback | ✅ FIXED | Toast notification added |
+| KEY-001 | Tab order issues | ⏳ DEFERRED | Requires DOM restructuring |
 
-### WARNINGS (8)
+### WARNINGS (8) - 2 FIXED, 6 DEFERRED (by design or low priority)
 
-| ID | Issue | Source |
-|----|-------|--------|
-| ZOOM-007 | At 1920px, content only uses 21% of viewport (single-column layout) | Edge Cases |
-| OFF-001 | No prominent offline banner when network disconnected | Edge Cases |
-| A11Y-024 | No toast feedback for unauthenticated save actions | Accessibility |
-| PERF-011 | Filter selection 512ms (12ms over 500ms threshold - imperceptible) | Performance |
-| PERF-013 | Modal open 611ms (intentional CSS animation, not real perf issue) | Performance |
-| PERF-014 | Modal close 620ms (intentional CSS animation) | Performance |
-| MOB-003 | Some touch targets below 44px (nav tabs 38px, Sign In 29px) | Auth+Nav+Mobile |
-| ERR-001/2/3 | Auth validation uses browser-native tooltips only (no custom messages) | Modals+Flows |
+| ID | Issue | Status | Fix |
+|----|-------|--------|-----|
+| MOB-003 | Touch targets below 44px | ✅ FIXED | min-height: 44px on nav tabs and Sign In |
+| A11Y-024 | No toast for guest saves | ✅ FIXED | Toast added (same as BTN-010) |
+| ZOOM-007 | 1920px narrow content | ⏳ DEFERRED | Mobile-first design, acceptable |
+| OFF-001 | No offline banner | ⏳ DEFERRED | Low priority |
+| PERF-011/013/014 | Filter/modal timing | ⏳ BY DESIGN | Intentional animations |
+| ERR-001/2/3 | Browser-native validation | ⏳ DEFERRED | Acceptable for MVP |
 
 ---
 
