@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Calendar, MapPin, Clock, Star, Check, Bell, Search, ChevronRight, X, Plus, Eye, Users, DollarSign, CheckCircle, SlidersHorizontal, Building, Wrench, Percent, Heart, Sparkles, MessageCircle, WifiOff } from 'lucide-react';
+import { Calendar, MapPin, Star, Check, Bell, Search, ChevronRight, X, Plus, Eye, Users, DollarSign, CheckCircle, SlidersHorizontal, Building, Wrench, Percent, Heart, Sparkles, MessageCircle, WifiOff } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import { useUserData } from './hooks/useUserData';
 import { useCardAnimation } from './hooks/useCardAnimation';
@@ -8,7 +8,9 @@ import { useSubmissions } from './hooks/useSubmissions';
 import { useBooking } from './hooks/useBooking';
 import { useCalendar } from './hooks/useCalendar';
 import { useAppData } from './hooks/useAppData';
-import { formatResponseTime } from './lib/businessAnalytics';
+import ServicesGrid from './components/ServicesGrid';
+import DealsGrid from './components/DealsGrid';
+import FilterSection from './components/FilterSection';
 import WellnessBooking from './components/WellnessBooking';
 import EventDetailModal from './components/modals/EventDetailModal';
 import DealDetailModal from './components/modals/DealDetailModal';
@@ -29,7 +31,7 @@ import ContactSheet from './components/modals/ContactSheet';
 import EditEventModal from './components/modals/EditEventModal';
 import EventCard from './components/EventCard';
 import { REAL_DATA } from './data/realData';
-import { generateSmartDealTitle, normalizeDealCategory, getDealSavingsDisplay } from './utils/dealHelpers';
+import { normalizeDealCategory } from './utils/dealHelpers';
 import { filterEvents as filterEventsUtil, filterDeals as filterDealsUtil } from './utils/filterHelpers';
 import { PACIFIC_TZ, getPacificNow } from './utils/timezoneHelpers';
 import './styles/pulse-app.css';
@@ -888,212 +890,17 @@ export default function PulseApp() {
 
           {/* Premium Filter System - Clean 5-Filter Layout */}
           {(currentSection === 'events' || currentSection === 'classes') && (
-            <>
-              {/* Filters Toggle Button */}
-              <div className="filters-toggle-section">
-                <button 
-                  className="filters-toggle-btn"
-                  onClick={() => setShowFilters(!showFilters)}
-                >
-                  <SlidersHorizontal size={18} />
-                  <span>{showFilters ? 'Hide Filters' : 'Show Filters'}</span>
-                  <ChevronRight 
-                    size={18} 
-                    style={{ 
-                      transform: showFilters ? 'rotate(90deg)' : 'rotate(0deg)',
-                      transition: 'transform 0.2s ease'
-                    }} 
-                  />
-                </button>
-              </div>
-
-              {/* Filters Section - Collapsible */}
-              {showFilters && (
-              <div className="filters-section">
-                <div className="filters-row-top">
-                  {/* Day Filter */}
-                  <div className="filter-group">
-                    <select
-                      value={filters.day}
-                      onChange={(e) => setFilters({...filters, day: e.target.value})}
-                      className="filter-dropdown"
-                      aria-label="Filter by day"
-                    >
-                      <option value="today">📅 Upcoming</option>
-                      <option value="tomorrow">Tomorrow</option>
-                      <option value="thisWeekend">This Weekend</option>
-                      <option value="nextWeek">Next Week</option>
-                      <option value="anytime">Anytime</option>
-                    </select>
-                  </div>
-
-                  {/* Time Filter - Dynamic 30-min slots */}
-                  <div className="filter-group">
-                    <select
-                      value={filters.time}
-                      onChange={(e) => setFilters({...filters, time: e.target.value})}
-                      className="filter-dropdown"
-                      aria-label="Filter by time"
-                    >
-                      <option value="all">🕐 All Times</option>
-                      {getAvailableTimeSlots().map(timeSlot => {
-                        const [hour, min] = timeSlot.split(':');
-                        const hourNum = parseInt(hour);
-                        const period = hourNum >= 12 ? 'PM' : 'AM';
-                        const displayHour = hourNum === 0 ? 12 : hourNum > 12 ? hourNum - 12 : hourNum;
-                        const displayMin = min === '00' ? '' : `:${min}`;
-                        return (
-                          <option key={timeSlot} value={timeSlot}>
-                            {displayHour}{displayMin} {period}
-                          </option>
-                        );
-                      })}
-                    </select>
-                  </div>
-
-                  {/* Age Filter */}
-                  <div className="filter-group">
-                    <select
-                      value={filters.age}
-                      aria-label="Filter by age group"
-                      onChange={(e) => {
-                        setFilters({...filters, age: e.target.value});
-                        if (e.target.value !== 'kids') {
-                          setKidsAgeRange([0, 18]); // Reset when not kids
-                        }
-                      }}
-                      className={`filter-dropdown ${filters.age === 'kids' ? 'filter-active' : ''}`}
-                    >
-                      <option value="all">👥 All Ages</option>
-                      <option value="kids">Kids</option>
-                      <option value="adults">Adults</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Kids Age Range Slider - Shows when Kids is selected */}
-                {filters.age === 'kids' && (
-                  <div className="kids-age-slider-section">
-                    <div className="age-slider-header">
-                      <span className="age-slider-label">Age Range</span>
-                      <span className="age-slider-value">
-                        {kidsAgeRange[0] === -1 ? 'Prenatal' : `${kidsAgeRange[0]} yrs`} - {kidsAgeRange[1]} yrs
-                      </span>
-                    </div>
-
-                    {/* Dual Range Slider */}
-                    <div className="age-slider-container">
-                      <div className="age-slider-track">
-                        <div
-                          className="age-slider-fill"
-                          style={{
-                            left: `${((kidsAgeRange[0] + 1) / 19) * 100}%`,
-                            width: `${((kidsAgeRange[1] - kidsAgeRange[0]) / 19) * 100}%`
-                          }}
-                        />
-                      </div>
-                      <input
-                        type="range"
-                        min="-1"
-                        max="18"
-                        value={kidsAgeRange[0]}
-                        onChange={(e) => {
-                          const val = parseInt(e.target.value);
-                          if (val < kidsAgeRange[1]) {
-                            setKidsAgeRange([val, kidsAgeRange[1]]);
-                          }
-                        }}
-                        className="age-slider age-slider-min"
-                      />
-                      <input
-                        type="range"
-                        min="-1"
-                        max="18"
-                        value={kidsAgeRange[1]}
-                        onChange={(e) => {
-                          const val = parseInt(e.target.value);
-                          if (val > kidsAgeRange[0]) {
-                            setKidsAgeRange([kidsAgeRange[0], val]);
-                          }
-                        }}
-                        className="age-slider age-slider-max"
-                      />
-                    </div>
-
-                    {/* Quick Select Buttons */}
-                    <div className="age-range-buttons">
-                      {ageRangeOptions.map((opt) => {
-                        const isSelected = kidsAgeRange[0] <= opt.min && kidsAgeRange[1] >= opt.max;
-                        const isExactMatch = kidsAgeRange[0] === opt.min && kidsAgeRange[1] === opt.max;
-                        return (
-                          <button
-                            key={opt.label}
-                            className={`age-range-btn ${isExactMatch ? 'active' : isSelected ? 'in-range' : ''}`}
-                            onClick={() => setKidsAgeRange([opt.min, opt.max])}
-                          >
-                            {opt.label}
-                          </button>
-                        );
-                      })}
-                      <button
-                        className={`age-range-btn ${kidsAgeRange[0] === 0 && kidsAgeRange[1] === 18 ? 'active' : ''}`}
-                        onClick={() => setKidsAgeRange([0, 18])}
-                      >
-                        All Kids
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                <div className="filters-row-bottom">
-                  {/* Category Filter */}
-                  <div className="filter-group">
-                    <select
-                      value={filters.category}
-                      onChange={(e) => setFilters({...filters, category: e.target.value})}
-                      className="filter-dropdown"
-                      aria-label="Filter by category"
-                    >
-                      <option value="all">🏷️ All Categories</option>
-                      {categories.slice(1).map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                    </select>
-                  </div>
-
-                  {/* Price Filter */}
-                  <div className="filter-group">
-                    <select
-                      value={filters.price}
-                      onChange={(e) => setFilters({...filters, price: e.target.value})}
-                      className="filter-dropdown"
-                      aria-label="Filter by price"
-                    >
-                      <option value="all">💵 All Prices</option>
-                      <option value="free">Free</option>
-                      <option value="paid">Paid</option>
-                    </select>
-                  </div>
-
-                  {/* Reset Button */}
-                  {(() => {
-                    const hasActiveFilters = filters.day !== 'today' || filters.time !== 'all' ||
-                                            filters.age !== 'all' || filters.category !== 'all' || filters.price !== 'all' ||
-                                            (kidsAgeRange[0] !== 0 || kidsAgeRange[1] !== 18);
-                    return hasActiveFilters ? (
-                      <button
-                        onClick={() => {
-                          setFilters({day: 'today', time: 'all', age: 'all', category: 'all', price: 'all'});
-                          setKidsAgeRange([0, 18]);
-                        }}
-                        className="reset-btn"
-                      >
-                        ↺ Reset
-                      </button>
-                    ) : null;
-                  })()}
-                </div>
-              </div>
-            )}
-            </>
+            <FilterSection
+              filters={filters}
+              setFilters={setFilters}
+              showFilters={showFilters}
+              setShowFilters={setShowFilters}
+              kidsAgeRange={kidsAgeRange}
+              setKidsAgeRange={setKidsAgeRange}
+              ageRangeOptions={ageRangeOptions}
+              categories={categories}
+              getAvailableTimeSlots={getAvailableTimeSlots}
+            />
           )}
 
           <main className="content" id="main-content">
@@ -1119,122 +926,19 @@ export default function PulseApp() {
             )}
 
             {currentSection === 'deals' ? (
-              <>
-                {/* Deals Filter */}
-                <div className="filters-section" style={{marginTop: '20px'}}>
-                  <div className="filters-row-single">
-                    <div className="filter-group">
-                      <select
-                        value={dealCategoryFilter}
-                        onChange={(e) => setDealCategoryFilter(e.target.value)}
-                        className="filter-dropdown"
-                        aria-label="Filter deals by category"
-                      >
-                        <option value="All">💰 All Deals</option>
-                        <option value="Food & Drink">🍔 Food & Drink</option>
-                        <option value="Shopping">🛍️ Shopping</option>
-                        <option value="Services">🔧 Services</option>
-                        <option value="Fitness">💪 Fitness</option>
-                        <option value="Recreation">🎯 Recreation</option>
-                        <option value="Wellness">🧘 Wellness</option>
-                        <option value="Accommodations">🏨 Accommodations</option>
-                        <option value="Family">👨‍👩‍👧‍👦 Family</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="deals-grid">
-                  {filterDeals()
-                    .filter(deal => {
-                      if (dealCategoryFilter === 'All') return true;
-                      // Use normalized category for filtering
-                      return normalizeDealCategory(deal.category) === dealCategoryFilter;
-                    })
-                    .map((deal, index) => (
-                  <div
-                    key={deal.id}
-                    className="deal-card"
-                    onClick={() => setSelectedDeal(deal)}
-                    ref={(el) => dealCardRefs.current[index] = el}
-                  >
-                    {/* Prominent savings badge at top */}
-                    {getDealSavingsDisplay(deal) && (
-                      <div className={`deal-savings-badge savings-${getDealSavingsDisplay(deal).type}`}>
-                        {getDealSavingsDisplay(deal).text}
-                      </div>
-                    )}
-
-                    <div className="deal-card-header-new">
-                      <div className="deal-title-section">
-                        <h3>{generateSmartDealTitle(deal, getVenueName(deal.venueId, deal))}</h3>
-                        {deal.verified && (
-                          <div
-                            className="verified-badge-premium"
-                            onClick={(e) => e.stopPropagation()}
-                            data-tooltip="Verified"
-                          >
-                            <Check size={14} strokeWidth={3} />
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="deal-card-body-new">
-                      <div className="deal-detail-row">
-                        <div className="deal-detail-item">
-                          <div className="detail-icon venue-icon">
-                            <MapPin size={16} />
-                          </div>
-                          <span className="detail-text">{getVenueName(deal.venueId, deal)}</span>
-                        </div>
-                      </div>
-
-                      {deal.schedule && (
-                        <div className="deal-detail-row">
-                          <div className="deal-detail-item full-width">
-                            <div className="detail-icon clock-icon">
-                              <Clock size={16} />
-                            </div>
-                            <span className="detail-text">{deal.schedule}</span>
-                          </div>
-                        </div>
-                      )}
-
-                      {deal.description && deal.description.toLowerCase() !== deal.title.toLowerCase() && (
-                        <p className="deal-description-new">{deal.description.length > 80 ? deal.description.substring(0, 77) + '...' : deal.description}</p>
-                      )}
-                    </div>
-
-                    <button
-                      className={`save-star-btn ${isItemSavedLocal('deal', deal.id) ? 'saved' : ''}`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleSave(deal.id, 'deal', deal.title, { venue: getVenueName(deal.venueId, deal) });
-                      }}
-                      data-tooltip={isItemSavedLocal('deal', deal.id) ? "Saved" : "Save"}
-                      aria-label={isItemSavedLocal('deal', deal.id) ? "Remove from saved" : "Save to favorites"}
-                    >
-                      <Star size={24} fill={isItemSavedLocal('deal', deal.id) ? "#f59e0b" : "none"} stroke={isItemSavedLocal('deal', deal.id) ? "#f59e0b" : "#9ca3af"} strokeWidth={2} />
-                    </button>
-                    <ChevronRight className="deal-chevron" size={20} />
-                  </div>
-                ))}
-              </div>
-              {/* Deals empty state */}
-              {!dealsLoading && filterDeals().filter(d => dealCategoryFilter === 'All' || normalizeDealCategory(d.category) === dealCategoryFilter).length === 0 && (
-                <div className="no-results-state" style={{textAlign: 'center', padding: '40px 20px', color: '#6b7280'}}>
-                  <DollarSign size={48} style={{color: '#d1d5db', marginBottom: '12px'}} />
-                  <h3 style={{color: '#374151', marginBottom: '8px'}}>No deals found</h3>
-                  <p>{searchQuery ? `No deals matching "${searchQuery}"` : 'No deals in this category'}</p>
-                  {(searchQuery || dealCategoryFilter !== 'All') && (
-                    <button onClick={() => { setSearchQuery(''); setDealCategoryFilter('All'); }} className="clear-search-btn" style={{marginTop: '12px', padding: '8px 16px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600}}>
-                      Clear Filters
-                    </button>
-                  )}
-                </div>
-              )}
-              </>
+              <DealsGrid
+                deals={filterDeals()}
+                dealsLoading={dealsLoading}
+                dealCategoryFilter={dealCategoryFilter}
+                setDealCategoryFilter={setDealCategoryFilter}
+                dealCardRefs={dealCardRefs}
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+                getVenueName={getVenueName}
+                isItemSavedLocal={isItemSavedLocal}
+                toggleSave={toggleSave}
+                onSelectDeal={setSelectedDeal}
+              />
             ) : currentSection === 'services' ? (
               <>
                 {servicesSubView === 'booking' ? (
@@ -1246,268 +950,17 @@ export default function PulseApp() {
                     setShowAuthModal={setShowAuthModal}
                   />
                 ) : (
-                <>
-                {/* Services Filter */}
-                <div className="filters-section" style={{marginTop: '20px'}}>
-                  <div className="filters-row-single">
-                    <div className="filter-group">
-                      <select
-                        value={serviceCategoryFilter}
-                        onChange={(e) => setServiceCategoryFilter(e.target.value)}
-                        className="filter-dropdown"
-                        aria-label="Filter services by category"
-                      >
-                        <option value="All">🔧 All Services</option>
-                        <option value="Restaurants & Dining">🍽️ Restaurants & Dining</option>
-                        <option value="Retail & Shopping">🛍️ Retail & Shopping</option>
-                        <option value="Cafes & Bakeries">☕ Cafes & Bakeries</option>
-                        <option value="Outdoor Adventures">🏔️ Outdoor Adventures</option>
-                        <option value="Auto Services">🚗 Auto Services</option>
-                        <option value="Real Estate">🏘️ Real Estate</option>
-                        <option value="Fitness & Gyms">💪 Fitness & Gyms</option>
-                        <option value="Recreation & Sports">⚽ Recreation & Sports</option>
-                        <option value="Health & Wellness">🧘 Health & Wellness</option>
-                        <option value="Construction & Building">🏗️ Construction & Building</option>
-                        <option value="Outdoor Gear & Shops">🎒 Outdoor Gear & Shops</option>
-                        <option value="Community Services">🤝 Community Services</option>
-                        <option value="Hotels & Lodging">🏨 Hotels & Lodging</option>
-                        <option value="Web & Marketing">💻 Web & Marketing</option>
-                        <option value="Financial Services">💰 Financial Services</option>
-                        <option value="Medical Clinics">🏥 Medical Clinics</option>
-                        <option value="Photography">📸 Photography</option>
-                        <option value="Attractions">🎡 Attractions</option>
-                        <option value="Churches & Religious">⛪ Churches & Religious</option>
-                        <option value="Salons & Spas">💇 Salons & Spas</option>
-                        <option value="Arts & Culture">🎨 Arts & Culture</option>
-                        <option value="Other">📋 Other</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Search Results Count */}
-                {debouncedSearch && (
-                  <div className="search-results-count">
-                    <span className="results-text">
-                      {(() => {
-                        const count = services.filter(service => {
-                          const query = debouncedSearch.toLowerCase().trim();
-                          return service.name.toLowerCase().includes(query) ||
-                                 service.category.toLowerCase().includes(query) ||
-                                 service.address?.toLowerCase().includes(query);
-                        }).length;
-                        return count === 0 ? 'No results' : `${count} result${count !== 1 ? 's' : ''} for "${searchQuery}"`;
-                      })()}
-                    </span>
-                  </div>
-                )}
-                
-                <div className="services-grid" key={debouncedSearch}>
-                  {servicesLoading ? (
-                    <div style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>
-                      Loading services...
-                    </div>
-                  ) : services
-                    .filter(service => {
-                      // Search filter - search in name, category, and address
-                      if (debouncedSearch) {
-                        const query = debouncedSearch.toLowerCase().trim();
-                        const nameMatch = service.name.toLowerCase().includes(query);
-                        const categoryMatch = service.category.toLowerCase().includes(query);
-                        const addressMatch = service.address?.toLowerCase().includes(query);
-                        if (!nameMatch && !categoryMatch && !addressMatch) {
-                          return false;
-                        }
-                      }
-                      
-                      // Category filter
-                      if (serviceCategoryFilter === 'All') return true;
-
-                      // Main categories with 10+ businesses - exact match
-                      const mainCategories = [
-                        'Restaurants & Dining', 'Retail & Shopping', 'Cafes & Bakeries',
-                        'Outdoor Adventures', 'Auto Services', 'Real Estate',
-                        'Fitness & Gyms', 'Recreation & Sports', 'Health & Wellness',
-                        'Construction & Building', 'Outdoor Gear & Shops', 'Community Services',
-                        'Hotels & Lodging', 'Web & Marketing', 'Financial Services',
-                        'Medical Clinics', 'Photography', 'Attractions',
-                        'Churches & Religious', 'Salons & Spas', 'Arts & Culture'
-                      ];
-
-                      // "Other" catches everything not in main categories
-                      if (serviceCategoryFilter === 'Other') {
-                        return !mainCategories.includes(service.category);
-                      }
-
-                      // Exact category match
-                      return service.category === serviceCategoryFilter;
-                    })
-                    .sort((a, b) => {
-                      // Tiered sorting system
-                      const aReviews = a.reviews || 0;
-                      const bReviews = b.reviews || 0;
-                      const aRating = a.rating || 0;
-                      const bRating = b.rating || 0;
-                      
-                      // Tier 1: 50+ reviews AND 4+ stars
-                      const aIsTier1 = aReviews >= 50 && aRating >= 4;
-                      const bIsTier1 = bReviews >= 50 && bRating >= 4;
-                      
-                      // If one is Tier 1 and other isn't, Tier 1 comes first
-                      if (aIsTier1 && !bIsTier1) return -1;
-                      if (!aIsTier1 && bIsTier1) return 1;
-                      
-                      // Within same tier, sort by rating (highest first), then by reviews as tiebreaker
-                      if (bRating !== aRating) return bRating - aRating;
-                      return bReviews - aReviews;
-                    })
-                    .map((service, index) => {
-                      // Check if this is a Tier 1 business (50+ reviews AND 4+ stars)
-                      const isTier1 = (service.reviews || 0) >= 50 && (service.rating || 0) >= 4;
-                      
-                      // Generate social proof - uses real Pulse data when available, falls back to Google data
-                      const getSocialProof = (svc, idx, tier1) => {
-                        const reviews = svc.reviews || 0;
-                        const rating = svc.rating || 0;
-
-                        // If service has pre-fetched Pulse social proof data, use it
-                        if (svc.pulseData) {
-                          const pd = svc.pulseData;
-                          // Jobs completed on Pulse
-                          if (pd.jobs_completed >= 100) {
-                            return { type: 'volume', text: `📈 ${pd.jobs_completed}+ jobs completed on Pulse` };
-                          }
-                          // Neighbors hired
-                          if (pd.neighbor_hires >= 3) {
-                            return { type: 'neighbor', text: `👥 ${pd.neighbor_hires} neighbors hired them` };
-                          }
-                          // Fast response
-                          if (pd.response_time_minutes && pd.response_time_minutes <= 60) {
-                            const timeText = formatResponseTime(pd.response_time_minutes);
-                            return { type: 'response', text: `⚡ Responds in ${timeText}` };
-                          }
-                          // Testimonial
-                          if (pd.testimonial) {
-                            const quote = pd.testimonial.quote.length > 40
-                              ? pd.testimonial.quote.substring(0, 40) + '...'
-                              : pd.testimonial.quote;
-                            return { type: 'testimonial', text: `💬 "${quote}" — ${pd.testimonial.author}` };
-                          }
-                          // Satisfaction rate
-                          if (pd.satisfaction_rate >= 95) {
-                            return { type: 'satisfaction', text: `✅ ${pd.satisfaction_rate}% satisfaction rate` };
-                          }
-                          // Years active
-                          if (pd.years_active >= 5) {
-                            return { type: 'longevity', text: `📅 ${pd.years_active} years serving Squamish` };
-                          }
-                          // Some jobs completed
-                          if (pd.jobs_completed >= 10) {
-                            return { type: 'trusted', text: `✅ ${pd.jobs_completed} jobs completed on Pulse` };
-                          }
-                        }
-
-                        // Fallback to Google data
-                        if (tier1 && idx < 3 && rating >= 4.5) {
-                          return { type: 'rank', text: `⭐ Top rated in ${svc.category.split('&')[0].trim()}` };
-                        }
-
-                        if (rating >= 4.8 && reviews >= 50) {
-                          return { type: 'excellent', text: `⭐ ${rating} rating from ${reviews} Google reviews` };
-                        }
-
-                        if (rating >= 4.5 && reviews >= 100) {
-                          return { type: 'popular', text: `📍 ${reviews}+ reviews on Google` };
-                        }
-
-                        if (rating >= 4.5 && reviews >= 20) {
-                          return { type: 'highrated', text: `⭐ Highly rated (${rating}/5)` };
-                        }
-
-                        if (reviews >= 50) {
-                          return { type: 'reviewed', text: `📍 ${reviews} Google reviews` };
-                        }
-
-                        if (rating >= 4.0) {
-                          return { type: 'rated', text: `⭐ ${rating}/5 on Google` };
-                        }
-
-                        // Default - just show it's a local business
-                        return { type: 'default', text: '📍 Local Squamish Business' };
-                      };
-
-                      const socialProof = getSocialProof(service, index, isTier1);
-                      
-                      return (
-                    <div key={service.id} className="service-card" ref={(el) => serviceCardRefs.current[index] = el} onClick={() => setSelectedService(service)}>
-                      <div className="service-card-header-new">
-                        <div className="service-title-section">
-                          <h3>{service.name}</h3>
-                          
-                        </div>
-                        {service.rating && (
-                          <div className="service-rating-badge">
-                            <Star size={14} fill="#fbbf24" stroke="#fbbf24" />
-                            <span>{service.rating}</span>
-                            {service.reviews && <span className="review-count">({service.reviews})</span>}
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="service-card-body-new">
-                        <div className="service-detail-row">
-                          <div className="service-detail-item">
-                            <div className="detail-icon category-icon">
-                              <Wrench size={16} />
-                            </div>
-                            <span className="detail-text service-category-text">{service.category}</span>
-                          </div>
-                        </div>
-
-                        <a 
-                          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(service.name + ' ' + service.address)}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="service-detail-row service-link-row"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <div className="service-detail-item">
-                            <div className="detail-icon location-icon">
-                              <MapPin size={16} />
-                            </div>
-                            <span className="detail-text detail-link">{service.address}</span>
-                          </div>
-                        </a>
-                      </div>
-
-                      {/* Social Proof Banner with Arrow */}
-                      <div className={`service-social-proof ${socialProof.type}`}>
-                        <span className="social-proof-text">{socialProof.text}</span>
-                        <div className="social-proof-arrow">
-                          <ChevronRight size={16} />
-                        </div>
-                      </div>
-                    </div>
-                      );
-                    })}
-                </div>
-                {/* No results state for services */}
-                {debouncedSearch && services.filter(service => {
-                  const query = debouncedSearch.toLowerCase().trim();
-                  return service.name.toLowerCase().includes(query) ||
-                         service.category.toLowerCase().includes(query) ||
-                         service.address?.toLowerCase().includes(query);
-                }).length === 0 && (
-                  <div className="no-results-state">
-                    <div className="no-results-icon">🔍</div>
-                    <h3>No businesses found for "{searchQuery}"</h3>
-                    <p>Try a different search term or browse all services</p>
-                    <button onClick={() => setSearchQuery('')} className="clear-search-btn">
-                      Clear Search
-                    </button>
-                  </div>
-                )}
-              </>
+                <ServicesGrid
+                    services={services}
+                    servicesLoading={servicesLoading}
+                    debouncedSearch={debouncedSearch}
+                    searchQuery={searchQuery}
+                    setSearchQuery={setSearchQuery}
+                    serviceCategoryFilter={serviceCategoryFilter}
+                    setServiceCategoryFilter={setServiceCategoryFilter}
+                    serviceCardRefs={serviceCardRefs}
+                    onSelectService={setSelectedService}
+                  />
                 )}
               </>
             ) : currentSection === 'wellness' ? (
