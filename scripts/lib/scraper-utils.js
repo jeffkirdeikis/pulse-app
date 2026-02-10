@@ -253,9 +253,9 @@ export async function insertClass(cls) {
     start_date: cls.date,
     start_time: cls.time,
     end_time: cls.endTime || null,
-    price: 0,
-    is_free: false,
-    price_description: 'See venue for pricing',
+    price: cls.price || 0,
+    is_free: cls.isFree || false,
+    price_description: cls.priceDescription || 'See venue for pricing',
     status: 'active',
     tags: cls.tags || ['auto-scraped', cls.bookingSystem || 'unknown', (cls.venueName || cls.studioName || '').toLowerCase().replace(/\s+/g, '-')]
   };

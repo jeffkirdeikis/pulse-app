@@ -70,6 +70,35 @@ const sourceResults = [];
 // classExists, insertClass, deleteOldClasses, validateScrapedData) are
 // imported from ./lib/scraper-utils.js
 
+/**
+ * Extract price from nearby text lines around a class listing.
+ * Looks for patterns like "$20", "$25.00", "Free", "$0".
+ * Returns { price, isFree, priceDescription } or null if no price found.
+ */
+function extractPrice(lines, startIdx, lookAhead = 4) {
+  for (let j = Math.max(0, startIdx - 1); j <= Math.min(lines.length - 1, startIdx + lookAhead); j++) {
+    const line = lines[j];
+    // Match "$XX" or "$XX.XX"
+    const dollarMatch = line.match(/\$(\d+(?:\.\d{2})?)/);
+    if (dollarMatch) {
+      const amount = parseFloat(dollarMatch[1]);
+      if (amount === 0) {
+        return { price: 0, isFree: true, priceDescription: 'Free' };
+      }
+      return { price: amount, isFree: false, priceDescription: `$${dollarMatch[1]}` };
+    }
+    // Match "Free" as standalone or in context like "Free class"
+    if (/\bfree\b/i.test(line) && !/free\s*trial/i.test(line) && !/free\s*parking/i.test(line)) {
+      return { price: 0, isFree: true, priceDescription: 'Free' };
+    }
+  }
+  return null;
+}
+
+// Pricing stats
+let pricesFound = 0;
+let pricesNotFound = 0;
+
 // ============================================================
 // MINDBODY WIDGET SCRAPER (HealCode)
 // ============================================================
@@ -146,6 +175,10 @@ async function scrapeMindbodyWidget(source, browser) {
       const startTimes = [...html.matchAll(/<time class="hc_starttime" datetime="[^"]*">\s*([^<]+)<\/time>/g)].map(m => m[1].trim());
       const endTimes = [...html.matchAll(/<time class="hc_endtime" datetime="[^"]*">\s*([^<]+)<\/time>/g)].map(m => m[1].trim());
       const instructors = [...html.matchAll(/<div class="bw-session__staff"[^>]*>\s*([^\n<]+)/g)].map(m => m[1].trim());
+      // Try to extract prices from HTML (e.g., price attributes, "$XX" text)
+      const prices = [...html.matchAll(/\$(\d+(?:\.\d{2})?)/g)].map(m => parseFloat(m[1]));
+      // If there's exactly one price per class, map them; otherwise no price data
+      const hasPerClassPrices = prices.length === classNames.length && prices.length > 0;
 
       // Guard: if arrays desync, Mindbody HTML structure may have changed
       if (classNames.length > 0 && classNames.length !== startTimes.length) {
@@ -181,6 +214,12 @@ async function scrapeMindbodyWidget(source, browser) {
         if (exists) continue;
 
         const parsedEndTime = endTimes[i] ? parseTime(endTimes[i]) : null;
+        // Pass price if available from HTML
+        const classPrice = hasPerClassPrices ? prices[i] : null;
+        const priceData = classPrice != null
+          ? { price: classPrice, isFree: classPrice === 0, priceDescription: classPrice === 0 ? 'Free' : `$${classPrice.toFixed(2)}` }
+          : {};
+        if (classPrice != null) pricesFound++; else pricesNotFound++;
         const success = await insertClass({
           title: className,
           time: parsedTime,
@@ -190,7 +229,8 @@ async function scrapeMindbodyWidget(source, browser) {
           address: source.address,
           category: source.category,
           date: dateStr,
-          bookingSystem: 'mindbody-widget'
+          bookingSystem: 'mindbody-widget',
+          ...priceData
         });
 
         if (success) {
@@ -258,6 +298,10 @@ function parseClassicSchedule(text, source) {
       if (/^\d+\s*(hour|minute|hr|min)/i.test(instructor)) instructor = '';
       if (/^coach$/i.test(instructor)) instructor = '';
 
+      // Look for price in nearby lines
+      const priceInfo = extractPrice(lines, i, 5);
+      if (priceInfo) pricesFound++; else pricesNotFound++;
+
       classes.push({
         title: className,
         time: parseTime(timeMatch[1]),
@@ -266,7 +310,8 @@ function parseClassicSchedule(text, source) {
         address: source.address,
         category: source.category,
         date: currentDate,
-        bookingSystem: 'mindbody-classic'
+        bookingSystem: 'mindbody-classic',
+        ...(priceInfo || {})
       });
     }
   }
@@ -506,6 +551,10 @@ function parseWellnessLivingSchedule(text, source) {
       }
     }
 
+    // Look for price in nearby lines
+    const priceInfo = extractPrice(lines, i, 5);
+    if (priceInfo) pricesFound++; else pricesNotFound++;
+
     classes.push({
       title: className.trim(),
       time: parseTime(startTime),
@@ -515,7 +564,8 @@ function parseWellnessLivingSchedule(text, source) {
       address: source.address,
       category: source.category,
       date: currentDate,
-      bookingSystem: 'wellnessliving'
+      bookingSystem: 'wellnessliving',
+      ...(priceInfo || {})
     });
   }
 
@@ -696,6 +746,10 @@ function parseBrandedwebSchedule(text, source) {
     const instructor = (i + 3 < lines.length) ? lines[i + 3] : '';
     const cleanInstructor = /^(Show Details|Book|Oxygen|\d)/.test(instructor) ? '' : instructor;
 
+    // Look for price in nearby lines
+    const priceInfo = extractPrice(lines, i, 6);
+    if (priceInfo) pricesFound++; else pricesNotFound++;
+
     classes.push({
       title: className,
       time: parseTime(timeMatch[1]),
@@ -704,7 +758,8 @@ function parseBrandedwebSchedule(text, source) {
       address: source.address,
       category: source.category,
       date: currentDate,
-      bookingSystem: 'brandedweb'
+      bookingSystem: 'brandedweb',
+      ...(priceInfo || {})
     });
   }
 
@@ -873,6 +928,10 @@ function parseSendMoreClasses(text, source) {
       const prevLine = i > 0 ? lines[i - 1] : '';
       if (prevLine && !prevLine.match(/(\w+),\s*\d{1,2}(?:st|nd|rd|th)/) &&
           !prevLine.match(/^(translate|Login|person|event)/i)) {
+        // Look for price in nearby lines
+        const priceInfo = extractPrice(lines, i, 4);
+        if (priceInfo) pricesFound++; else pricesNotFound++;
+
         classes.push({
           title: prevLine,
           time: parseTime(timeMatch[1]),
@@ -881,7 +940,8 @@ function parseSendMoreClasses(text, source) {
           address: source.address,
           category: source.category,
           date: currentDate,
-          bookingSystem: 'sendmoregetbeta'
+          bookingSystem: 'sendmoregetbeta',
+          ...(priceInfo || {})
         });
       }
     }
@@ -1052,6 +1112,7 @@ async function main() {
   if (stats.insertFailures > 0) {
     console.log(`Inserts:    ${stats.insertFailures} failed`);
   }
+  console.log(`Pricing:    ${pricesFound} with price, ${pricesNotFound} without (defaulted to "See venue for pricing")`);
 
   if (stats.errors.length > 0) {
     console.log('\n❌ Errors:');

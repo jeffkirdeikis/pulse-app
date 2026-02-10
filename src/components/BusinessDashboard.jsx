@@ -359,25 +359,25 @@ const BusinessDashboard = memo(function BusinessDashboard({
             </div>
 
             <div className="goals-grid">
-              <div className="goal-card completed">
-                <div className="goal-status"><Check size={16} /></div>
+              <div className="goal-card">
+                <div className="goal-status empty"></div>
                 <div className="goal-content">
                   <span className="goal-title">Post a new event or deal</span>
                   <span className="goal-xp">+100 XP</span>
                 </div>
               </div>
-              <div className="goal-card completed">
-                <div className="goal-status"><Check size={16} /></div>
+              <div className="goal-card">
+                <div className="goal-status empty"></div>
                 <div className="goal-content">
                   <span className="goal-title">Respond to 5 reviews</span>
                   <span className="goal-xp">+75 XP</span>
                 </div>
               </div>
-              <div className="goal-card in-progress">
-                <div className="goal-status progress">3/5</div>
+              <div className="goal-card">
+                <div className="goal-status empty"></div>
                 <div className="goal-content">
                   <span className="goal-title">Get 5 new reviews</span>
-                  <div className="goal-progress-bar"><div style={{width: '60%'}}></div></div>
+                  <div className="goal-progress-bar"><div style={{width: '0%'}}></div></div>
                 </div>
                 <span className="goal-xp">+150 XP</span>
               </div>
@@ -385,7 +385,7 @@ const BusinessDashboard = memo(function BusinessDashboard({
                 <div className="goal-status empty"></div>
                 <div className="goal-content">
                   <span className="goal-title">Reach 15,000 profile views</span>
-                  <div className="goal-progress-bar"><div style={{width: '86%'}}></div></div>
+                  <div className="goal-progress-bar"><div style={{width: '0%'}}></div></div>
                 </div>
                 <span className="goal-xp">+175 XP</span>
               </div>
@@ -497,22 +497,22 @@ const BusinessDashboard = memo(function BusinessDashboard({
               <div className="score-tip-card">
                 <div className="tip-header">
                   <div className="tip-score">
-                    <span className="tip-score-val">92</span>
+                    <span className="tip-score-val">0</span>
                     <span className="tip-score-max">/100</span>
                   </div>
                   <span className="tip-label">Engagement</span>
                 </div>
                 <div className="tip-progress">
-                  <div className="tip-progress-fill" style={{width: '92%', background: 'linear-gradient(90deg, #10b981, #34d399)'}}></div>
+                  <div className="tip-progress-fill" style={{width: '0%', background: 'linear-gradient(90deg, #10b981, #34d399)'}}></div>
                 </div>
                 <p className="tip-description">How often customers interact with your listings</p>
                 <div className="tip-actions">
-                  <div className="tip-action">
-                    <Check size={14} />
+                  <div className="tip-action pending">
+                    <Plus size={14} />
                     <span>Post events weekly</span>
                   </div>
-                  <div className="tip-action">
-                    <Check size={14} />
+                  <div className="tip-action pending">
+                    <Plus size={14} />
                     <span>Add photos to listings</span>
                   </div>
                   <div className="tip-action pending">
@@ -525,23 +525,23 @@ const BusinessDashboard = memo(function BusinessDashboard({
               <div className="score-tip-card">
                 <div className="tip-header">
                   <div className="tip-score">
-                    <span className="tip-score-val">88</span>
+                    <span className="tip-score-val">0</span>
                     <span className="tip-score-max">/100</span>
                   </div>
                   <span className="tip-label">Response Rate</span>
                 </div>
                 <div className="tip-progress">
-                  <div className="tip-progress-fill" style={{width: '88%', background: 'linear-gradient(90deg, #3b82f6, #60a5fa)'}}></div>
+                  <div className="tip-progress-fill" style={{width: '0%', background: 'linear-gradient(90deg, #3b82f6, #60a5fa)'}}></div>
                 </div>
                 <p className="tip-description">How quickly you respond to reviews & messages</p>
                 <div className="tip-actions">
-                  <div className="tip-action">
-                    <Check size={14} />
+                  <div className="tip-action pending">
+                    <Plus size={14} />
                     <span>Reply within 24 hrs</span>
                   </div>
                   <div className="tip-action pending">
                     <Plus size={14} />
-                    <span>3 reviews need response (+4 pts)</span>
+                    <span>Respond to reviews</span>
                   </div>
                   <div className="tip-action pending">
                     <Plus size={14} />
@@ -550,30 +550,25 @@ const BusinessDashboard = memo(function BusinessDashboard({
                 </div>
               </div>
 
-              <div className="score-tip-card needs-attention">
+              <div className="score-tip-card">
                 <div className="tip-header">
                   <div className="tip-score">
-                    <span className="tip-score-val">76</span>
+                    <span className="tip-score-val">0</span>
                     <span className="tip-score-max">/100</span>
                   </div>
                   <span className="tip-label">Content Quality</span>
-                  <span className="needs-work-badge">Needs Work</span>
                 </div>
                 <div className="tip-progress">
-                  <div className="tip-progress-fill" style={{width: '76%', background: 'linear-gradient(90deg, #f59e0b, #fbbf24)'}}></div>
+                  <div className="tip-progress-fill" style={{width: '0%', background: 'linear-gradient(90deg, #f59e0b, #fbbf24)'}}></div>
                 </div>
                 <p className="tip-description">Completeness & quality of your profile & events</p>
                 <div className="tip-actions">
-                  <div className="tip-action">
-                    <Check size={14} />
-                    <span>Business verified</span>
-                  </div>
-                  <div className="tip-action pending urgent">
-                    <AlertCircle size={14} />
+                  <div className="tip-action pending">
+                    <Plus size={14} />
                     <span>Add business hours (+8 pts)</span>
                   </div>
-                  <div className="tip-action pending urgent">
-                    <AlertCircle size={14} />
+                  <div className="tip-action pending">
+                    <Plus size={14} />
                     <span>Upload cover photo (+6 pts)</span>
                   </div>
                   <div className="tip-action pending">
@@ -586,28 +581,27 @@ const BusinessDashboard = memo(function BusinessDashboard({
               <div className="score-tip-card">
                 <div className="tip-header">
                   <div className="tip-score">
-                    <span className="tip-score-val">95</span>
+                    <span className="tip-score-val">0</span>
                     <span className="tip-score-max">/100</span>
                   </div>
                   <span className="tip-label">Customer Satisfaction</span>
-                  <span className="excellent-badge">Excellent</span>
                 </div>
                 <div className="tip-progress">
-                  <div className="tip-progress-fill" style={{width: '95%', background: 'linear-gradient(90deg, #8b5cf6, #a78bfa)'}}></div>
+                  <div className="tip-progress-fill" style={{width: '0%', background: 'linear-gradient(90deg, #8b5cf6, #a78bfa)'}}></div>
                 </div>
                 <p className="tip-description">Based on ratings, reviews & repeat customers</p>
                 <div className="tip-actions">
-                  <div className="tip-action">
-                    <Check size={14} />
-                    <span>4.8 star average</span>
+                  <div className="tip-action pending">
+                    <Plus size={14} />
+                    <span>Get your first review</span>
                   </div>
-                  <div className="tip-action">
-                    <Check size={14} />
-                    <span>42% repeat customers</span>
+                  <div className="tip-action pending">
+                    <Plus size={14} />
+                    <span>Build repeat customers</span>
                   </div>
-                  <div className="tip-action">
-                    <Check size={14} />
-                    <span>0 unresolved complaints</span>
+                  <div className="tip-action pending">
+                    <Plus size={14} />
+                    <span>Respond to inquiries</span>
                   </div>
                 </div>
               </div>
