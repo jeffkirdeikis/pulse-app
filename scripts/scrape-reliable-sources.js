@@ -19,13 +19,17 @@ import {
   parseTime,
   getTodayPacific,
   getEndDatePacific,
-  validateScrapedData
+  validateScrapedData,
+  retryWithBackoff,
+  parseDateHeader
 } from './lib/scraper-utils.js';
+import { sendTelegramAlert as telegramAlert } from './lib/alerting.js';
 import {
   RELIABLE_SOURCES,
   getSourcesBySystem,
   recordScrapeSuccess,
-  recordScrapeFailure
+  recordScrapeFailure,
+  syncSourcesToDatabase
 } from './lib/reliable-sources.js';
 
 puppeteer.use(StealthPlugin());
@@ -39,10 +43,14 @@ const stats = {
   sourcesSuccessful: 0,
   classesFound: 0,
   classesAdded: 0,
+  insertFailures: 0,
   eventsFound: 0,
   eventsAdded: 0,
   errors: []
 };
+
+// Track per-source results for post-run analysis
+const sourceResults = [];
 
 // All utility functions (parseTime, getTodayPacific, getEndDatePacific,
 // classExists, insertClass, deleteOldClasses, validateScrapedData) are
@@ -82,14 +90,36 @@ async function scrapeMindbodyWidget(source, browser) {
 
       let data;
       try {
-        const response = await fetch(apiUrl);
-        if (!response.ok) continue;
-        data = await response.json();
+        data = await retryWithBackoff(async () => {
+          const response = await fetch(apiUrl);
+          if (response.status === 404 || response.status === 410) {
+            if (dayOffset === 0) {
+              console.log(`   ⚠️ Widget ID may be invalid: HTTP ${response.status}`);
+              await telegramAlert(`🚨 Invalid Widget ID: ${source.name}\nWidget ID ${source.widget_id} returned HTTP ${response.status}. Studio may have changed Mindbody config.`);
+            }
+            return null;
+          }
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          const contentType = response.headers.get('content-type') || '';
+          if (!contentType.includes('json')) {
+            if (dayOffset === 0) {
+              await telegramAlert(`⚠️ Mindbody API Format Change: ${source.name}\nAPI returned ${contentType} instead of JSON. API may have changed.`);
+            }
+            return null;
+          }
+          return response.json();
+        }, { maxRetries: 2, baseDelay: 1000, label: `${source.name} API` });
       } catch {
         continue;
       }
 
-      if (!data || !data.class_sessions) continue;
+      if (!data || !data.class_sessions) {
+        if (dayOffset === 0 && data && !data.class_sessions) {
+          console.log(`   ⚠️ API response missing class_sessions. Keys: ${Object.keys(data).join(', ')}`);
+          await telegramAlert(`⚠️ Mindbody API Structure Change\nWidget ${source.widget_id} response missing "class_sessions". Keys: ${Object.keys(data).join(', ')}`);
+        }
+        continue;
+      }
 
       // Parse HTML from API response
       let html = data.class_sessions;
@@ -144,6 +174,8 @@ async function scrapeMindbodyWidget(source, browser) {
         if (success) {
           classesAdded++;
           stats.classesAdded++;
+        } else {
+          stats.insertFailures++;
         }
       }
 
@@ -153,11 +185,13 @@ async function scrapeMindbodyWidget(source, browser) {
 
     console.log(`   ✅ Found: ${classesFound}, Added: ${classesAdded}`);
     stats.sourcesSuccessful++;
+    sourceResults.push({ name: source.name, classesFound, classesAdded, error: null });
     await recordScrapeSuccess(source.name, classesFound);
 
   } catch (error) {
     console.error(`   ❌ Error: ${error.message}`);
     stats.errors.push({ source: source.name, error: error.message });
+    sourceResults.push({ name: source.name, classesFound, classesAdded, error: error.message });
     await recordScrapeFailure(source.name, error.message);
   }
 
@@ -173,22 +207,14 @@ function parseClassicSchedule(text, source) {
   const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
 
   let currentDate = null;
-  const months = ['january', 'february', 'march', 'april', 'may', 'june',
-                  'july', 'august', 'september', 'october', 'november', 'december'];
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
 
-    // Check for date header like "Mon January 26, 2026"
-    const dateMatch = line.match(/^(Sun|Mon|Tue|Wed|Thu|Fri|Sat)\s+(\w+)\s+(\d{1,2}),?\s*(\d{4})?/i);
-    if (dateMatch) {
-      const monthName = dateMatch[2].toLowerCase();
-      const day = parseInt(dateMatch[3]);
-      const monthIndex = months.indexOf(monthName);
-      if (monthIndex !== -1) {
-        const year = dateMatch[4] ? parseInt(dateMatch[4]) : new Date().getFullYear();
-        currentDate = `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      }
+    // Adaptive date header parsing — handles multiple formats
+    const parsedDate = parseDateHeader(line);
+    if (parsedDate) {
+      currentDate = parsedDate;
       continue;
     }
 
@@ -248,11 +274,29 @@ async function scrapeMindbodyClassic(source, browser) {
     await deleteOldClasses(source.name, todayStr, 'mindbody-classic');
 
     console.log(`   Loading: ${source.url}`);
-    await page.goto(`https://clients.mindbodyonline.com/classic/mainclass?studioid=${source.studio_id}`, {
-      waitUntil: 'networkidle2',
-      timeout: 60000
-    });
+    await retryWithBackoff(async () => {
+      await page.goto(`https://clients.mindbodyonline.com/classic/mainclass?studioid=${source.studio_id}`, {
+        waitUntil: 'networkidle2',
+        timeout: 60000
+      });
+    }, { maxRetries: 2, baseDelay: 3000, label: `${source.name} page load` });
     await new Promise(r => setTimeout(r, 3000));
+
+    // Detect if studio migrated from Classic to new Mindbody
+    const currentUrl = page.url();
+    const initialText = await page.evaluate(() => document.body.innerText);
+    const migrationText = /this studio has moved|updated booking experience|new mindbody experience/i.test(initialText);
+    const redirectedAway = !currentUrl.includes('mindbodyonline.com');
+    if (migrationText || redirectedAway) {
+      const msg = `${source.name} (ID: ${source.studio_id}) appears to have migrated from Mindbody Classic`;
+      console.log(`   ⚠️ MIGRATION DETECTED: ${msg}`);
+      await telegramAlert(`🚨 Mindbody Classic Migration: ${source.name}\n${msg}. Classic scraper will no longer work. Update to mindbody-widget.`);
+      throw new Error('Studio migrated from Mindbody Classic');
+    }
+    // Warn (but don't fail) if redirected within Mindbody but away from Classic
+    if (!currentUrl.includes('classic/mainclass')) {
+      console.log(`   ⚠️ Unexpected URL after navigation: ${currentUrl} (may be transient)`);
+    }
 
     // Click on the correct tab
     if (source.tab_id) {
@@ -354,11 +398,13 @@ async function scrapeMindbodyClassic(source, browser) {
 
     console.log(`   ✅ Found: ${classesFound}, Added: ${classesAdded}`);
     stats.sourcesSuccessful++;
+    sourceResults.push({ name: source.name, classesFound, classesAdded, error: null });
     await recordScrapeSuccess(source.name, classesFound);
 
   } catch (error) {
     console.error(`   ❌ Error: ${error.message}`);
     stats.errors.push({ source: source.name, error: error.message });
+    sourceResults.push({ name: source.name, classesFound, classesAdded, error: error.message });
     await recordScrapeFailure(source.name, error.message);
   } finally {
     await page.close();
@@ -384,38 +430,15 @@ function parseWellnessLivingSchedule(text, source) {
   const classes = [];
   const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
 
-  const months = ['january', 'february', 'march', 'april', 'may', 'june',
-                  'july', 'august', 'september', 'october', 'november', 'december'];
-
   let currentDate = null;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
 
-    // Match day headers like "Thursday, February 05, 2026" or "Sunday February 8, 2026"
-    // or "Tuesday February 10, 2026 (Today)" — comma after day name is optional
-    const dateMatch = line.match(/^\w+,?\s+(\w+)\s+(\d{1,2}),?\s+(\d{4})/i);
-    if (dateMatch) {
-      const monthName = dateMatch[1].toLowerCase();
-      const day = parseInt(dateMatch[2]);
-      const year = parseInt(dateMatch[3]);
-      const monthIndex = months.indexOf(monthName);
-      if (monthIndex !== -1) {
-        currentDate = `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      }
-      continue;
-    }
-
-    // Also match "Thursday, 5th February" style (alternate format)
-    const dateMatch2 = line.match(/^\w+,?\s+(\d{1,2})(?:st|nd|rd|th)\s+(\w+)(?:\s+(\d{4}))?$/i);
-    if (dateMatch2) {
-      const day = parseInt(dateMatch2[1]);
-      const monthName = dateMatch2[2].toLowerCase();
-      const year = dateMatch2[3] ? parseInt(dateMatch2[3]) : new Date().getFullYear();
-      const monthIndex = months.indexOf(monthName);
-      if (monthIndex !== -1) {
-        currentDate = `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      }
+    // Adaptive date header parsing — handles all known WellnessLiving formats
+    const parsedDate = parseDateHeader(line);
+    if (parsedDate) {
+      currentDate = parsedDate;
       continue;
     }
 
@@ -483,8 +506,19 @@ async function scrapeWellnessLiving(source, browser) {
     await deleteOldClasses(source.name, todayStr, 'wellnessliving');
 
     console.log(`   Loading: ${source.url}`);
-    await page.goto(source.url, { waitUntil: 'networkidle2', timeout: 60000 });
+    await retryWithBackoff(async () => {
+      await page.goto(source.url, { waitUntil: 'networkidle2', timeout: 60000 });
+    }, { maxRetries: 2, baseDelay: 3000, label: `${source.name} page load` });
     await new Promise(r => setTimeout(r, 5000));
+
+    // Detect Imperva WAF block
+    const wlPageContent = await page.evaluate(() => document.body.innerText);
+    if (/Checking your browser|Access Denied|Pardon Our Interruption|Human Verification|Enable JavaScript and cookies/i.test(wlPageContent)) {
+      const msg = `Imperva WAF is blocking Puppeteer for ${source.name}. Stealth plugin may no longer be effective.`;
+      console.log(`   ⚠️ WAF BLOCKED: ${msg}`);
+      await telegramAlert(`🚨 WAF Block: ${source.name}\n${msg}\n\nManual action needed.`);
+      throw new Error('Blocked by Imperva WAF');
+    }
 
     // WellnessLiving shows a weekly schedule with day headers.
     // Navigate week by week to cover DAYS_TO_SCRAPE days.
@@ -557,11 +591,13 @@ async function scrapeWellnessLiving(source, browser) {
 
     console.log(`   ✅ Found: ${classesFound}, Added: ${classesAdded}`);
     stats.sourcesSuccessful++;
+    sourceResults.push({ name: source.name, classesFound, classesAdded, error: null });
     await recordScrapeSuccess(source.name, classesFound);
 
   } catch (error) {
     console.error(`   ❌ Error: ${error.message}`);
     stats.errors.push({ source: source.name, error: error.message });
+    sourceResults.push({ name: source.name, classesFound, classesAdded, error: error.message });
     await recordScrapeFailure(source.name, error.message);
   } finally {
     await page.close();
@@ -583,41 +619,16 @@ function parseBrandedwebSchedule(text, source) {
   const classes = [];
   const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
 
-  const months = ['january', 'february', 'march', 'april', 'may', 'june',
-                  'july', 'august', 'september', 'october', 'november', 'december'];
-  const shortMonths = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
-
   let currentDate = null;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
 
-    // Match date headers: "Tuesday, February 10, 2026" or "Tuesday, February 10"
-    const dateMatch1 = line.match(/^\w+,\s+(\w+)\s+(\d{1,2}),?\s*(\d{4})?$/i);
-    if (dateMatch1) {
-      const monthName = dateMatch1[1].toLowerCase();
-      const day = parseInt(dateMatch1[2]);
-      const year = dateMatch1[3] ? parseInt(dateMatch1[3]) : new Date().getFullYear();
-      const monthIndex = months.indexOf(monthName);
-      const shortIndex = shortMonths.findIndex(m => monthName.startsWith(m));
-      const idx = monthIndex !== -1 ? monthIndex : shortIndex;
-      if (idx !== -1) {
-        currentDate = `${year}-${String(idx + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      }
+    // Try adaptive date parser for any date header format
+    const parsed = parseDateHeader(line);
+    if (parsed) {
+      currentDate = parsed;
       continue;
-    }
-
-    // Match shorter date headers: "Tue, Feb 10" or "Feb 10, 2026"
-    const dateMatch2 = line.match(/(?:\w+,\s+)?(\w+)\s+(\d{1,2})(?:,\s*(\d{4}))?$/i);
-    if (dateMatch2 && !line.match(/^\d/) && line.length < 30) {
-      const monthName = dateMatch2[1].toLowerCase();
-      const day = parseInt(dateMatch2[2]);
-      const year = dateMatch2[3] ? parseInt(dateMatch2[3]) : new Date().getFullYear();
-      const shortIndex = shortMonths.findIndex(m => monthName.startsWith(m));
-      if (shortIndex !== -1 && day >= 1 && day <= 31) {
-        currentDate = `${year}-${String(shortIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-        continue;
-      }
     }
 
     if (!currentDate) continue;
@@ -678,7 +689,10 @@ async function scrapeBrandedweb(source, browser) {
     await deleteOldClasses(source.name, todayStr, 'brandedweb');
 
     console.log(`   Loading: ${source.url}`);
-    await page.goto(source.url, { waitUntil: 'networkidle2', timeout: 60000 });
+    await retryWithBackoff(
+      () => page.goto(source.url, { waitUntil: 'networkidle2', timeout: 60000 }),
+      { label: `${source.name} page load` }
+    );
     await new Promise(r => setTimeout(r, 3000));
 
     // Brandedweb pages show a weekly schedule. Navigate week-by-week.
@@ -751,17 +765,21 @@ async function scrapeBrandedweb(source, browser) {
         if (success) {
           classesAdded++;
           stats.classesAdded++;
+        } else {
+          stats.insertFailures++;
         }
       }
     }
 
     console.log(`   ✅ Found: ${classesFound}, Added: ${classesAdded}`);
     stats.sourcesSuccessful++;
+    sourceResults.push({ name: source.name, classesFound, classesAdded, error: null });
     await recordScrapeSuccess(source.name, classesFound);
 
   } catch (error) {
     console.error(`   ❌ Error: ${error.message}`);
     stats.errors.push({ source: source.name, error: error.message });
+    sourceResults.push({ name: source.name, classesFound, classesAdded, error: error.message });
     await recordScrapeFailure(source.name, error.message);
   } finally {
     await page.close();
@@ -790,24 +808,14 @@ function parseSendMoreClasses(text, source) {
   const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
 
   let currentDate = null;
-  const months = ['january', 'february', 'march', 'april', 'may', 'june',
-                  'july', 'august', 'september', 'october', 'november', 'december'];
 
   for (let i = 0; i < lines.length - 1; i++) {
     const line = lines[i];
 
-    // Check for date header like "Sunday, 1st February"
-    const dateMatch = line.match(/(\w+),\s*(\d{1,2})(?:st|nd|rd|th)\s+(\w+)/i);
-    if (dateMatch) {
-      const day = parseInt(dateMatch[2]);
-      const monthName = dateMatch[3].toLowerCase();
-      const monthIndex = months.indexOf(monthName);
-      if (monthIndex !== -1) {
-        const year = new Date().getFullYear();
-        const currentMonth = new Date().getMonth();
-        const adjustedYear = monthIndex < currentMonth - 1 ? year + 1 : year;
-        currentDate = `${adjustedYear}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      }
+    // Try adaptive date parser for any date header format
+    const parsed = parseDateHeader(line);
+    if (parsed) {
+      currentDate = parsed;
       continue;
     }
 
@@ -857,7 +865,10 @@ async function scrapeSendMoreGetBeta(source, browser) {
     await deleteOldClasses(source.name, todayStr, 'sendmoregetbeta');
 
     console.log(`   Loading: ${source.url}`);
-    await page.goto(source.url, { waitUntil: 'networkidle2', timeout: 60000 });
+    await retryWithBackoff(
+      () => page.goto(source.url, { waitUntil: 'networkidle2', timeout: 60000 }),
+      { label: `${source.name} page load` }
+    );
     await new Promise(r => setTimeout(r, 5000));
 
     // Parse all classes from the widget text
@@ -879,16 +890,20 @@ async function scrapeSendMoreGetBeta(source, browser) {
       if (success) {
         classesAdded++;
         stats.classesAdded++;
+      } else {
+        stats.insertFailures++;
       }
     }
 
     console.log(`   ✅ Found: ${classesFound}, Added: ${classesAdded}`);
     stats.sourcesSuccessful++;
+    sourceResults.push({ name: source.name, classesFound, classesAdded, error: null });
     await recordScrapeSuccess(source.name, classesFound);
 
   } catch (error) {
     console.error(`   ❌ Error: ${error.message}`);
     stats.errors.push({ source: source.name, error: error.message });
+    sourceResults.push({ name: source.name, classesFound, classesAdded, error: error.message });
     await recordScrapeFailure(source.name, error.message);
   } finally {
     await page.close();
@@ -909,6 +924,9 @@ async function main() {
   console.log(`Sources: ${RELIABLE_SOURCES.length}`);
   console.log(`Scrape window: ${DAYS_TO_SCRAPE} days`);
   console.log('='.repeat(70));
+
+  // Sync sources to database (ensures recordScrapeSuccess/Failure has rows to update)
+  await syncSourcesToDatabase();
 
   // List all sources
   console.log('\n📋 Sources to scrape:');
@@ -950,6 +968,13 @@ async function main() {
       // Post-scrape validation: detect and remove duplicated schedules
       await validateScrapedData(source.name, source.booking_system);
 
+      // Zero-result detection: alert immediately when a source finds nothing
+      const lastResult = sourceResults[sourceResults.length - 1];
+      if (lastResult && lastResult.classesFound === 0 && !lastResult.error) {
+        console.warn(`   ⚠️ ZERO CLASSES from ${source.name} — possible silent failure`);
+        await telegramAlert(`⚠️ Scraper: ${source.name} returned 0 classes (${source.booking_system}). Possible format change or site issue.`);
+      }
+
       // Brief pause between sources
       await new Promise(r => setTimeout(r, 2000));
     }
@@ -964,6 +989,9 @@ async function main() {
   console.log(`Sources:    ${stats.sourcesSuccessful}/${stats.sourcesAttempted} successful`);
   console.log(`Classes:    ${stats.classesFound} found, ${stats.classesAdded} added`);
   console.log(`Events:     ${stats.eventsFound} found, ${stats.eventsAdded} added`);
+  if (stats.insertFailures > 0) {
+    console.log(`Inserts:    ${stats.insertFailures} failed`);
+  }
 
   if (stats.errors.length > 0) {
     console.log('\n❌ Errors:');
@@ -972,6 +1000,28 @@ async function main() {
 
   console.log(`\nCompleted: ${new Date().toLocaleString()}`);
   console.log('='.repeat(70));
+
+  // Send Telegram summary if there were any issues
+  const zeroSources = sourceResults.filter(r => r.classesFound === 0 && !r.error);
+  const errorSources = sourceResults.filter(r => r.error);
+  const hasIssues = zeroSources.length > 0 || errorSources.length > 0 || stats.insertFailures > 10;
+
+  if (hasIssues) {
+    const lines = [`📊 Scraper Run Complete — Issues Detected`];
+    lines.push(`Sources: ${stats.sourcesSuccessful}/${stats.sourcesAttempted} | Classes: ${stats.classesFound} found, ${stats.classesAdded} added`);
+    if (zeroSources.length > 0) {
+      lines.push(`\n⚠️ Zero-result sources (${zeroSources.length}):`);
+      zeroSources.forEach(r => lines.push(`  • ${r.name}`));
+    }
+    if (errorSources.length > 0) {
+      lines.push(`\n❌ Failed sources (${errorSources.length}):`);
+      errorSources.forEach(r => lines.push(`  • ${r.name}: ${r.error}`));
+    }
+    if (stats.insertFailures > 10) {
+      lines.push(`\n🔴 High insert failure rate: ${stats.insertFailures} failures`);
+    }
+    await telegramAlert(lines.join('\n'));
+  }
 }
 
 main().catch(console.error);

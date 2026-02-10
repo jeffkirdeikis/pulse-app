@@ -8,6 +8,7 @@
  */
 
 import { SUPABASE_URL, SUPABASE_SERVICE_KEY } from './env.js';
+import { sendTelegramAlert as telegramAlert } from './alerting.js';
 
 const SUPABASE_KEY = SUPABASE_SERVICE_KEY();
 
@@ -347,6 +348,12 @@ export async function recordScrapeFailure(sourceName, errorMessage) {
         consecutive_failures: failures
       })
     });
+
+    // Alert on 3+ consecutive failures — something is persistently broken
+    if (failures >= 3) {
+      console.warn(`   🔴 ${sourceName} has failed ${failures} times consecutively!`);
+      await telegramAlert(`🔴 Scraper Alert: ${sourceName} has failed ${failures} consecutive times.\nLatest error: ${errorMessage}`);
+    }
   } catch (e) {
     console.warn(`Failed to record scrape failure for ${sourceName}:`, e.message);
   }

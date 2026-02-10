@@ -14,6 +14,41 @@ import { SUPABASE_URL, SUPABASE_SERVICE_KEY } from './env.js';
 const SUPABASE_KEY = SUPABASE_SERVICE_KEY();
 
 // ============================================================
+// RETRY WITH BACKOFF
+// ============================================================
+
+/**
+ * Retry an async function with exponential backoff.
+ * Only retries transient/network errors — throws immediately for logic errors.
+ *
+ * @param {Function} fn - Async function to retry
+ * @param {object} opts - { maxRetries: 3, baseDelay: 1000, maxDelay: 15000, label: 'operation' }
+ * @returns {Promise<any>} Result of fn()
+ */
+export async function retryWithBackoff(fn, opts = {}) {
+  const { maxRetries = 3, baseDelay = 1000, maxDelay = 15000, label = 'operation' } = opts;
+  let lastError;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      if (attempt === maxRetries) break;
+
+      const isRetryable = /timeout|ECONNRESET|ECONNREFUSED|ETIMEDOUT|502|503|504|net::ERR|socket hang up/i.test(error.message);
+      if (!isRetryable) throw error;
+
+      const delay = Math.min(baseDelay * Math.pow(2, attempt), maxDelay);
+      const jitter = delay * 0.2 * Math.random();
+      console.log(`   [retry] ${label} attempt ${attempt + 1}/${maxRetries} failed: ${error.message}. Retrying in ${Math.round(delay + jitter)}ms`);
+      await new Promise(r => setTimeout(r, delay + jitter));
+    }
+  }
+  throw lastError;
+}
+
+// ============================================================
 // DATE HELPERS
 // ============================================================
 
@@ -47,6 +82,84 @@ export function getEndDatePacific(daysFromNow) {
     day: '2-digit'
   });
   return formatter.format(date);
+}
+
+// ============================================================
+// ADAPTIVE DATE PARSING
+// ============================================================
+
+const MONTHS_FULL = ['january','february','march','april','may','june',
+                     'july','august','september','october','november','december'];
+const MONTHS_SHORT = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+
+/**
+ * Find month index (0-11) from a month name string (full or abbreviated).
+ * Returns -1 if not found.
+ */
+function findMonthIndex(name) {
+  const lower = name.toLowerCase();
+  const fullIdx = MONTHS_FULL.indexOf(lower);
+  if (fullIdx !== -1) return fullIdx;
+  return MONTHS_SHORT.findIndex(m => lower.startsWith(m));
+}
+
+/**
+ * Adaptive date header parser. Tries multiple known formats in priority order.
+ * Returns YYYY-MM-DD string or null if no format matches.
+ *
+ * Handles:
+ *   "Thursday, February 05, 2026"        (comma after day name, comma after day)
+ *   "Sunday February 8, 2026"            (no comma after day name)
+ *   "Tuesday February 10, 2026 (Today)"  (trailing text)
+ *   "Sunday, 8th February 2026"          (ordinal day)
+ *   "Sunday, 8th February"               (ordinal, no year)
+ *   "Mon January 26, 2026"               (abbreviated day name)
+ *   "Mon January 26 2026"                (no comma before year)
+ *   "Feb 10, 2026"                       (short month, no day name)
+ *   "Tuesday, February 10"               (no year)
+ *   "2026-02-10"                         (ISO passthrough)
+ *
+ * @param {string} line - Text line to parse
+ * @param {number} [fallbackYear] - Year to use when not present in string
+ * @returns {string|null} Date as YYYY-MM-DD or null
+ */
+export function parseDateHeader(line, fallbackYear) {
+  if (!line) return null;
+  const text = line.trim();
+  const year = fallbackYear || new Date().getFullYear();
+
+  // ISO passthrough: "2026-02-10"
+  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return text;
+
+  // Format: "DayOfWeek,? Month DD,? YYYY" (with optional trailing text like "(Today)")
+  const f1 = text.match(/^\w+,?\s+(\w+)\s+(\d{1,2}),?\s+(\d{4})/i);
+  if (f1) {
+    const mi = findMonthIndex(f1[1]);
+    if (mi !== -1) return `${f1[3]}-${String(mi + 1).padStart(2, '0')}-${String(parseInt(f1[2])).padStart(2, '0')}`;
+  }
+
+  // Format: "DayOfWeek,? DDth Month YYYY?" (ordinal day)
+  const f2 = text.match(/^\w+,?\s+(\d{1,2})(?:st|nd|rd|th)\s+(\w+)(?:\s+(\d{4}))?/i);
+  if (f2) {
+    const mi = findMonthIndex(f2[2]);
+    if (mi !== -1) return `${f2[3] || year}-${String(mi + 1).padStart(2, '0')}-${String(parseInt(f2[1])).padStart(2, '0')}`;
+  }
+
+  // Format: "Month DD, YYYY" (no day-of-week)
+  const f3 = text.match(/^(\w+)\s+(\d{1,2}),?\s+(\d{4})/i);
+  if (f3) {
+    const mi = findMonthIndex(f3[1]);
+    if (mi !== -1) return `${f3[3]}-${String(mi + 1).padStart(2, '0')}-${String(parseInt(f3[2])).padStart(2, '0')}`;
+  }
+
+  // Format: "DayOfWeek,? Month DD" (no year)
+  const f4 = text.match(/^\w+,?\s+(\w+)\s+(\d{1,2})$/i);
+  if (f4) {
+    const mi = findMonthIndex(f4[1]);
+    if (mi !== -1) return `${year}-${String(mi + 1).padStart(2, '0')}-${String(parseInt(f4[2])).padStart(2, '0')}`;
+  }
+
+  return null;
 }
 
 // ============================================================
@@ -138,8 +251,13 @@ export async function insertClass(cls) {
       },
       body: JSON.stringify(eventData)
     });
+    if (!response.ok) {
+      const errorBody = await response.text().catch(() => 'unknown');
+      console.warn(`   [insert-fail] ${cls.title} on ${cls.date}: HTTP ${response.status} - ${errorBody.substring(0, 100)}`);
+    }
     return response.ok;
-  } catch {
+  } catch (error) {
+    console.warn(`   [insert-fail] ${cls.title} on ${cls.date}: ${error.message}`);
     return false;
   }
 }

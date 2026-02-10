@@ -16,7 +16,8 @@
     "scrape:mindbody": "node scripts/scrape-mindbody-classic.js",
     "scrape:setup": "node scripts/setup-scraping-tables.js",
     "validate:data": "node scripts/validate-data-quality.js",
-    "validate:data:fix": "node scripts/validate-data-quality.js --fix"
+    "validate:data:fix": "node scripts/validate-data-quality.js --fix",
+    "scrape:health": "node scripts/scraper-health-check.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.72.1",
