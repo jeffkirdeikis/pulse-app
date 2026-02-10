@@ -677,6 +677,9 @@ export default function PulseApp() {
           ? prev.filter(k => k !== itemKey)
           : [...prev, itemKey];
         localStorage.setItem('pulse_local_saves', JSON.stringify(newSaves));
+        if (!exists) {
+          showToast('Saved locally. Sign in to sync across devices.', 'info');
+        }
         return newSaves;
       });
       return;
@@ -708,6 +711,12 @@ export default function PulseApp() {
     const itemKey = `${type}-${id}`;
     return localSavedItems.includes(itemKey) || isItemSaved(type, String(id));
   }, [localSavedItems, isItemSaved]);
+
+  // Clear search when switching tabs to prevent cross-tab confusion
+  useEffect(() => {
+    setSearchQuery('');
+    setDebouncedSearch('');
+  }, [currentSection]);
 
   // Debounce search for smoother performance
   useEffect(() => {
@@ -772,22 +781,28 @@ export default function PulseApp() {
           <main className="content" id="main-content">
             {currentSection !== 'wellness' && (
             <div className="results-count" aria-live="polite" aria-atomic="true">
-              {currentSection === 'deals' ? (
-                dealsLoading ? 'Loading...' : `${filterDeals().filter(d => dealCategoryFilter === 'All' || normalizeDealCategory(d.category) === dealCategoryFilter).length} results`
-              ) : currentSection === 'services' ? (
-                `${services.filter(s => {
-                  if (debouncedSearch) {
-                    const query = debouncedSearch.toLowerCase().trim();
-                    if (!s.name.toLowerCase().includes(query) && !s.category.toLowerCase().includes(query) && !s.address?.toLowerCase().includes(query)) return false;
-                  }
-                  if (serviceCategoryFilter === 'All') return true;
-                  const mainCategories = ['Restaurants & Dining', 'Retail & Shopping', 'Cafes & Bakeries', 'Outdoor Adventures', 'Auto Services', 'Real Estate', 'Fitness & Gyms', 'Recreation & Sports', 'Health & Wellness', 'Construction & Building', 'Outdoor Gear & Shops', 'Community Services', 'Hotels & Lodging', 'Web & Marketing', 'Financial Services', 'Medical Clinics', 'Photography', 'Attractions', 'Churches & Religious', 'Salons & Spas', 'Arts & Culture'];
-                  if (serviceCategoryFilter === 'Other') return !mainCategories.includes(s.category);
-                  return s.category === serviceCategoryFilter;
-                }).length} results`
-              ) : (
-                eventsLoading ? 'Loading...' : `${filterEvents().length} results`
-              )}
+              {(() => {
+                let count;
+                if (currentSection === 'deals') {
+                  if (dealsLoading) return 'Loading...';
+                  count = filterDeals().filter(d => dealCategoryFilter === 'All' || normalizeDealCategory(d.category) === dealCategoryFilter).length;
+                } else if (currentSection === 'services') {
+                  count = services.filter(s => {
+                    if (debouncedSearch) {
+                      const query = debouncedSearch.toLowerCase().trim();
+                      if (!s.name.toLowerCase().includes(query) && !s.category.toLowerCase().includes(query) && !s.address?.toLowerCase().includes(query)) return false;
+                    }
+                    if (serviceCategoryFilter === 'All') return true;
+                    const mainCategories = ['Restaurants & Dining', 'Retail & Shopping', 'Cafes & Bakeries', 'Outdoor Adventures', 'Auto Services', 'Real Estate', 'Fitness & Gyms', 'Recreation & Sports', 'Health & Wellness', 'Construction & Building', 'Outdoor Gear & Shops', 'Community Services', 'Hotels & Lodging', 'Web & Marketing', 'Financial Services', 'Medical Clinics', 'Photography', 'Attractions', 'Churches & Religious', 'Salons & Spas', 'Arts & Culture'];
+                    if (serviceCategoryFilter === 'Other') return !mainCategories.includes(s.category);
+                    return s.category === serviceCategoryFilter;
+                  }).length;
+                } else {
+                  if (eventsLoading) return 'Loading...';
+                  count = filterEvents().length;
+                }
+                return `${count} ${count === 1 ? 'result' : 'results'}`;
+              })()}
             </div>
             )}
 

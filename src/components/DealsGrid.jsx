@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { MapPin, Clock, Star, Check, ChevronRight, DollarSign } from 'lucide-react';
 import { generateSmartDealTitle, normalizeDealCategory, getDealSavingsDisplay } from '../utils/dealHelpers';
 
@@ -31,6 +31,32 @@ const DealsGrid = React.memo(function DealsGrid({
   toggleSave,
   onSelectDeal,
 }) {
+  // Build category options dynamically from actual deal data (prevents mismatch)
+  const categoryOptions = useMemo(() => {
+    const catCounts = {};
+    deals.forEach(deal => {
+      const normalized = normalizeDealCategory(deal.category);
+      catCounts[normalized] = (catCounts[normalized] || 0) + 1;
+    });
+    // Only show categories that have deals, sorted by count descending
+    return Object.entries(catCounts)
+      .filter(([cat]) => cat !== 'Other' || catCounts['Other'] > 0)
+      .sort((a, b) => b[1] - a[1])
+      .map(([cat]) => cat);
+  }, [deals]);
+
+  const CATEGORY_EMOJI = {
+    'Food & Drink': '\uD83C\uDF54',
+    'Retail': '\uD83D\uDECD\uFE0F',
+    'Services': '\uD83D\uDD27',
+    'Fitness': '\uD83D\uDCAA',
+    'Entertainment': '\uD83C\uDFAF',
+    'Wellness': '\uD83E\uDDD8',
+    'Beauty': '\uD83D\uDC85',
+    'Family': '\uD83D\uDC68\u200D\uD83D\uDC69\u200D\uD83D\uDC67\u200D\uD83D\uDC66',
+    'Other': '\uD83C\uDF1F',
+  };
+
   const filteredDeals = deals.filter(deal => {
     if (dealCategoryFilter === 'All') return true;
     return normalizeDealCategory(deal.category) === dealCategoryFilter;
@@ -48,15 +74,10 @@ const DealsGrid = React.memo(function DealsGrid({
               className="filter-dropdown"
               aria-label="Filter deals by category"
             >
-              <option value="All">💰 All Deals</option>
-              <option value="Food & Drink">🍔 Food & Drink</option>
-              <option value="Shopping">🛍️ Shopping</option>
-              <option value="Services">🔧 Services</option>
-              <option value="Fitness">💪 Fitness</option>
-              <option value="Recreation">🎯 Recreation</option>
-              <option value="Wellness">🧘 Wellness</option>
-              <option value="Accommodations">🏨 Accommodations</option>
-              <option value="Family">👨‍👩‍👧‍👦 Family</option>
+              <option value="All">{'\uD83D\uDCB0'} All Deals</option>
+              {categoryOptions.map(cat => (
+                <option key={cat} value={cat}>{CATEGORY_EMOJI[cat] || '\uD83C\uDF1F'} {cat}</option>
+              ))}
             </select>
           </div>
         </div>

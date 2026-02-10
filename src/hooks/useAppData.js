@@ -5,6 +5,39 @@ import { getPacificDateStr, pacificDate } from '../utils/timezoneHelpers';
 const CACHE_TTL = 30000; // 30 seconds
 
 /**
+ * Infer age group from class/event title and description.
+ * Prevents "All Ages" default that makes age filters useless.
+ * Returns 'Kids', 'Adults', 'Teens & Adults', or 'All Ages'.
+ */
+function inferAgeGroup(title, description = '') {
+  const text = `${title} ${description}`.toLowerCase();
+
+  // Explicit kids indicators
+  const kidsPatterns = [
+    /\bkids?\b/, /\bchild(ren)?\b/, /\bjunior\b/, /\byouth\b/,
+    /\blittle\b/, /\btots?\b/, /\btoddler\b/, /\bbaby\b/, /\bbabies\b/,
+    /\binfant\b/, /\bnewborn\b/, /\bprenatal\b/, /\bperinatal\b/,
+    /\bpreschool\b/, /\bpre-school\b/, /\bmommy\s*(&|and)\s*me\b/,
+    /\bparent\s*(&|and)\s*(tot|child|baby)\b/,
+    /\bages?\s*\d+\s*[-–]\s*\d+\b/, // "Ages 3-5"
+    /\b\d+\s*[-–]\s*\d+\s*y(ear|r)s?\b/, // "3-5 years"
+  ];
+
+  // Explicit adult indicators
+  const adultPatterns = [
+    /\badult\b/, /\b19\+\b/, /\b18\+\b/, /\bsenior\b/, /\bover\s*\d{2}\b/,
+  ];
+
+  const isKids = kidsPatterns.some(p => p.test(text));
+  const isAdults = adultPatterns.some(p => p.test(text));
+
+  if (isKids && isAdults) return 'All Ages';
+  if (isKids) return 'Kids';
+  if (isAdults) return 'Adults';
+  return 'All Ages';
+}
+
+/**
  * Hook for fetching and caching app data from Supabase (services, events, deals).
  * Handles caching, visibility-based refresh, and data mapping.
  */
@@ -146,7 +179,7 @@ export function useAppData() {
           category: event.category
             ? event.category.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
             : 'Community',
-          ageGroup: 'All Ages',
+          ageGroup: inferAgeGroup(event.title, event.description),
           price: event.is_free ? 'Free' : (event.price_description || (event.price ? `$${event.price}` : 'Free')),
           recurrence: 'none',
           description: event.description || '',

@@ -12,7 +12,7 @@ export function initSentry() {
   const dsn = import.meta.env.VITE_SENTRY_DSN;
 
   if (!dsn) {
-    console.log('[Sentry] No DSN configured - error tracking disabled');
+    if (import.meta.env.DEV) console.log('[Sentry] No DSN configured - error tracking disabled');
     return;
   }
 
@@ -53,7 +53,7 @@ export function initSentry() {
     }
   });
 
-  console.log('[Sentry] Error tracking initialized');
+  if (import.meta.env.DEV) console.log('[Sentry] Error tracking initialized');
 }
 
 /**
@@ -74,7 +74,7 @@ export function captureMessage(message, level = 'info') {
   if (import.meta.env.VITE_SENTRY_DSN) {
     Sentry.captureMessage(message, level);
   } else {
-    console.log(`[${level}]`, message);
+    if (import.meta.env.DEV) console.log(`[${level}]`, message);
   }
 }
 

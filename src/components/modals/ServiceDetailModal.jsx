@@ -76,7 +76,7 @@ const ServiceDetailModal = memo(function ServiceDetailModal({
             target="_blank" rel="noopener noreferrer" className="quick-action-btn"
           >
             <div className="quick-action-icon website"><Globe size={20} /></div>
-            <span>Website</span>
+            <span>{service.website ? 'Website' : 'Search'}</span>
           </a>
           <button
             className={`quick-action-btn ${isItemSavedLocal('service', service.id) ? 'saved' : ''}`}

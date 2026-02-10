@@ -32,7 +32,14 @@ export function filterEvents(allEvents, { currentSection, filters, searchQuery, 
   }
 
   // Day filtering
-  if (filters.day === 'today') {
+  // Always exclude past events regardless of day filter
+  const todayMidnight = new Date(now);
+  todayMidnight.setHours(0, 0, 0, 0);
+
+  if (filters.day === 'anytime') {
+    // "Anytime" = all future events (not past ones)
+    filtered = filtered.filter(e => e.start >= todayMidnight);
+  } else if (filters.day === 'today') {
     const thirtyDaysLater = new Date(now);
     thirtyDaysLater.setDate(now.getDate() + 30);
     filtered = filtered.filter(e => e.start >= now && e.start < thirtyDaysLater);

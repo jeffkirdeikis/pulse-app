@@ -67,9 +67,9 @@ export function useUserData() {
   // Listen to auth changes
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('[Auth] Initial getSession:', session ? 'Session exists' : 'No session');
+      if (import.meta.env.DEV) console.log('[Auth] Initial getSession:', session ? 'Session exists' : 'No session');
       if (session?.user) {
-        console.log('[Auth] Initial session user:', session.user.id, session.user.email);
+        if (import.meta.env.DEV) console.log('[Auth] Initial session user:', session.user.id, session.user.email);
       }
       setSession(session);
       if (session?.user) {
@@ -80,9 +80,9 @@ export function useUserData() {
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('[Auth] Auth state changed:', event, 'Session:', session ? 'exists' : 'null');
+      if (import.meta.env.DEV) console.log('[Auth] Auth state changed:', event, 'Session:', session ? 'exists' : 'null');
       if (session?.user) {
-        console.log('[Auth] User from session:', session.user.id, session.user.email);
+        if (import.meta.env.DEV) console.log('[Auth] User from session:', session.user.id, session.user.email);
       }
       setSession(session);
       if (session?.user) {
@@ -104,7 +104,7 @@ export function useUserData() {
         .rpc('get_user_profile', { p_user_id: userId });
 
       if (profileError) {
-        console.log('[Auth] RPC get_user_profile failed (expected if function not created):', profileError.message);
+        if (import.meta.env.DEV) console.log('[Auth] RPC get_user_profile failed (expected if function not created):', profileError.message);
         // If function doesn't exist yet, fetch basic profile
         let { data: basicProfile, error: fetchError } = await supabase
           .from('profiles')
@@ -113,14 +113,14 @@ export function useUserData() {
           .single();
 
         if (fetchError) {
-          console.log('[Auth] Profile fetch result:', fetchError.code === 'PGRST116' ? 'No profile found (will create)' : fetchError.message);
+          if (import.meta.env.DEV) console.log('[Auth] Profile fetch result:', fetchError.code === 'PGRST116' ? 'No profile found (will create)' : fetchError.message);
         }
 
         // If no profile exists and we have auth user data, create one
         if (!basicProfile && authUser) {
           const userMeta = authUser.user_metadata || {};
-          console.log('[Auth] Creating new profile for user:', userId);
-          console.log('[Auth] User metadata from Google:', { name: userMeta.full_name || userMeta.name, email: authUser.email });
+          if (import.meta.env.DEV) console.log('[Auth] Creating new profile for user:', userId);
+          if (import.meta.env.DEV) console.log('[Auth] User metadata from Google:', { name: userMeta.full_name || userMeta.name, email: authUser.email });
 
           const newProfile = {
             id: userId,
@@ -140,7 +140,7 @@ export function useUserData() {
           if (createError) {
             console.error('[Auth] ERROR creating profile:', createError.message, createError.details, createError.hint);
           } else {
-            console.log('[Auth] Profile created successfully:', createdProfile.id);
+            if (import.meta.env.DEV) console.log('[Auth] Profile created successfully:', createdProfile.id);
             basicProfile = createdProfile;
           }
         }
