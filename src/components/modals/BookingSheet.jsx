@@ -1,7 +1,6 @@
 import React, { memo } from 'react';
 import { Calendar, Clock, ExternalLink, Info, Send, Ticket } from 'lucide-react';
-
-const PACIFIC_TZ = 'America/Vancouver';
+import { PACIFIC_TZ } from '../../utils/timezoneHelpers';
 
 const BookingSheet = memo(function BookingSheet({
   bookingEvent,

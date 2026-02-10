@@ -4,8 +4,7 @@ import {
   MapPin, Navigation, Repeat, Share2, Sparkles, Star, Ticket,
   Users, Building, Zap
 } from 'lucide-react';
-
-const PACIFIC_TZ = 'America/Vancouver';
+import { PACIFIC_TZ } from '../../utils/timezoneHelpers';
 
 const EventDetailModal = memo(function EventDetailModal({
   event,

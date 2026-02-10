@@ -4,6 +4,7 @@ import {
   Edit2, Eye, Plus, Search, SlidersHorizontal, Trash2, XCircle
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { getPacificDateStr } from '../utils/timezoneHelpers';
 
 const AdminDashboard = memo(function AdminDashboard({
   user,
@@ -30,7 +31,6 @@ const AdminDashboard = memo(function AdminDashboard({
   enterImpersonation,
   showToast,
   fetchServices,
-  getPacificDateStr,
   setView,
 }) {
   return (

@@ -1,5 +1,6 @@
 import React, { memo } from 'react';
 import { Calendar, ExternalLink, Globe, MapPin, Trash2, X } from 'lucide-react';
+import { PACIFIC_TZ } from '../../utils/timezoneHelpers';
 
 const MyCalendarModal = memo(function MyCalendarModal({
   myCalendar,

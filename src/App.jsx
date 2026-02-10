@@ -5,6 +5,8 @@ import { useUserData } from './hooks/useUserData';
 import { useCardAnimation } from './hooks/useCardAnimation';
 import { useMessaging } from './hooks/useMessaging';
 import { useSubmissions } from './hooks/useSubmissions';
+import { useBooking } from './hooks/useBooking';
+import { useCalendar } from './hooks/useCalendar';
 import { formatResponseTime } from './lib/businessAnalytics';
 import WellnessBooking from './components/WellnessBooking';
 import EventDetailModal from './components/modals/EventDetailModal';
@@ -24,41 +26,12 @@ import EditVenueModal from './components/modals/EditVenueModal';
 import ImageCropperModal from './components/modals/ImageCropperModal';
 import ContactSheet from './components/modals/ContactSheet';
 import EditEventModal from './components/modals/EditEventModal';
+import EventCard from './components/EventCard';
 import { REAL_DATA } from './data/realData';
-import { getBookingUrl, getBookingType } from './utils/bookingHelpers';
 import { generateSmartDealTitle, normalizeDealCategory, getDealSavingsDisplay } from './utils/dealHelpers';
 import { filterEvents as filterEventsUtil, filterDeals as filterDealsUtil } from './utils/filterHelpers';
+import { PACIFIC_TZ, getPacificNow, getPacificDateStr, pacificDate } from './utils/timezoneHelpers';
 import './styles/pulse-app.css';
-
-// All dates/times in this app are in Squamish (Pacific) time, regardless of user's location.
-const PACIFIC_TZ = 'America/Vancouver';
-
-/** Get current Date adjusted to Pacific timezone */
-function getPacificNow() {
-  const pacificStr = new Date().toLocaleString('en-US', { timeZone: PACIFIC_TZ });
-  return new Date(pacificStr);
-}
-
-/** Get today's date string (YYYY-MM-DD) in Pacific timezone */
-function getPacificDateStr() {
-  const now = new Date();
-  const fmt = new Intl.DateTimeFormat('en-CA', { timeZone: PACIFIC_TZ, year: 'numeric', month: '2-digit', day: '2-digit' });
-  return fmt.format(now);
-}
-
-/** Create a Date object for a Pacific date + time (from DB fields) */
-function pacificDate(dateStr, timeStr) {
-  const [year, month, day] = dateStr.split('-').map(Number);
-  const [hours, minutes] = (timeStr || '09:00').split(':').map(Number);
-  const fakeLocal = new Date(year, month - 1, day, hours, minutes, 0, 0);
-  const localStr = fakeLocal.toLocaleString('en-US', { timeZone: PACIFIC_TZ });
-  const pacificEquiv = new Date(localStr);
-  const offset = fakeLocal.getTime() - pacificEquiv.getTime();
-  return new Date(fakeLocal.getTime() + offset);
-}
-
-/** Format options for displaying dates/times always in Pacific timezone */
-const PACIFIC_DATE_OPTS = { timeZone: PACIFIC_TZ };
 
 export default function PulseApp() {
   const [view, setView] = useState('consumer');
@@ -452,118 +425,15 @@ export default function PulseApp() {
     }
   };
 
-  // Get business info for an event, including booking URL from lookup
-  const getBusinessForEvent = (event) => {
-    const venueName = getVenueName(event.venueId, event);
-    const venue = REAL_DATA.venues.find(v => v.name === venueName);
-    const bookingUrl = getBookingUrl(venueName) || event.bookingUrl;
-    const bookingType = getBookingType(venueName);
-
-    return {
-      id: venue?.id || event.venueId,
-      name: venueName,
-      booking_url: bookingUrl,
-      booking_type: bookingType,
-      ...venue
-    };
-  };
-
-  // Handle booking button click
-  const handleBookClick = (event) => {
-    const business = getBusinessForEvent(event);
-
-    // Track booking click
-    trackAnalytics('booking_click', business.id, event.id);
-
-    setBookingEvent(event);
-    setIframeLoaded(false);
-    setIframeFailed(false);
-    setBookingRequestMessage('');
-
-    // Determine booking step based on whether business has booking URL
-    const hasBookingUrl = business.booking_url;
-    if (hasBookingUrl) {
-      setBookingStep('iframe');
-    } else {
-      setBookingStep('request');
+  const getVenueName = (venueId, event) => {
+    if (event?.venueName) return event.venueName;
+    if (venueId) {
+      const venue = REAL_DATA.venues.find(v => v.id === venueId);
+      if (venue?.name) return venue.name;
     }
-
-    setShowBookingSheet(true);
+    return event?.venue_name || event?.title || '';
   };
-
-  // Close booking sheet and show confirmation
-  const closeBookingSheet = () => {
-    const business = bookingEvent ? getBusinessForEvent(bookingEvent) : null;
-    const hasBookingUrl = business?.booking_url;
-
-    setShowBookingSheet(false);
-
-    // Only show confirmation if there was a booking URL (user might have booked externally)
-    if (hasBookingUrl && bookingStep === 'iframe') {
-      setShowBookingConfirmation(true);
-    }
-  };
-
-  // Handle booking confirmation response
-  const handleBookingConfirmation = async (didBook) => {
-    if (didBook && bookingEvent) {
-      const business = getBusinessForEvent(bookingEvent);
-
-      // Track confirmed booking
-      await trackAnalytics('booking_confirmed', business.id, bookingEvent.id);
-
-      // Add to calendar
-      addToCalendar(bookingEvent);
-
-      setCalendarToastMessage('Great! Added to your calendar');
-      setShowCalendarToast(true);
-      setTimeout(() => setShowCalendarToast(false), 2000);
-    }
-
-    setShowBookingConfirmation(false);
-    setBookingEvent(null);
-  };
-
-  // Submit booking request (for businesses without booking URL)
-  const submitBookingRequest = async () => {
-    if (!bookingEvent) return;
-
-    const business = getBusinessForEvent(bookingEvent);
-
-    setSendingMessage(true);
-    try {
-      const subject = `Booking Request: ${bookingEvent.title}`;
-      const message = `Hi, I'd like to book:\n\n` +
-        `Class: ${bookingEvent.title}\n` +
-        `Date: ${bookingEvent.start.toLocaleDateString('en-US', { timeZone: PACIFIC_TZ, weekday: 'long', month: 'long', day: 'numeric' })}\n` +
-        `Time: ${bookingEvent.start.toLocaleTimeString('en-US', { timeZone: PACIFIC_TZ, hour: 'numeric', minute: '2-digit' })}\n\n` +
-        (bookingRequestMessage ? `Message: ${bookingRequestMessage}` : '');
-
-      const conversationId = await startConversation(business.id, subject, message);
-
-      if (conversationId) {
-        // Track message received
-        await trackAnalytics('message_received', business.id, bookingEvent.id);
-
-        setShowBookingSheet(false);
-        setBookingEvent(null);
-
-        setCalendarToastMessage('Request sent! You\'ll hear back soon.');
-        setShowCalendarToast(true);
-        setTimeout(() => {
-          setShowCalendarToast(false);
-          // Open messages to show the sent request
-          openMessages();
-        }, 1500);
-      }
-    } catch (err) {
-      console.error('Error submitting booking request:', err);
-      showToast('Failed to send request. Please try again.', 'error');
-    } finally {
-      setSendingMessage(false);
-    }
-  };
-
+  const isVerified = (venueId) => REAL_DATA.venues.find(v => v.id === venueId)?.verified || false;
 
   // Business Analytics State
   const [businessAnalytics, setBusinessAnalytics] = useState(null);
@@ -715,14 +585,7 @@ export default function PulseApp() {
     { label: '13-18', min: 13, max: 18 }
   ];
 
-  // Booking & Messaging State
-  const [showBookingSheet, setShowBookingSheet] = useState(false);
-  const [bookingEvent, setBookingEvent] = useState(null);
-  const [bookingStep, setBookingStep] = useState('iframe'); // iframe, request, confirmation
-  const [, setIframeLoaded] = useState(false);
-  const [, setIframeFailed] = useState(false);
-  const [showBookingConfirmation, setShowBookingConfirmation] = useState(false);
-  const [bookingRequestMessage, setBookingRequestMessage] = useState('');
+  // Venue editing state
   const [showEditVenueModal, setShowEditVenueModal] = useState(false);
   const [editingVenue, setEditingVenue] = useState(null);
   const [editVenueForm, setEditVenueForm] = useState({ name: '', address: '', phone: '', website: '', email: '', category: '' });
@@ -776,80 +639,44 @@ export default function PulseApp() {
     setShowAddEventModal(false);
   };
 
-  // Generate Google Calendar URL
-  const generateGoogleCalendarUrl = (event) => {
-    const startDate = event.start.toISOString().replace(/-|:|\.\d+/g, '');
-    const endDate = event.end.toISOString().replace(/-|:|\.\d+/g, '');
-    const title = encodeURIComponent(event.title);
-    const details = encodeURIComponent(event.description || '');
-    const location = encodeURIComponent(getVenueName(event.venueId, event) + ', Squamish, BC');
-    
-    return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${startDate}/${endDate}&details=${details}&location=${location}`;
-  };
+  // Calendar (hook replaces 5 functions)
+  const {
+    generateGoogleCalendarUrl,
+    addToCalendar,
+    removeFromCalendar,
+    isInMyCalendar,
+    getCalendarEventsByDate,
+  } = useCalendar({
+    myCalendar,
+    isAuthenticated,
+    registerForEvent,
+    refreshUserData,
+    getVenueName,
+    showToast,
+  });
 
-  // Add event to both Google Calendar and My Calendar
-  const addToCalendar = async (event) => {
-    // Add to internal calendar if not already there
-    const isAlreadyInCalendar = myCalendar.some(e => e.eventId === event.id || e.id === event.id);
-
-    if (!isAlreadyInCalendar && isAuthenticated) {
-      await registerForEvent({
-        id: event.id,
-        eventType: event.eventType || 'event',
-        title: event.title,
-        date: event.start ? event.start.toISOString().split('T')[0] : event.date,
-        time: event.start ? event.start.toLocaleTimeString('en-US', { timeZone: PACIFIC_TZ, hour: 'numeric', minute: '2-digit' }) : event.time,
-        venue: getVenueName(event.venueId, event),
-        address: event.location || event.address || '',
-        ...event
-      });
-      setCalendarToastMessage(`"${event.title}" added to My Calendar!`);
-    } else if (isAlreadyInCalendar) {
-      setCalendarToastMessage(`"${event.title}" is already in your calendar`);
-    } else {
-      setCalendarToastMessage('Sign in to add events to your calendar');
-    }
-
-    setShowCalendarToast(true);
-    setTimeout(() => setShowCalendarToast(false), 3000);
-
-    // Open Google Calendar in new tab
-    window.open(generateGoogleCalendarUrl(event), '_blank');
-  };
-
-  // Remove event from My Calendar
-  const removeFromCalendar = async (_eventId) => {
-    if (!isAuthenticated) return;
-    // For now, just show toast - full removal would need a Supabase function
-    setCalendarToastMessage('Event removed from My Calendar');
-    setShowCalendarToast(true);
-    setTimeout(() => setShowCalendarToast(false), 3000);
-    refreshUserData(); // Refresh to get updated calendar
-  };
-
-  // Check if event is in My Calendar
-  const isInMyCalendar = (eventId) => {
-    return myCalendar.some(e => e.eventId === eventId || e.id === eventId);
-  };
-
-  // Get events grouped by date for calendar view
-  const getCalendarEventsByDate = () => {
-    const grouped = {};
-    myCalendar.forEach(event => {
-      const dateKey = event.start.toDateString();
-      if (!grouped[dateKey]) {
-        grouped[dateKey] = [];
-      }
-      grouped[dateKey].push(event);
-    });
-    // Sort by date
-    return Object.entries(grouped)
-      .sort((a, b) => new Date(a[0]) - new Date(b[0]))
-      .map(([date, events]) => ({
-        date: new Date(date),
-        events: events.sort((a, b) => a.start - b.start)
-      }));
-  };
+  // Booking (hook replaces 7 state variables + 5 functions)
+  const {
+    showBookingSheet, setShowBookingSheet,
+    bookingEvent,
+    bookingStep,
+    showBookingConfirmation,
+    bookingRequestMessage, setBookingRequestMessage,
+    getBusinessForEvent,
+    handleBookClick,
+    closeBookingSheet,
+    handleBookingConfirmation,
+    submitBookingRequest,
+  } = useBooking({
+    getVenueName,
+    venues: REAL_DATA.venues,
+    trackAnalytics,
+    addToCalendar,
+    startConversation,
+    openMessages,
+    setSendingMessage,
+    showToast,
+  });
 
   // Get available time slots from actual events (30-min intervals)
   const getAvailableTimeSlots = () => {
@@ -937,20 +764,6 @@ export default function PulseApp() {
       setClaimSubmitting(false);
     }
   };
-
-  const getVenueName = (venueId, event) => {
-    // For database events that have venueName directly
-    if (event?.venueName) return event.venueName;
-    // For hardcoded events with venueId
-    if (venueId) {
-      const venue = REAL_DATA.venues.find(v => v.id === venueId);
-      if (venue?.name) return venue.name;
-    }
-    // Fallback to venue_name field or title-based name
-    return event?.venue_name || event?.title || '';
-  };
-  const isVerified = (venueId) => REAL_DATA.venues.find(v => v.id === venueId)?.verified || false;
-  
 
   const filterEvents = () => filterEventsUtil(
     [...REAL_DATA.events, ...dbEvents],
@@ -1040,7 +853,7 @@ export default function PulseApp() {
           
           {groupedEvents[dateKey].map((event) => {
             const currentIndex = globalEventIndex++;
-            return <EventCard key={event.id} event={event} ref={(el) => eventCardRefs.current[currentIndex] = el} />;
+            return <EventCard key={event.id} event={event} ref={(el) => eventCardRefs.current[currentIndex] = el} venues={REAL_DATA.venues} isItemSavedLocal={isItemSavedLocal} toggleSave={toggleSave} getVenueName={getVenueName} onSelect={setSelectedEvent} onBookClick={handleBookClick} />;
           })}
         </div>
       );
@@ -1109,90 +922,6 @@ export default function PulseApp() {
   useCardAnimation(serviceCardRefs, 'service-card-visible', [currentSection, serviceCategoryFilter, searchQuery]);
   useCardAnimation(classCardRefs, 'class-card-visible', [currentSection]);
   useCardAnimation(venueCardRefs, 'venue-card-visible', [currentSection], { checkInitial: false });
-
-  const EventCard = React.forwardRef(({ event }, ref) => {
-    const itemType = event.eventType === 'class' ? 'class' : 'event';
-    const isSaved = isItemSavedLocal(itemType, event.id);
-
-    const handleSave = async (e) => {
-      e.stopPropagation();
-      await toggleSave(event.id, itemType, event.title, { venue: getVenueName(event.venueId, event), date: event.start ? event.start.toISOString() : event.date });
-    };
-
-    return (
-      <div ref={ref} className="event-card" onClick={() => setSelectedEvent(event)}>
-        <div className="event-card-header">
-          <div className="event-title-section">
-            <h3>{event.title}</h3>
-            {REAL_DATA.venues.find(v => v.id === event.venueId)?.verified && (
-              <div
-                className="verified-badge-premium-inline"
-                onClick={(e) => e.stopPropagation()}
-                data-tooltip="Verified"
-              >
-                <Check size={12} strokeWidth={3} />
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="event-card-body">
-          <div className="event-detail-row">
-            <div className="event-detail-item">
-              <div className="detail-icon">
-                <Calendar size={16} />
-              </div>
-              <span className="detail-text">{event.start.toLocaleDateString('en-US', { timeZone: PACIFIC_TZ, weekday: 'short', month: 'short', day: 'numeric' })}</span>
-            </div>
-            <div className="event-detail-item">
-              <div className="detail-icon">
-                <Clock size={16} />
-              </div>
-              <span className="detail-text">{event.start.toLocaleTimeString('en-US', { timeZone: PACIFIC_TZ, hour: 'numeric', minute: '2-digit' })}</span>
-            </div>
-          </div>
-
-          <div className="event-detail-row">
-            <div className="event-detail-item venue-item">
-              <div className="detail-icon">
-                <MapPin size={16} />
-              </div>
-              <span className="detail-text">{getVenueName(event.venueId, event)}</span>
-            </div>
-          </div>
-
-          <div className="event-badges-row">
-            {event.ageGroup && <span className="event-badge age-badge">{event.ageGroup}</span>}
-            {event.price && <span className="event-badge price-badge">{event.price}</span>}
-            {event.recurrence !== 'none' && <span className="event-badge recurrence-badge">Recurring {event.recurrence}</span>}
-          </div>
-        </div>
-
-        {/* Book button for classes */}
-        {event.eventType === 'class' && (
-          <button
-            className="event-book-btn"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleBookClick(event);
-            }}
-          >
-            Book
-          </button>
-        )}
-
-        <button
-          className={`save-star-btn ${isSaved ? 'saved' : ''}`}
-          onClick={handleSave}
-          data-tooltip={isSaved ? "Saved" : "Save"}
-          aria-label={isSaved ? "Remove from saved" : "Save to favorites"}
-        >
-          <Star size={24} fill={isSaved ? "#f59e0b" : "none"} stroke={isSaved ? "#f59e0b" : "#9ca3af"} strokeWidth={2} />
-        </button>
-        <ChevronRight className="event-chevron" size={20} />
-      </div>
-    );
-  });
 
   return (
     <div className="pulse-app">
@@ -2436,7 +2165,6 @@ export default function PulseApp() {
           enterImpersonation={enterImpersonation}
           showToast={showToast}
           fetchServices={fetchServices}
-          getPacificDateStr={getPacificDateStr}
           setView={setView}
         />
       )}
