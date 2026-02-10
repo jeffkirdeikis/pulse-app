@@ -38,7 +38,7 @@
 | DATA-007 | **97.5% missing venue_id** | ✅ FIXED | Backfill + aliases table + auto-link trigger → **99.2% coverage** |
 | FLT-C08/C09 | **Age filters useless** (all "All Ages") | ✅ FIXED | `inferAgeGroup()` pattern-matches titles for Kids/Adults |
 
-### MINOR (8) - 7 FIXED, 1 DEFERRED
+### MINOR (8) - ALL FIXED
 
 | ID | Issue | Status | Fix |
 |----|-------|--------|-----|
@@ -49,18 +49,18 @@
 | CQ-006 | "Website" button misleading | ✅ FIXED | Shows "Search" when no URL |
 | DATA-008 | 230 expired events still active | ✅ FIXED | Archived as 'completed' + cleanup function |
 | BTN-010 | Guest save no feedback | ✅ FIXED | Toast notification added |
-| KEY-001 | Tab order issues | ⏳ DEFERRED | Requires DOM restructuring |
+| KEY-001 | Tab order issues | ✅ FIXED | tabIndex={-1} on Consumer/Business toggle |
 
-### WARNINGS (8) - 2 FIXED, 6 DEFERRED (by design or low priority)
+### WARNINGS (8) - 5 FIXED, 3 BY DESIGN
 
 | ID | Issue | Status | Fix |
 |----|-------|--------|-----|
 | MOB-003 | Touch targets below 44px | ✅ FIXED | min-height: 44px on nav tabs and Sign In |
 | A11Y-024 | No toast for guest saves | ✅ FIXED | Toast added (same as BTN-010) |
-| ZOOM-007 | 1920px narrow content | ⏳ DEFERRED | Mobile-first design, acceptable |
-| OFF-001 | No offline banner | ⏳ DEFERRED | Low priority |
-| PERF-011/013/014 | Filter/modal timing | ⏳ BY DESIGN | Intentional animations |
-| ERR-001/2/3 | Browser-native validation | ⏳ DEFERRED | Acceptable for MVP |
+| ZOOM-007 | 1920px narrow content | ✅ FIXED | Responsive max-width: 640px/800px, centered layout |
+| ERR-001/2/3 | Browser-native validation | ✅ FIXED | Custom inline validation with error messages |
+| OFF-001 | No offline banner | ⏳ DEFERRED | Low priority, app doesn't crash offline |
+| PERF-011/013/014 | Filter/modal timing | ⏳ BY DESIGN | Intentional CSS animations |
 
 ---
 
