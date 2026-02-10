@@ -9,18 +9,41 @@ const AuthModal = memo(function AuthModal({ onClose, onSuccess }) {
   const [authName, setAuthName] = useState('');
   const [authError, setAuthError] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState({});
 
   const handleClose = () => {
     setAuthError('');
     setAuthEmail('');
     setAuthPassword('');
     setAuthName('');
+    setFieldErrors({});
     onClose();
+  };
+
+  const validateForm = () => {
+    const errors = {};
+    const emailTrimmed = authEmail.trim();
+    if (!emailTrimmed) {
+      errors.email = 'Email is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTrimmed)) {
+      errors.email = 'Please enter a valid email';
+    }
+    if (!authPassword) {
+      errors.password = 'Password is required';
+    } else if (authPassword.length < 6) {
+      errors.password = 'Password must be at least 6 characters';
+    }
+    if (authMode === 'signup' && !authName.trim()) {
+      errors.name = 'Name is required';
+    }
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
   const handleEmailSignIn = async (e) => {
     e.preventDefault();
     setAuthError('');
+    if (!validateForm()) return;
     setAuthLoading(true);
 
     try {
@@ -44,6 +67,7 @@ const AuthModal = memo(function AuthModal({ onClose, onSuccess }) {
   const handleEmailSignUp = async (e) => {
     e.preventDefault();
     setAuthError('');
+    if (!validateForm()) return;
     setAuthLoading(true);
 
     try {
@@ -98,20 +122,23 @@ const AuthModal = memo(function AuthModal({ onClose, onSuccess }) {
           <div className="auth-divider">
             <span>or</span>
           </div>
-          <form onSubmit={authMode === 'signin' ? handleEmailSignIn : handleEmailSignUp} className="auth-form">
+          <form onSubmit={authMode === 'signin' ? handleEmailSignIn : handleEmailSignUp} className="auth-form" noValidate>
             {authMode === 'signup' && (
               <div className="auth-form-group">
                 <label>Full Name</label>
-                <input type="text" placeholder="Your name" value={authName} onChange={(e) => setAuthName(e.target.value)} required />
+                <input type="text" placeholder="Your name" value={authName} onChange={(e) => { setAuthName(e.target.value); if (fieldErrors.name) setFieldErrors(fe => ({...fe, name: ''})); }} aria-invalid={!!fieldErrors.name} />
+                {fieldErrors.name && <span className="auth-field-error" role="alert" style={{color:'#dc2626',fontSize:'12px',marginTop:'4px',display:'block'}}>{fieldErrors.name}</span>}
               </div>
             )}
             <div className="auth-form-group">
               <label>Email</label>
-              <input type="email" placeholder="you@example.com" value={authEmail} onChange={(e) => setAuthEmail(e.target.value)} required />
+              <input type="email" placeholder="you@example.com" value={authEmail} onChange={(e) => { setAuthEmail(e.target.value); if (fieldErrors.email) setFieldErrors(fe => ({...fe, email: ''})); }} aria-invalid={!!fieldErrors.email} />
+              {fieldErrors.email && <span className="auth-field-error" role="alert" style={{color:'#dc2626',fontSize:'12px',marginTop:'4px',display:'block'}}>{fieldErrors.email}</span>}
             </div>
             <div className="auth-form-group">
               <label>Password</label>
-              <input type="password" placeholder={authMode === 'signup' ? 'Create a password (min 6 chars)' : 'Your password'} value={authPassword} onChange={(e) => setAuthPassword(e.target.value)} minLength={6} required />
+              <input type="password" placeholder={authMode === 'signup' ? 'Create a password (min 6 chars)' : 'Your password'} value={authPassword} onChange={(e) => { setAuthPassword(e.target.value); if (fieldErrors.password) setFieldErrors(fe => ({...fe, password: ''})); }} aria-invalid={!!fieldErrors.password} />
+              {fieldErrors.password && <span className="auth-field-error" role="alert" style={{color:'#dc2626',fontSize:'12px',marginTop:'4px',display:'block'}}>{fieldErrors.password}</span>}
             </div>
             {authError && (
               <div className="auth-error">
@@ -126,9 +153,9 @@ const AuthModal = memo(function AuthModal({ onClose, onSuccess }) {
           </form>
           <div className="auth-switch">
             {authMode === 'signin' ? (
-              <p>Don't have an account? <button onClick={() => { setAuthMode('signup'); setAuthError(''); }}>Sign Up</button></p>
+              <p>Don't have an account? <button onClick={() => { setAuthMode('signup'); setAuthError(''); setFieldErrors({}); }}>Sign Up</button></p>
             ) : (
-              <p>Already have an account? <button onClick={() => { setAuthMode('signin'); setAuthError(''); }}>Sign In</button></p>
+              <p>Already have an account? <button onClick={() => { setAuthMode('signin'); setAuthError(''); setFieldErrors({}); }}>Sign In</button></p>
             )}
           </div>
         </div>
