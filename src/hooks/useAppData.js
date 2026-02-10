@@ -180,7 +180,7 @@ export function useAppData() {
             ? event.category.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
             : 'Community',
           ageGroup: inferAgeGroup(event.title, event.description),
-          price: event.is_free ? 'Free' : (event.price > 0 ? `$${event.price}` : (event.price_description && event.price_description !== 'See venue for pricing' ? event.price_description : null)),
+          price: event.is_free ? 'Free' : (event.price > 0 ? `$${event.price}` : (event.price_description && !/^see (venue|studio) for pricing$/i.test(event.price_description) ? event.price_description : null)),
           recurrence: 'none',
           description: event.description || '',
           featured: event.featured || false,
