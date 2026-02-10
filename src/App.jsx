@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Calendar, MapPin, Clock, Star, Check, Bell, Search, Filter, ChevronRight, X, Plus, Eye, Users, DollarSign, CheckCircle, SlidersHorizontal, Building, Wrench, Navigation, Percent, Heart, Sparkles, MessageCircle, Send, WifiOff } from 'lucide-react';
+import { Calendar, MapPin, Clock, Star, Check, Bell, Search, ChevronRight, X, Plus, Eye, Users, DollarSign, CheckCircle, SlidersHorizontal, Building, Wrench, Percent, Heart, Sparkles, MessageCircle, WifiOff } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import { useUserData } from './hooks/useUserData';
 import { useCardAnimation } from './hooks/useCardAnimation';
@@ -24,7 +24,7 @@ import EditVenueModal from './components/modals/EditVenueModal';
 import ImageCropperModal from './components/modals/ImageCropperModal';
 import ContactSheet from './components/modals/ContactSheet';
 import EditEventModal from './components/modals/EditEventModal';
-import { REAL_DATA, SERVICE_CATEGORIES } from './data/realData';
+import { REAL_DATA } from './data/realData';
 import { getBookingUrl, getBookingType } from './utils/bookingHelpers';
 import { generateSmartDealTitle, normalizeDealCategory, calculateDealScore, getDealSavingsDisplay, isRealDeal } from './utils/dealHelpers';
 import './styles/pulse-app.css';
