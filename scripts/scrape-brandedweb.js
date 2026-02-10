@@ -3,13 +3,25 @@
 /**
  * Brandedweb Mindbody Scraper
  * For studios using brandedweb-next.mindbodyonline.com widgets
+ *
+ * FIXED (Feb 2026): Replaced fragile pixel-clicking day navigation with
+ * CSS selector-based week navigation. Now parses dates from page headers
+ * instead of assigning computed dates from a loop counter. Detects stale
+ * pages (navigation failure) and stops immediately.
+ *
  * Run: node scripts/scrape-brandedweb.js
  */
 
 import puppeteer from 'puppeteer';
-import { SUPABASE_URL, SUPABASE_SERVICE_KEY } from './lib/env.js';
-
-const SUPABASE_KEY = SUPABASE_SERVICE_KEY();
+import {
+  classExists,
+  insertClass,
+  parseTime,
+  getTodayPacific,
+  getEndDatePacific,
+  deleteOldClasses,
+  validateScrapedData
+} from './lib/scraper-utils.js';
 
 const DAYS_TO_SCRAPE = 30;
 
@@ -32,163 +44,110 @@ const stats = {
   errors: []
 };
 
-function parseTime(timeStr) {
-  if (!timeStr) return '09:00';
-  const match = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM|am|pm)?/);
-  if (match) {
-    let hours = parseInt(match[1]);
-    const minutes = match[2];
-    const period = match[3]?.toUpperCase();
-    if (period === 'PM' && hours < 12) hours += 12;
-    if (period === 'AM' && hours === 12) hours = 0;
-    return `${hours.toString().padStart(2, '0')}:${minutes}`;
-  }
-  return '09:00';
-}
+/**
+ * Parse date headers from Brandedweb page text.
+ * Brandedweb pages show date headers like:
+ *   "Tuesday, February 10, 2026"
+ *   "Tue, Feb 10"
+ *   "Feb 10, 2026"
+ *
+ * Returns an array of all unique dates found on the page as YYYY-MM-DD.
+ */
+function parseDatesFromText(text) {
+  const dates = new Set();
+  const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
 
-async function classExists(title, date, studioName, time) {
-  try {
-    let url = `${SUPABASE_URL}/rest/v1/events?title=eq.${encodeURIComponent(title)}&start_date=eq.${date}&venue_name=eq.${encodeURIComponent(studioName)}`;
-    if (time) {
-      const normalizedTime = time.length === 5 ? `${time}:00` : time;
-      url += `&start_time=eq.${encodeURIComponent(normalizedTime)}`;
-    }
-    url += '&limit=1';
-    const response = await fetch(url,
-      { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }
-    );
-    const data = await response.json();
-    return data.length > 0;
-  } catch { return false; }
-}
+  const months = ['january', 'february', 'march', 'april', 'may', 'june',
+                  'july', 'august', 'september', 'october', 'november', 'december'];
+  const shortMonths = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
 
-async function insertClass(cls) {
-  const eventData = {
-    title: cls.title,
-    description: cls.instructor ? `Instructor: ${cls.instructor}` : `${cls.category} class at ${cls.studioName}`,
-    venue_name: cls.studioName,
-    venue_address: cls.studioAddress,
-    category: cls.category,
-    event_type: 'class',
-    start_date: cls.date,
-    start_time: cls.time,
-    end_time: null,
-    price: 0,
-    is_free: false,
-    price_description: 'See studio for pricing',
-    status: 'active',
-    tags: ['auto-scraped', 'brandedweb', cls.studioName.toLowerCase().replace(/\s+/g, '-')]
-  };
-
-  try {
-    const response = await fetch(`${SUPABASE_URL}/rest/v1/events`, {
-      method: 'POST',
-      headers: {
-        'apikey': SUPABASE_KEY,
-        'Authorization': `Bearer ${SUPABASE_KEY}`,
-        'Content-Type': 'application/json',
-        'Prefer': 'return=minimal'
-      },
-      body: JSON.stringify(eventData)
-    });
-    return response.ok;
-  } catch { return false; }
-}
-
-async function deleteOldClasses(studioName, fromDate) {
-  try {
-    await fetch(
-      `${SUPABASE_URL}/rest/v1/events?venue_name=eq.${encodeURIComponent(studioName)}&event_type=eq.class&start_date=gte.${fromDate}&tags=cs.{auto-scraped}`,
-      {
-        method: 'DELETE',
-        headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+  for (const line of lines) {
+    // Pattern 1: "Tuesday, February 10, 2026"
+    const match1 = line.match(/^\w+,\s+(\w+)\s+(\d{1,2}),?\s*(\d{4})?$/i);
+    if (match1) {
+      const monthName = match1[1].toLowerCase();
+      const day = parseInt(match1[2]);
+      const year = match1[3] ? parseInt(match1[3]) : new Date().getFullYear();
+      const monthIndex = months.indexOf(monthName);
+      const shortIndex = shortMonths.findIndex(m => monthName.startsWith(m));
+      const idx = monthIndex !== -1 ? monthIndex : shortIndex;
+      if (idx !== -1) {
+        dates.add(`${year}-${String(idx + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`);
       }
-    );
-  } catch {}
-}
-
-async function scrapeStudio(browser, studio) {
-  console.log(`\n📍 ${studio.name}`);
-  console.log(`   Widget ID: ${studio.widgetId}`);
-  console.log('-'.repeat(50));
-
-  stats.studiosAttempted++;
-  const page = await browser.newPage();
-  await page.setViewport({ width: 1280, height: 900 });
-
-  const today = new Date();
-  const todayStr = today.toISOString().split('T')[0];
-  let studioClassesFound = 0;
-  let studioClassesAdded = 0;
-
-  try {
-    console.log('   Clearing old scraped classes...');
-    await deleteOldClasses(studio.name, todayStr);
-
-    console.log('   Loading schedule page...');
-    await page.goto(studio.scheduleUrl, { waitUntil: 'networkidle2', timeout: 60000 });
-    await new Promise(r => setTimeout(r, 3000));
-
-    // Scrape each day
-    for (let dayOffset = 0; dayOffset < DAYS_TO_SCRAPE; dayOffset++) {
-      const targetDate = new Date(today);
-      targetDate.setDate(today.getDate() + dayOffset);
-      const dateStr = targetDate.toISOString().split('T')[0];
-      const dayName = targetDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-
-      // Click on the day number to navigate
-      if (dayOffset > 0) {
-        const dayNum = targetDate.getDate();
-        // Calculate approximate x position based on day of week (Sun=1, Mon=2, etc.)
-        const dayOfWeek = targetDate.getDay(); // 0=Sun, 1=Mon, etc.
-        const xPositions = [200, 300, 400, 500, 200, 300, 400]; // Approximate button positions
-        const xPos = xPositions[dayOfWeek] || 200;
-
-        await page.mouse.click(xPos, 265);
-        await new Promise(r => setTimeout(r, 2000));
-      }
-
-      // Extract classes from the page
-      const text = await page.evaluate(() => document.body.innerText);
-      const classes = parseClasses(text, dateStr, studio);
-
-      if (classes.length > 0) {
-        console.log(`   ${dayName}: ${classes.length} classes`);
-
-        for (const cls of classes) {
-          studioClassesFound++;
-          stats.classesFound++;
-
-          const exists = await classExists(cls.title, cls.date, cls.studioName, cls.time);
-          if (exists) continue;
-
-          const success = await insertClass(cls);
-          if (success) {
-            stats.classesAdded++;
-            studioClassesAdded++;
-          }
-        }
-      }
+      continue;
     }
 
-    console.log(`   ✅ Total: ${studioClassesFound} found, ${studioClassesAdded} added`);
-    stats.studiosSuccessful++;
-
-  } catch (error) {
-    console.error(`   ❌ Error: ${error.message}`);
-    stats.errors.push({ studio: studio.name, error: error.message });
-  } finally {
-    await page.close();
+    // Pattern 2: "Feb 10, 2026" or "Tue, Feb 10"
+    const match2 = line.match(/(?:\w+,\s+)?(\w+)\s+(\d{1,2})(?:,\s*(\d{4}))?$/i);
+    if (match2 && !line.match(/^\d/) && line.length < 30) {
+      const monthName = match2[1].toLowerCase();
+      const day = parseInt(match2[2]);
+      const year = match2[3] ? parseInt(match2[3]) : new Date().getFullYear();
+      const shortIndex = shortMonths.findIndex(m => monthName.startsWith(m));
+      if (shortIndex !== -1 && day >= 1 && day <= 31) {
+        dates.add(`${year}-${String(shortIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`);
+      }
+    }
   }
+
+  return Array.from(dates).sort();
 }
 
-function parseClasses(text, date, studio) {
+/**
+ * Parse classes from Brandedweb page text, using date headers found in
+ * the text itself. Classes are only assigned dates that appear as headers
+ * on the page -- never computed dates from a loop counter.
+ *
+ * Expected format on page:
+ *   [Date header line]
+ *   8:30 AM           <-- time line
+ *   55 min            <-- duration line
+ *   Hot Rise & Shine  <-- class name
+ *   Instructor Name   <-- instructor (optional)
+ */
+function parseClasses(text, studio) {
   const classes = [];
   const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
 
-  // Pattern: time (8:30 AM) -> duration (55 min) -> class name -> instructor -> Show Details -> venue -> Book
+  const months = ['january', 'february', 'march', 'april', 'may', 'june',
+                  'july', 'august', 'september', 'october', 'november', 'december'];
+  const shortMonths = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+
+  let currentDate = null;
+
   for (let i = 0; i < lines.length - 3; i++) {
     const line = lines[i];
+
+    // Check for date header: "Tuesday, February 10, 2026" or "Tuesday, February 10"
+    const dateMatch1 = line.match(/^\w+,\s+(\w+)\s+(\d{1,2}),?\s*(\d{4})?$/i);
+    if (dateMatch1) {
+      const monthName = dateMatch1[1].toLowerCase();
+      const day = parseInt(dateMatch1[2]);
+      const year = dateMatch1[3] ? parseInt(dateMatch1[3]) : new Date().getFullYear();
+      const monthIndex = months.indexOf(monthName);
+      const shortIndex = shortMonths.findIndex(m => monthName.startsWith(m));
+      const idx = monthIndex !== -1 ? monthIndex : shortIndex;
+      if (idx !== -1) {
+        currentDate = `${year}-${String(idx + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      }
+      continue;
+    }
+
+    // Shorter date header: "Feb 10, 2026" or "Tue, Feb 10"
+    const dateMatch2 = line.match(/(?:\w+,\s+)?(\w+)\s+(\d{1,2})(?:,\s*(\d{4}))?$/i);
+    if (dateMatch2 && !line.match(/^\d/) && line.length < 30) {
+      const monthName = dateMatch2[1].toLowerCase();
+      const day = parseInt(dateMatch2[2]);
+      const year = dateMatch2[3] ? parseInt(dateMatch2[3]) : new Date().getFullYear();
+      const shortIndex = shortMonths.findIndex(m => monthName.startsWith(m));
+      if (shortIndex !== -1 && day >= 1 && day <= 31) {
+        currentDate = `${year}-${String(shortIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        continue;
+      }
+    }
+
+    // Only extract classes if we have a valid parsed date from the page
+    if (!currentDate) continue;
 
     // Check if line is a time (e.g., "8:30 AM", "6:00 PM")
     const timeMatch = line.match(/^(\d{1,2}:\d{2}\s*(?:AM|PM))$/i);
@@ -213,19 +172,155 @@ function parseClasses(text, date, studio) {
       instructor: cleanInstructor,
       studioName: studio.name,
       studioAddress: studio.address,
+      venueName: studio.name,
+      address: studio.address,
       category: studio.category,
-      date: date
+      date: currentDate,
+      bookingSystem: 'brandedweb'
     });
   }
 
-  // Deduplicate
+  // Deduplicate by title + date + time
   const seen = new Set();
   return classes.filter(c => {
-    const key = `${c.title}-${c.time}`;
+    const key = `${c.title}-${c.date}-${c.time}`;
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
   });
+}
+
+async function scrapeStudio(browser, studio) {
+  console.log(`\n📍 ${studio.name}`);
+  console.log(`   Widget ID: ${studio.widgetId}`);
+  console.log('-'.repeat(50));
+
+  stats.studiosAttempted++;
+  const page = await browser.newPage();
+  await page.setViewport({ width: 1280, height: 900 });
+
+  const todayStr = getTodayPacific();
+  const endDateStr = getEndDatePacific(DAYS_TO_SCRAPE);
+  let studioClassesFound = 0;
+  let studioClassesAdded = 0;
+
+  try {
+    console.log('   Clearing old scraped classes...');
+    await deleteOldClasses(studio.name, todayStr, 'brandedweb');
+
+    console.log('   Loading schedule page...');
+    await page.goto(studio.scheduleUrl, { waitUntil: 'networkidle2', timeout: 60000 });
+    await new Promise(r => setTimeout(r, 3000));
+
+    // Brandedweb widgets show a weekly schedule. Navigate week-by-week
+    // using CSS selectors instead of fragile pixel-clicking.
+    const weeksNeeded = Math.ceil(DAYS_TO_SCRAPE / 7);
+    let lastPageText = '';
+
+    for (let week = 0; week < weeksNeeded; week++) {
+      // Navigate to next week (skip for the first week)
+      if (week > 0) {
+        // Try CSS selector-based navigation for the "next" button
+        let navigated = false;
+        try {
+          navigated = await page.evaluate(() => {
+            // Brandedweb Mindbody widget navigation selectors
+            const selectors = [
+              'button[aria-label*="Next"]', 'button[aria-label*="next"]',
+              'button[aria-label*="Forward"]', 'button[aria-label*="forward"]',
+              '.next-week', '[class*="next"]', '[class*="forward"]',
+              '.fa-chevron-right', '.fa-arrow-right',
+              'button[class*="arrow-right"]', 'button[class*="right"]',
+              '[data-testid*="next"]', '[data-testid*="forward"]'
+            ];
+            for (const sel of selectors) {
+              const el = document.querySelector(sel);
+              if (el) {
+                el.click();
+                return true;
+              }
+            }
+            // Fallback: try arrow buttons by text content
+            const buttons = document.querySelectorAll('button, a, span');
+            for (const btn of buttons) {
+              const text = btn.textContent.trim();
+              if (text === '>' || text === '›' || text === '→' || text === '▶' || text === 'Next') {
+                btn.click();
+                return true;
+              }
+            }
+            return false;
+          });
+        } catch (navErr) {
+          console.log(`   Navigation error at week ${week + 1}: ${navErr.message}. Stopping.`);
+          break;
+        }
+
+        if (!navigated) {
+          console.log(`   Could not find next-week button at week ${week + 1}. Stopping.`);
+          break;
+        }
+
+        await new Promise(r => setTimeout(r, 3000));
+      }
+
+      // Extract page text
+      const pageText = await page.evaluate(() => document.body.innerText);
+
+      // CRITICAL FIX: Detect stale page (navigation didn't change content)
+      if (week > 0 && pageText === lastPageText) {
+        console.log(`   Page content unchanged after navigation at week ${week + 1}. Navigation failed. Stopping.`);
+        break;
+      }
+      lastPageText = pageText;
+
+      // CRITICAL FIX: Verify dates on the page actually changed
+      const datesOnPage = parseDatesFromText(pageText);
+      if (datesOnPage.length === 0 && week > 0) {
+        console.log(`   No date headers found on page at week ${week + 1}. Stopping.`);
+        break;
+      }
+
+      // Parse classes using date headers from the page text (NOT loop counter)
+      const classes = parseClasses(pageText, studio);
+
+      if (classes.length > 0) {
+        const dates = new Set(classes.map(c => c.date));
+        console.log(`   Week ${week + 1}: ${classes.length} classes across ${dates.size} days`);
+      } else {
+        console.log(`   Week ${week + 1}: 0 classes found`);
+      }
+
+      for (const cls of classes) {
+        // Skip classes outside our date range
+        if (cls.date < todayStr || cls.date > endDateStr) continue;
+
+        studioClassesFound++;
+        stats.classesFound++;
+
+        const exists = await classExists(cls.title, cls.date, cls.studioName, cls.time);
+        if (exists) continue;
+
+        const success = await insertClass(cls);
+        if (success) {
+          stats.classesAdded++;
+          studioClassesAdded++;
+        }
+      }
+    }
+
+    // Post-scrape validation: detect and remove duplicated schedules
+    await validateScrapedData(studio.name, 'brandedweb');
+
+    console.log(`   ✅ Total: ${studioClassesFound} found, ${studioClassesAdded} added`);
+    stats.studiosSuccessful++;
+
+  } catch (error) {
+    console.error(`   ❌ Error: ${error.message}`);
+    stats.errors.push({ studio: studio.name, error: error.message });
+  } finally {
+    await page.close();
+  }
 }
 
 async function main() {

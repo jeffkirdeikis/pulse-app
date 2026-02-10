@@ -3,13 +3,24 @@
 /**
  * WellnessLiving Class Scraper
  * Uses Puppeteer to scrape WellnessLiving schedule widgets
+ *
+ * FIXED (Feb 2026): No longer uses loop counter to assign dates.
+ * Instead, parses the actual displayed date from the page after each
+ * navigation. If navigation fails (displayed date doesn't change),
+ * scraping stops immediately to prevent date duplication.
+ *
  * Run: node scripts/scrape-wellnessliving.js
  */
 
 import puppeteer from 'puppeteer';
-import { SUPABASE_URL, SUPABASE_SERVICE_KEY } from './lib/env.js';
-
-const SUPABASE_KEY = SUPABASE_SERVICE_KEY();
+import {
+  classExists,
+  insertClass,
+  parseTime,
+  getTodayPacific,
+  deleteOldClasses,
+  validateScrapedData
+} from './lib/scraper-utils.js';
 
 const DAYS_TO_SCRAPE = 30;
 
@@ -71,90 +82,68 @@ function cleanClassTitle(title) {
 }
 
 /**
- * Parse time to HH:MM format
+ * Parse the displayed date from the WellnessLiving schedule page.
+ * WellnessLiving pages show date headers like:
+ *   "Thursday, February 05, 2026"
+ *   "Friday, February 06, 2026"
+ * or in day-view mode, a header showing the current displayed date.
+ *
+ * Returns the date as YYYY-MM-DD, or null if no date could be parsed.
  */
-function parseTime(timeStr) {
-  if (!timeStr) return '09:00';
-  const match = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM|am|pm)?/);
-  if (match) {
-    let hours = parseInt(match[1]);
-    const minutes = match[2];
-    const period = match[3]?.toUpperCase();
-    if (period === 'PM' && hours < 12) hours += 12;
-    if (period === 'AM' && hours === 12) hours = 0;
-    return `${hours.toString().padStart(2, '0')}:${minutes}`;
-  }
-  return '09:00';
-}
-
-/**
- * Check if class exists
- */
-async function classExists(title, date, studioName, time) {
+async function parseDisplayedDate(page) {
   try {
-    let url = `${SUPABASE_URL}/rest/v1/events?title=eq.${encodeURIComponent(title)}&start_date=eq.${date}&venue_name=eq.${encodeURIComponent(studioName)}`;
-    if (time) {
-      const normalizedTime = time.length === 5 ? `${time}:00` : time;
-      url += `&start_time=eq.${encodeURIComponent(normalizedTime)}`;
-    }
-    url += '&limit=1';
-    const response = await fetch(url,
-      { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }
-    );
-    const data = await response.json();
-    return data.length > 0;
-  } catch { return false; }
-}
+    return await page.evaluate(() => {
+      const months = ['january', 'february', 'march', 'april', 'may', 'june',
+                      'july', 'august', 'september', 'october', 'november', 'december'];
 
-/**
- * Insert class into database
- */
-async function insertClass(cls) {
-  const eventData = {
-    title: cls.title,
-    description: cls.instructor ? `Instructor: ${cls.instructor}` : `${cls.category} class at ${cls.studioName}`,
-    venue_name: cls.studioName,
-    venue_address: cls.studioAddress,
-    category: cls.category,
-    event_type: 'class',
-    start_date: cls.date,
-    start_time: cls.time,
-    end_time: cls.endTime || null,
-    price: 0,
-    is_free: false,
-    price_description: 'See studio for pricing',
-    status: 'active',
-    tags: ['auto-scraped', 'wellnessliving', cls.studioName.toLowerCase().replace(/\s+/g, '-')]
-  };
+      const bodyText = document.body.innerText;
+      const lines = bodyText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
 
-  try {
-    const response = await fetch(`${SUPABASE_URL}/rest/v1/events`, {
-      method: 'POST',
-      headers: {
-        'apikey': SUPABASE_KEY,
-        'Authorization': `Bearer ${SUPABASE_KEY}`,
-        'Content-Type': 'application/json',
-        'Prefer': 'return=minimal'
-      },
-      body: JSON.stringify(eventData)
-    });
-    return response.ok;
-  } catch { return false; }
-}
+      // Look for date patterns in the page text
+      for (const line of lines) {
+        // Pattern 1: "Thursday, February 05, 2026"
+        const match1 = line.match(/^\w+,\s+(\w+)\s+(\d{1,2}),?\s+(\d{4})$/i);
+        if (match1) {
+          const monthName = match1[1].toLowerCase();
+          const day = parseInt(match1[2]);
+          const year = parseInt(match1[3]);
+          const monthIndex = months.indexOf(monthName);
+          if (monthIndex !== -1) {
+            return `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+          }
+        }
 
-/**
- * Delete old classes for a studio
- */
-async function deleteOldClasses(studioName, fromDate) {
-  try {
-    await fetch(
-      `${SUPABASE_URL}/rest/v1/events?venue_name=eq.${encodeURIComponent(studioName)}&event_type=eq.class&start_date=gte.${fromDate}&tags=cs.{auto-scraped}`,
-      {
-        method: 'DELETE',
-        headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+        // Pattern 2: "February 05, 2026" (without day of week)
+        const match2 = line.match(/^(\w+)\s+(\d{1,2}),?\s+(\d{4})$/i);
+        if (match2) {
+          const monthName = match2[1].toLowerCase();
+          const day = parseInt(match2[2]);
+          const year = parseInt(match2[3]);
+          const monthIndex = months.indexOf(monthName);
+          if (monthIndex !== -1) {
+            return `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+          }
+        }
+
+        // Pattern 3: "Thu, Feb 5" (short format, assume current year)
+        const match3 = line.match(/^\w+,\s+(\w{3})\s+(\d{1,2})$/i);
+        if (match3) {
+          const shortMonths = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+          const monthAbbr = match3[1].toLowerCase();
+          const day = parseInt(match3[2]);
+          const monthIndex = shortMonths.indexOf(monthAbbr);
+          if (monthIndex !== -1) {
+            const year = new Date().getFullYear();
+            return `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+          }
+        }
       }
-    );
-  } catch {}
+
+      return null;
+    });
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -168,15 +157,14 @@ async function scrapeStudio(browser, studio) {
   stats.studiosAttempted++;
   let page = null;
 
-  const today = new Date();
-  const todayStr = today.toISOString().split('T')[0];
+  const todayStr = getTodayPacific();
   let studioClassesFound = 0;
   let studioClassesAdded = 0;
 
   try {
     // Delete old classes
     console.log('   Clearing old scraped classes...');
-    await deleteOldClasses(studio.name, todayStr);
+    await deleteOldClasses(studio.name, todayStr, 'wellnessliving');
 
     page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 900 });
@@ -186,25 +174,65 @@ async function scrapeStudio(browser, studio) {
     await page.goto(studio.scheduleUrl, { waitUntil: 'networkidle2', timeout: 60000 });
     await new Promise(r => setTimeout(r, 5000));
 
+    // Track the previously displayed date to detect stale navigation
+    let previousDisplayedDate = null;
+    let consecutiveStaleCount = 0;
+
     // Scrape each day
     for (let dayOffset = 0; dayOffset < DAYS_TO_SCRAPE; dayOffset++) {
-      const targetDate = new Date(today);
-      targetDate.setDate(today.getDate() + dayOffset);
-      const dateStr = targetDate.toISOString().split('T')[0];
-      const dayName = targetDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-
-      // Navigate to the specific date if needed
+      // Navigate to the next day if not the first iteration
       if (dayOffset > 0) {
+        const nextButton = await page.$('.rs-schedule-day-next, .wl-schedule-next, [class*="next-day"], button[aria-label*="next"]');
+        if (!nextButton) {
+          console.log(`   Navigation failed at day ${dayOffset}: no next-day button found. Stopping.`);
+          break;
+        }
+
         try {
-          const nextButton = await page.$('.rs-schedule-day-next, .wl-schedule-next, [class*="next-day"], button[aria-label*="next"]');
-          if (nextButton) {
-            await nextButton.click();
-            await new Promise(r => setTimeout(r, 1500));
-          }
+          await nextButton.click();
+          await new Promise(r => setTimeout(r, 1500));
         } catch (e) {
-          console.log(`   Warning: Nav failed day ${dayOffset}: ${e.message}`);
+          console.log(`   Navigation failed at day ${dayOffset}: ${e.message}. Stopping.`);
+          break;
         }
       }
+
+      // CRITICAL FIX: Parse the ACTUAL displayed date from the page
+      // instead of trusting the loop counter (dayOffset).
+      const displayedDate = await parseDisplayedDate(page);
+
+      if (!displayedDate) {
+        // Could not parse any date from the page. On the first iteration this
+        // may mean the page layout is unexpected; on subsequent iterations it
+        // means navigation likely failed. Either way, skip this iteration.
+        console.log(`   Day ${dayOffset}: could not parse date from page, skipping`);
+        consecutiveStaleCount++;
+        if (consecutiveStaleCount >= 3) {
+          console.log(`   3 consecutive unparseable dates. Navigation is broken. Stopping.`);
+          break;
+        }
+        continue;
+      }
+
+      // CRITICAL FIX: Verify navigation actually changed the page.
+      // If the displayed date is the same as the previous iteration,
+      // navigation failed silently - stop immediately.
+      if (displayedDate === previousDisplayedDate) {
+        consecutiveStaleCount++;
+        if (consecutiveStaleCount >= 2) {
+          console.log(`   Navigation stale: displayed date ${displayedDate} unchanged for ${consecutiveStaleCount} iterations. Stopping.`);
+          break;
+        }
+        console.log(`   Warning: displayed date ${displayedDate} same as previous, retrying...`);
+        continue;
+      }
+
+      // Navigation succeeded - reset stale counter
+      consecutiveStaleCount = 0;
+      previousDisplayedDate = displayedDate;
+
+      const dateStr = displayedDate;
+      const dayName = new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 
       // Extract classes from the page
       let classes = [];
@@ -367,8 +395,14 @@ async function scrapeStudio(browser, studio) {
           stats.classesFound++;
 
           cls.time = parseTime(cls.time);
+          // Use shared classExists with all 4 fields (title+date+venue+time)
           const exists = await classExists(cls.title, cls.date, cls.studioName, cls.time);
           if (exists) continue;
+
+          // Use shared insertClass with date validation
+          cls.venueName = cls.studioName;
+          cls.address = cls.studioAddress;
+          cls.bookingSystem = 'wellnessliving';
           const success = await insertClass(cls);
           if (success) {
             stats.classesAdded++;
@@ -377,6 +411,9 @@ async function scrapeStudio(browser, studio) {
         }
       }
     }
+
+    // Post-scrape validation: detect and remove duplicated schedules
+    await validateScrapedData(studio.name, 'wellnessliving');
 
     console.log(`   ✅ Total: ${studioClassesFound} found, ${studioClassesAdded} added`);
     stats.studiosSuccessful++;
