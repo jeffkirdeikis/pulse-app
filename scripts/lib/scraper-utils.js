@@ -36,7 +36,7 @@ export async function retryWithBackoff(fn, opts = {}) {
       lastError = error;
       if (attempt === maxRetries) break;
 
-      const isRetryable = /timeout|ECONNRESET|ECONNREFUSED|ETIMEDOUT|502|503|504|net::ERR|socket hang up/i.test(error.message);
+      const isRetryable = /timeout|ECONNRESET|ECONNREFUSED|ETIMEDOUT|429|Too Many Requests|502|503|504|net::ERR|socket hang up/i.test(error.message);
       if (!isRetryable) throw error;
 
       const delay = Math.min(baseDelay * Math.pow(2, attempt), maxDelay);
@@ -131,35 +131,52 @@ export function parseDateHeader(line, fallbackYear) {
   // ISO passthrough: "2026-02-10"
   if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return text;
 
+  let result = null;
+
   // Format: "DayOfWeek,? Month DD,? YYYY" (with optional trailing text like "(Today)")
   const f1 = text.match(/^\w+,?\s+(\w+)\s+(\d{1,2}),?\s+(\d{4})/i);
   if (f1) {
     const mi = findMonthIndex(f1[1]);
-    if (mi !== -1) return `${f1[3]}-${String(mi + 1).padStart(2, '0')}-${String(parseInt(f1[2])).padStart(2, '0')}`;
+    if (mi !== -1) result = `${f1[3]}-${String(mi + 1).padStart(2, '0')}-${String(parseInt(f1[2], 10)).padStart(2, '0')}`;
   }
 
   // Format: "DayOfWeek,? DDth Month YYYY?" (ordinal day)
-  const f2 = text.match(/^\w+,?\s+(\d{1,2})(?:st|nd|rd|th)\s+(\w+)(?:\s+(\d{4}))?/i);
-  if (f2) {
-    const mi = findMonthIndex(f2[2]);
-    if (mi !== -1) return `${f2[3] || year}-${String(mi + 1).padStart(2, '0')}-${String(parseInt(f2[1])).padStart(2, '0')}`;
+  if (!result) {
+    const f2 = text.match(/^\w+,?\s+(\d{1,2})(?:st|nd|rd|th)\s+(\w+)(?:\s+(\d{4}))?/i);
+    if (f2) {
+      const mi = findMonthIndex(f2[2]);
+      if (mi !== -1) result = `${f2[3] || year}-${String(mi + 1).padStart(2, '0')}-${String(parseInt(f2[1], 10)).padStart(2, '0')}`;
+    }
   }
 
   // Format: "Month DD, YYYY" (no day-of-week)
-  const f3 = text.match(/^(\w+)\s+(\d{1,2}),?\s+(\d{4})/i);
-  if (f3) {
-    const mi = findMonthIndex(f3[1]);
-    if (mi !== -1) return `${f3[3]}-${String(mi + 1).padStart(2, '0')}-${String(parseInt(f3[2])).padStart(2, '0')}`;
+  if (!result) {
+    const f3 = text.match(/^(\w+)\s+(\d{1,2}),?\s+(\d{4})/i);
+    if (f3) {
+      const mi = findMonthIndex(f3[1]);
+      if (mi !== -1) result = `${f3[3]}-${String(mi + 1).padStart(2, '0')}-${String(parseInt(f3[2], 10)).padStart(2, '0')}`;
+    }
   }
 
   // Format: "DayOfWeek,? Month DD" (no year)
-  const f4 = text.match(/^\w+,?\s+(\w+)\s+(\d{1,2})$/i);
-  if (f4) {
-    const mi = findMonthIndex(f4[1]);
-    if (mi !== -1) return `${year}-${String(mi + 1).padStart(2, '0')}-${String(parseInt(f4[2])).padStart(2, '0')}`;
+  if (!result) {
+    const f4 = text.match(/^\w+,?\s+(\w+)\s+(\d{1,2})$/i);
+    if (f4) {
+      const mi = findMonthIndex(f4[1]);
+      if (mi !== -1) result = `${year}-${String(mi + 1).padStart(2, '0')}-${String(parseInt(f4[2], 10)).padStart(2, '0')}`;
+    }
   }
 
-  return null;
+  if (!result) return null;
+
+  // Validate the constructed date is real (catches Feb 30, Apr 31, etc.)
+  const [y, m, d] = result.split('-').map(Number);
+  const testDate = new Date(y, m - 1, d);
+  if (testDate.getFullYear() !== y || testDate.getMonth() !== m - 1 || testDate.getDate() !== d) {
+    return null;
+  }
+
+  return result;
 }
 
 // ============================================================
@@ -193,8 +210,11 @@ export async function classExists(title, date, venueName, time) {
     });
     const data = await response.json();
     return data.length > 0;
-  } catch {
-    return false;
+  } catch (err) {
+    // Conservative: assume class exists to prevent duplicates during outages.
+    // A missed class gets added on the next run; a duplicate persists forever.
+    console.warn(`   [dedup] Check failed for "${title}": ${err.message} — skipping to avoid duplicate`);
+    return true;
   }
 }
 
@@ -297,8 +317,9 @@ export async function validateScrapedData(venueName, bookingSystemTag) {
 
     // A class running every day for 30 days = ratio of 30.
     // Most classes run 2-5x/week = ratio of 8-20 over 30 days.
-    // Ratio > 25 strongly indicates duplication (same schedule stamped on every day).
-    if (ratio > 25) {
+    // Ratio > 25 with high total count strongly indicates duplication.
+    // Small venues with few classes legitimately have high ratios (e.g., 1 class × 30 days = 30).
+    if (ratio > 25 && data.length > 150) {
       console.warn(`   [scraper-utils] VALIDATION FAIL: ${venueName} has ${data.length} records for ${titles.size} unique classes (ratio: ${ratio.toFixed(1)}x)`);
       console.warn(`      This likely indicates failed navigation causing date duplication.`);
       console.warn(`      Deleting suspicious data to prevent incorrect schedules.`);
@@ -312,6 +333,8 @@ export async function validateScrapedData(venueName, bookingSystemTag) {
         }
       );
       return false;
+    } else if (ratio > 25) {
+      console.warn(`   [scraper-utils] VALIDATION WARNING: ${venueName} has high ratio ${ratio.toFixed(1)}x but only ${data.length} records — monitoring, not deleting`);
     }
     return true;
   } catch {
@@ -328,20 +351,21 @@ export async function validateScrapedData(venueName, bookingSystemTag) {
  * Handles formats like "8:30 AM", "6:00PM", "14:30", etc.
  *
  * @param {string} timeStr - Time string to parse
- * @returns {string} Time in HH:MM format, or '09:00' if unparseable
+ * @returns {string|null} Time in HH:MM format, or null if unparseable
  */
 export function parseTime(timeStr) {
-  if (!timeStr) return '09:00';
+  if (!timeStr) return null;
   const match = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM|am|pm)?/);
   if (match) {
-    let hours = parseInt(match[1]);
+    let hours = parseInt(match[1], 10);
     const minutes = match[2];
     const period = (match[3] || '').toUpperCase();
     if (period === 'PM' && hours < 12) hours += 12;
     if (period === 'AM' && hours === 12) hours = 0;
     return `${hours.toString().padStart(2, '0')}:${minutes}`;
   }
-  return '09:00';
+  console.warn(`   [parseTime] Unparseable time: "${timeStr}"`);
+  return null;
 }
 
 // ============================================================
@@ -354,20 +378,26 @@ export function parseTime(timeStr) {
  * @param {string} venueName - Name of the venue
  * @param {string} fromDate - YYYY-MM-DD start date
  * @param {string} bookingSystemTag - Tag for the booking system
+ * @returns {Promise<boolean>} true if deletion succeeded
  */
 export async function deleteOldClasses(venueName, fromDate, bookingSystemTag) {
   try {
     const tagFilter = bookingSystemTag
       ? `&tags=cs.{auto-scraped,${bookingSystemTag}}`
       : '&tags=cs.{auto-scraped}';
-    await fetch(
-      `${SUPABASE_URL}/rest/v1/events?venue_name=eq.${encodeURIComponent(venueName)}&event_type=eq.class&start_date=gte.${fromDate}${tagFilter}`,
-      {
-        method: 'DELETE',
-        headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
-      }
+    const response = await retryWithBackoff(
+      () => fetch(
+        `${SUPABASE_URL}/rest/v1/events?venue_name=eq.${encodeURIComponent(venueName)}&event_type=eq.class&start_date=gte.${fromDate}${tagFilter}`,
+        {
+          method: 'DELETE',
+          headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+        }
+      ),
+      { maxRetries: 2, label: `delete old classes for ${venueName}` }
     );
-  } catch {
-    // Silently continue - deletion failure is not critical
+    return response.ok;
+  } catch (err) {
+    console.warn(`   [delete] Failed for ${venueName}: ${err.message}`);
+    return false;
   }
 }

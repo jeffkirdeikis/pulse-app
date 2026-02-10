@@ -37,6 +37,20 @@ puppeteer.use(StealthPlugin());
 const SUPABASE_KEY = SUPABASE_SERVICE_KEY();
 const DAYS_TO_SCRAPE = 30;
 
+// User-agent rotation to reduce fingerprinting risk
+const USER_AGENTS = [
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2.1 Safari/605.1.15',
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0',
+];
+function randomUA() { return USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)]; }
+
+// Helper: extract sorted date headers from page text for stale detection
+function extractDateHeaders(text) {
+  return text.split('\n').map(l => parseDateHeader(l.trim())).filter(Boolean).sort().join(',');
+}
+
 // Stats tracking
 const stats = {
   sourcesAttempted: 0,
@@ -71,18 +85,14 @@ async function scrapeMindbodyWidget(source, browser) {
     const todayStr = getTodayPacific();
     const endDateStr = getEndDatePacific(DAYS_TO_SCRAPE);
 
-    await deleteOldClasses(source.name, todayStr, 'mindbody-widget');
-
     // Use direct Mindbody Widget API (numeric ID) instead of loading
     // the full JS-rendered widget page (hex embed ID) in Puppeteer.
     // The API returns pre-rendered HTML that can be parsed without a browser.
     console.log(`   Using Mindbody API for widget ID: ${source.widget_id}`);
 
-    const today = new Date();
     for (let dayOffset = 0; dayOffset < DAYS_TO_SCRAPE; dayOffset++) {
-      const targetDate = new Date(today);
-      targetDate.setDate(today.getDate() + dayOffset);
-      const dateStr = targetDate.toISOString().split('T')[0];
+      // Use Pacific-timezone-aware date to avoid UTC shift at evening scrape times
+      const dateStr = getEndDatePacific(dayOffset);
 
       if (dateStr < todayStr || dateStr > endDateStr) continue;
 
@@ -137,12 +147,24 @@ async function scrapeMindbodyWidget(source, browser) {
       const endTimes = [...html.matchAll(/<time class="hc_endtime" datetime="[^"]*">\s*([^<]+)<\/time>/g)].map(m => m[1].trim());
       const instructors = [...html.matchAll(/<div class="bw-session__staff"[^>]*>\s*([^\n<]+)/g)].map(m => m[1].trim());
 
+      // Guard: if arrays desync, Mindbody HTML structure may have changed
+      if (classNames.length > 0 && classNames.length !== startTimes.length) {
+        console.warn(`   ⚠️ HTML parse mismatch on ${dateStr}: ${classNames.length} names vs ${startTimes.length} times — Mindbody HTML may have changed`);
+        if (dayOffset === 0) {
+          await telegramAlert(`⚠️ Mindbody HTML mismatch for ${source.name}: ${classNames.length} names vs ${startTimes.length} times. HTML structure may have changed.`);
+        }
+      }
+      const safeLen = Math.min(classNames.length, startTimes.length);
+
       if (classNames.length > 0) {
-        const dayName = targetDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+        // Parse dateStr back for display (dateStr is already Pacific-correct YYYY-MM-DD)
+        const [yr, mo, dy] = dateStr.split('-').map(Number);
+        const displayDate = new Date(yr, mo - 1, dy);
+        const dayName = displayDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
         console.log(`   ${dayName}: ${classNames.length} classes`);
       }
 
-      for (let i = 0; i < classNames.length; i++) {
+      for (let i = 0; i < safeLen; i++) {
         const className = classNames[i]
           .replace(/_/g, ' ')
           .replace(/\b\w/g, c => c.toUpperCase());
@@ -181,6 +203,12 @@ async function scrapeMindbodyWidget(source, browser) {
 
       // Small delay between API requests
       await new Promise(r => setTimeout(r, 300));
+    }
+
+    // Delete old data AFTER successful scrape (not before) to avoid
+    // leaving zero classes if the scraper crashes mid-run
+    if (classesFound > 0) {
+      await deleteOldClasses(source.name, todayStr, 'mindbody-widget');
     }
 
     console.log(`   ✅ Found: ${classesFound}, Added: ${classesAdded}`);
@@ -262,7 +290,7 @@ async function scrapeMindbodyClassic(source, browser) {
   let classesAdded = 0;
 
   try {
-    await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+    await page.setUserAgent(randomUA());
     await page.evaluateOnNewDocument(() => {
       Object.defineProperty(navigator, 'webdriver', { get: () => false });
     });
@@ -270,8 +298,6 @@ async function scrapeMindbodyClassic(source, browser) {
 
     const todayStr = getTodayPacific();
     const endDateStr = getEndDatePacific(DAYS_TO_SCRAPE);
-
-    await deleteOldClasses(source.name, todayStr, 'mindbody-classic');
 
     console.log(`   Loading: ${source.url}`);
     await retryWithBackoff(async () => {
@@ -300,7 +326,7 @@ async function scrapeMindbodyClassic(source, browser) {
 
     // Click on the correct tab
     if (source.tab_id) {
-      await page.evaluate((tabId) => {
+      const tabClicked = await page.evaluate((tabId) => {
         const tabs = document.querySelectorAll('li[onclick]');
         for (const tab of tabs) {
           const onclick = tab.getAttribute('onclick') || '';
@@ -311,13 +337,17 @@ async function scrapeMindbodyClassic(source, browser) {
         }
         return false;
       }, source.tab_id);
+      if (!tabClicked) {
+        console.warn(`   ⚠️ Tab ID ${source.tab_id} not found — scraping default tab`);
+        await telegramAlert(`⚠️ ${source.name}: Tab ID ${source.tab_id} not found on Mindbody Classic page. Scraping default tab.`);
+      }
       await new Promise(r => setTimeout(r, 5000));
     }
 
     // Scrape multiple weeks
     const allClasses = [];
     const WEEKS_TO_SCRAPE = 5;
-    let lastClassicPageText = '';
+    let lastClassicDates = '';
 
     for (let week = 0; week < WEEKS_TO_SCRAPE; week++) {
       const text = await page.evaluate(() => document.body.innerText);
@@ -326,12 +356,14 @@ async function scrapeMindbodyClassic(source, browser) {
         throw new Error('Blocked by security check');
       }
 
-      // Stale page detection: if content didn't change after navigation, stop
-      if (week > 0 && text === lastClassicPageText) {
-        console.log(`   Week ${week + 1}: Page content unchanged after navigation, stopping`);
+      // Stale page detection: compare date headers only (not full text)
+      // This avoids false positives from timestamps or dynamic content
+      const currentDates = extractDateHeaders(text);
+      if (week > 0 && (currentDates === lastClassicDates || currentDates === '')) {
+        console.log(`   Week ${week + 1}: Date headers unchanged after navigation, stopping`);
         break;
       }
-      lastClassicPageText = text;
+      lastClassicDates = currentDates;
 
       const weekClasses = parseClassicSchedule(text, source);
       allClasses.push(...weekClasses);
@@ -394,6 +426,11 @@ async function scrapeMindbodyClassic(source, browser) {
         classesAdded++;
         stats.classesAdded++;
       }
+    }
+
+    // Delete old data AFTER successful scrape to avoid zero-class gap
+    if (classesFound > 0) {
+      await deleteOldClasses(source.name, todayStr, 'mindbody-classic');
     }
 
     console.log(`   ✅ Found: ${classesFound}, Added: ${classesAdded}`);
@@ -462,7 +499,8 @@ function parseWellnessLivingSchedule(text, source) {
     let instructor = '';
     if (i + 2 < lines.length) {
       const instrLine = lines[i + 2].replace(/\s+SUB$/i, '').trim();
-      const instrMatch = instrLine.match(/^(?:with\s+)?([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)$/);
+      // Broad instructor name match: handles "Paula Johnson", "O'Brien", "van der Berg", all-caps
+      const instrMatch = instrLine.match(/^(?:with\s+)?([A-Za-z][A-Za-z'.-]+(?:\s+[A-Za-z'.-]+){0,3})$/);
       if (instrMatch) {
         instructor = instrMatch[1].trim();
       }
@@ -503,8 +541,6 @@ async function scrapeWellnessLiving(source, browser) {
   try {
     const todayStr = getTodayPacific();
 
-    await deleteOldClasses(source.name, todayStr, 'wellnessliving');
-
     console.log(`   Loading: ${source.url}`);
     await retryWithBackoff(async () => {
       await page.goto(source.url, { waitUntil: 'networkidle2', timeout: 60000 });
@@ -523,7 +559,7 @@ async function scrapeWellnessLiving(source, browser) {
     // WellnessLiving shows a weekly schedule with day headers.
     // Navigate week by week to cover DAYS_TO_SCRAPE days.
     const weeksNeeded = Math.ceil(DAYS_TO_SCRAPE / 7);
-    let lastWLPageText = '';
+    let lastWLDates = '';
 
     for (let week = 0; week < weeksNeeded; week++) {
       if (week > 0) {
@@ -561,12 +597,13 @@ async function scrapeWellnessLiving(source, browser) {
       // Extract the full page text and parse day-by-day
       const pageText = await page.evaluate(() => document.body.innerText);
 
-      // Stale page detection: if content didn't change after navigation, stop
-      if (week > 0 && pageText === lastWLPageText) {
-        console.log(`   [wellnessliving] Page content unchanged after navigation, stopping`);
+      // Stale page detection: compare date headers only (not full text)
+      const currentDates = extractDateHeaders(pageText);
+      if (week > 0 && (currentDates === lastWLDates || currentDates === '')) {
+        console.log(`   [wellnessliving] Date headers unchanged after navigation, stopping`);
         break;
       }
-      lastWLPageText = pageText;
+      lastWLDates = currentDates;
       const classes = parseWellnessLivingSchedule(pageText, source);
 
       console.log(`   Week ${week + 1}: Found ${classes.length} classes across ${new Set(classes.map(c => c.date)).size} days`);
@@ -585,8 +622,15 @@ async function scrapeWellnessLiving(source, browser) {
         if (success) {
           classesAdded++;
           stats.classesAdded++;
+        } else {
+          stats.insertFailures++;
         }
       }
+    }
+
+    // Delete old data AFTER successful scrape to avoid zero-class gap
+    if (classesFound > 0) {
+      await deleteOldClasses(source.name, todayStr, 'wellnessliving');
     }
 
     console.log(`   ✅ Found: ${classesFound}, Added: ${classesAdded}`);
@@ -686,8 +730,6 @@ async function scrapeBrandedweb(source, browser) {
   try {
     const todayStr = getTodayPacific();
 
-    await deleteOldClasses(source.name, todayStr, 'brandedweb');
-
     console.log(`   Loading: ${source.url}`);
     await retryWithBackoff(
       () => page.goto(source.url, { waitUntil: 'networkidle2', timeout: 60000 }),
@@ -697,7 +739,7 @@ async function scrapeBrandedweb(source, browser) {
 
     // Brandedweb pages show a weekly schedule. Navigate week-by-week.
     const weeksNeeded = Math.ceil(DAYS_TO_SCRAPE / 7);
-    let lastPageText = '';
+    let lastBWDates = '';
 
     for (let week = 0; week < weeksNeeded; week++) {
       if (week > 0) {
@@ -738,13 +780,14 @@ async function scrapeBrandedweb(source, browser) {
         }
       }
 
-      // Extract page text and check it actually changed
+      // Extract page text and compare date headers for stale detection
       const pageText = await page.evaluate(() => document.body.innerText);
-      if (week > 0 && pageText === lastPageText) {
-        console.log(`   ⚠️ Page didn't change after navigation, stopping`);
+      const currentDates = extractDateHeaders(pageText);
+      if (week > 0 && (currentDates === lastBWDates || currentDates === '')) {
+        console.log(`   ⚠️ Date headers unchanged after navigation, stopping`);
         break;
       }
-      lastPageText = pageText;
+      lastBWDates = currentDates;
 
       // Parse classes with date headers from the page text
       const classes = parseBrandedwebSchedule(pageText, source);
@@ -769,6 +812,11 @@ async function scrapeBrandedweb(source, browser) {
           stats.insertFailures++;
         }
       }
+    }
+
+    // Delete old data AFTER successful scrape to avoid zero-class gap
+    if (classesFound > 0) {
+      await deleteOldClasses(source.name, todayStr, 'brandedweb');
     }
 
     console.log(`   ✅ Found: ${classesFound}, Added: ${classesAdded}`);
@@ -862,8 +910,6 @@ async function scrapeSendMoreGetBeta(source, browser) {
     const todayStr = getTodayPacific();
     const endDateStr = getEndDatePacific(DAYS_TO_SCRAPE);
 
-    await deleteOldClasses(source.name, todayStr, 'sendmoregetbeta');
-
     console.log(`   Loading: ${source.url}`);
     await retryWithBackoff(
       () => page.goto(source.url, { waitUntil: 'networkidle2', timeout: 60000 }),
@@ -893,6 +939,11 @@ async function scrapeSendMoreGetBeta(source, browser) {
       } else {
         stats.insertFailures++;
       }
+    }
+
+    // Delete old data AFTER successful scrape to avoid zero-class gap
+    if (classesFound > 0) {
+      await deleteOldClasses(source.name, todayStr, 'sendmoregetbeta');
     }
 
     console.log(`   ✅ Found: ${classesFound}, Added: ${classesAdded}`);
@@ -934,15 +985,22 @@ async function main() {
     console.log(`   • ${source.name} (${source.booking_system})`);
   }
 
-  const browser = await puppeteer.launch({
-    headless: 'new',
-    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-blink-features=AutomationControlled']
-  });
+  const BROWSER_ARGS = ['--no-sandbox', '--disable-setuid-sandbox', '--disable-blink-features=AutomationControlled', '--disable-dev-shm-usage'];
+  const RESTART_EVERY = 4; // Restart browser every N sources to prevent memory leaks
+
+  let browser = await puppeteer.launch({ headless: 'new', args: BROWSER_ARGS });
 
   try {
-    // Group sources by booking system and scrape
-    for (const source of RELIABLE_SOURCES) {
+    for (let idx = 0; idx < RELIABLE_SOURCES.length; idx++) {
+      const source = RELIABLE_SOURCES[idx];
       stats.sourcesAttempted++;
+
+      // Restart browser periodically to prevent memory leaks
+      if (idx > 0 && idx % RESTART_EVERY === 0) {
+        console.log(`\n   🔄 Restarting browser (after ${idx} sources)...`);
+        try { await browser.close(); } catch (e) { /* ignore */ }
+        browser = await puppeteer.launch({ headless: 'new', args: BROWSER_ARGS });
+      }
 
       switch (source.booking_system) {
         case 'mindbody-widget':
@@ -979,7 +1037,9 @@ async function main() {
       await new Promise(r => setTimeout(r, 2000));
     }
   } finally {
-    await browser.close();
+    if (browser) {
+      try { await browser.close(); } catch (e) { console.warn('Browser close error:', e.message); }
+    }
   }
 
   // Final report
