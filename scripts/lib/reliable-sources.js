@@ -76,7 +76,7 @@ export const RELIABLE_SOURCES = [
   {
     name: 'Shala Yoga Squamish',
     booking_system: 'mindbody-widget',
-    widget_id: '8006625412b8',
+    widget_id: '189264',
     studio_id: null,
     url: 'https://www.shalayoga.ca',
     address: '1368 Main St, Squamish, BC',
@@ -84,12 +84,12 @@ export const RELIABLE_SOURCES = [
     scrape_frequency: 'daily',
     priority: 10,
     verified: true,
-    notes: 'Main yoga studio - large class schedule'
+    notes: 'Main yoga studio - uses numeric widget API ID (not hex embed ID)'
   },
   {
     name: 'Wild Life Gym',
     booking_system: 'mindbody-widget',
-    widget_id: '3deb634012b8',
+    widget_id: '69441',
     studio_id: null,
     url: 'https://www.wildlifegym.ca',
     address: '38927 Progress Way Unit 113, Squamish, BC',
@@ -97,7 +97,7 @@ export const RELIABLE_SOURCES = [
     scrape_frequency: 'daily',
     priority: 9,
     verified: true,
-    notes: 'CrossFit-style gym with varied schedule'
+    notes: 'CrossFit-style gym - uses numeric widget API ID (not hex embed ID)'
   },
 
   // ========================================

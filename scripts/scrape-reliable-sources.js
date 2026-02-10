@@ -56,7 +56,6 @@ async function scrapeMindbodyWidget(source, browser) {
   console.log(`\n📍 ${source.name} (Mindbody Widget)`);
   console.log('-'.repeat(50));
 
-  const page = await browser.newPage();
   let classesFound = 0;
   let classesAdded = 0;
 
@@ -66,71 +65,90 @@ async function scrapeMindbodyWidget(source, browser) {
 
     await deleteOldClasses(source.name, todayStr, 'mindbody-widget');
 
-    const widgetUrl = `https://widgets.mindbodyonline.com/widgets/schedules/${source.widget_id}`;
-    console.log(`   Loading widget: ${widgetUrl}`);
+    // Use direct Mindbody Widget API (numeric ID) instead of loading
+    // the full JS-rendered widget page (hex embed ID) in Puppeteer.
+    // The API returns pre-rendered HTML that can be parsed without a browser.
+    console.log(`   Using Mindbody API for widget ID: ${source.widget_id}`);
 
-    await page.goto(widgetUrl, { waitUntil: 'networkidle2', timeout: 60000 });
-    await new Promise(r => setTimeout(r, 3000));
-
-    // Extract schedule data from widget
-    const classes = await page.evaluate(() => {
-      const items = [];
-      document.querySelectorAll('.bw-session').forEach(session => {
-        const dateEl = session.closest('.bw-day')?.querySelector('.bw-day__date');
-        const titleEl = session.querySelector('.bw-session__name');
-        const timeEl = session.querySelector('.bw-session__time');
-        const instructorEl = session.querySelector('.bw-session__staff');
-
-        if (titleEl && timeEl && dateEl) {
-          items.push({
-            title: titleEl.textContent?.trim(),
-            time: timeEl.textContent?.trim(),
-            instructor: instructorEl?.textContent?.trim() || '',
-            dateText: dateEl.textContent?.trim()
-          });
-        }
-      });
-      return items;
-    });
-
-    for (const cls of classes) {
-      // Parse date from widget format
-      const dateMatch = cls.dateText?.match(/(\w+)\s+(\d{1,2})/);
-      if (!dateMatch) continue;
-
-      const monthName = dateMatch[1];
-      const day = parseInt(dateMatch[2]);
-      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-      const monthIndex = months.findIndex(m => monthName.startsWith(m));
-      if (monthIndex === -1) continue;
-
-      const year = new Date().getFullYear();
-      const dateStr = `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const today = new Date();
+    for (let dayOffset = 0; dayOffset < DAYS_TO_SCRAPE; dayOffset++) {
+      const targetDate = new Date(today);
+      targetDate.setDate(today.getDate() + dayOffset);
+      const dateStr = targetDate.toISOString().split('T')[0];
 
       if (dateStr < todayStr || dateStr > endDateStr) continue;
 
-      classesFound++;
-      stats.classesFound++;
+      const apiUrl = `https://widgets.mindbodyonline.com/widgets/schedules/${source.widget_id}/load_markup?options%5Bstart_date%5D=${dateStr}`;
 
-      const parsedTime = parseTime(cls.time);
-      const exists = await classExists(cls.title, dateStr, source.name, parsedTime);
-      if (exists) continue;
-
-      const success = await insertClass({
-        title: cls.title,
-        time: parsedTime,
-        instructor: cls.instructor,
-        venueName: source.name,
-        address: source.address,
-        category: source.category,
-        date: dateStr,
-        bookingSystem: 'mindbody-widget'
-      });
-
-      if (success) {
-        classesAdded++;
-        stats.classesAdded++;
+      let data;
+      try {
+        const response = await fetch(apiUrl);
+        if (!response.ok) continue;
+        data = await response.json();
+      } catch {
+        continue;
       }
+
+      if (!data || !data.class_sessions) continue;
+
+      // Parse HTML from API response
+      let html = data.class_sessions;
+      html = html
+        .replace(/\\u003c/g, '<')
+        .replace(/\\u003e/g, '>')
+        .replace(/\\u0026/g, '&')
+        .replace(/\\"/g, '"')
+        .replace(/\\n/g, '\n')
+        .replace(/\\\//g, '/');
+
+      // Extract class data from the HTML
+      const classNames = [...html.matchAll(/data-bw-widget-mbo-class-name="([^"]+)"/g)].map(m => m[1]);
+      const startTimes = [...html.matchAll(/<time class="hc_starttime" datetime="[^"]*">\s*([^<]+)<\/time>/g)].map(m => m[1].trim());
+      const endTimes = [...html.matchAll(/<time class="hc_endtime" datetime="[^"]*">\s*([^<]+)<\/time>/g)].map(m => m[1].trim());
+      const instructors = [...html.matchAll(/<div class="bw-session__staff"[^>]*>\s*([^\n<]+)/g)].map(m => m[1].trim());
+
+      if (classNames.length > 0) {
+        const dayName = targetDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+        console.log(`   ${dayName}: ${classNames.length} classes`);
+      }
+
+      for (let i = 0; i < classNames.length; i++) {
+        const className = classNames[i]
+          .replace(/_/g, ' ')
+          .replace(/\b\w/g, c => c.toUpperCase());
+        const startTime = startTimes[i] || '';
+        const instructor = instructors[i]?.replace(/\s+/g, ' ').trim() || '';
+
+        if (!className || !startTime) continue;
+
+        classesFound++;
+        stats.classesFound++;
+
+        const parsedTime = parseTime(startTime);
+        const exists = await classExists(className, dateStr, source.name, parsedTime);
+        if (exists) continue;
+
+        const parsedEndTime = endTimes[i] ? parseTime(endTimes[i]) : null;
+        const success = await insertClass({
+          title: className,
+          time: parsedTime,
+          endTime: parsedEndTime,
+          instructor: instructor,
+          venueName: source.name,
+          address: source.address,
+          category: source.category,
+          date: dateStr,
+          bookingSystem: 'mindbody-widget'
+        });
+
+        if (success) {
+          classesAdded++;
+          stats.classesAdded++;
+        }
+      }
+
+      // Small delay between API requests
+      await new Promise(r => setTimeout(r, 300));
     }
 
     console.log(`   ✅ Found: ${classesFound}, Added: ${classesAdded}`);
@@ -141,8 +159,6 @@ async function scrapeMindbodyWidget(source, browser) {
     console.error(`   ❌ Error: ${error.message}`);
     stats.errors.push({ source: source.name, error: error.message });
     await recordScrapeFailure(source.name, error.message);
-  } finally {
-    await page.close();
   }
 
   return { classesFound, classesAdded };
@@ -376,8 +392,9 @@ function parseWellnessLivingSchedule(text, source) {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
 
-    // Match day headers like "Thursday, February 05, 2026" or "Friday, February 06, 2026"
-    const dateMatch = line.match(/^\w+,\s+(\w+)\s+(\d{1,2}),?\s+(\d{4})$/i);
+    // Match day headers like "Thursday, February 05, 2026" or "Sunday February 8, 2026"
+    // or "Tuesday February 10, 2026 (Today)" — comma after day name is optional
+    const dateMatch = line.match(/^\w+,?\s+(\w+)\s+(\d{1,2}),?\s+(\d{4})/i);
     if (dateMatch) {
       const monthName = dateMatch[1].toLowerCase();
       const day = parseInt(dateMatch[2]);
@@ -390,7 +407,7 @@ function parseWellnessLivingSchedule(text, source) {
     }
 
     // Also match "Thursday, 5th February" style (alternate format)
-    const dateMatch2 = line.match(/^\w+,\s+(\d{1,2})(?:st|nd|rd|th)\s+(\w+)(?:\s+(\d{4}))?$/i);
+    const dateMatch2 = line.match(/^\w+,?\s+(\d{1,2})(?:st|nd|rd|th)\s+(\w+)(?:\s+(\d{4}))?$/i);
     if (dateMatch2) {
       const day = parseInt(dateMatch2[1]);
       const monthName = dateMatch2[2].toLowerCase();
@@ -418,9 +435,11 @@ function parseWellnessLivingSchedule(text, source) {
     if (/^(Book Now|Filter|Today|translate|Login|person|event|\d+\s*capacity)/i.test(className)) continue;
 
     // Check for instructor on the line after class name
+    // WellnessLiving may show "Paula Johnson" or "Shelby Lewis SUB"
     let instructor = '';
     if (i + 2 < lines.length) {
-      const instrMatch = lines[i + 2].match(/^(?:with\s+)?([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)$/);
+      const instrLine = lines[i + 2].replace(/\s+SUB$/i, '').trim();
+      const instrMatch = instrLine.match(/^(?:with\s+)?([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)$/);
       if (instrMatch) {
         instructor = instrMatch[1].trim();
       }

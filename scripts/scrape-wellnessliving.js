@@ -101,8 +101,8 @@ async function parseDisplayedDate(page) {
 
       // Look for date patterns in the page text
       for (const line of lines) {
-        // Pattern 1: "Thursday, February 05, 2026"
-        const match1 = line.match(/^\w+,\s+(\w+)\s+(\d{1,2}),?\s+(\d{4})$/i);
+        // Pattern 1: "Thursday, February 05, 2026" or "Sunday February 8, 2026 (Today)"
+        const match1 = line.match(/^\w+,?\s+(\w+)\s+(\d{1,2}),?\s+(\d{4})/i);
         if (match1) {
           const monthName = match1[1].toLowerCase();
           const day = parseInt(match1[2]);
@@ -114,7 +114,7 @@ async function parseDisplayedDate(page) {
         }
 
         // Pattern 2: "February 05, 2026" (without day of week)
-        const match2 = line.match(/^(\w+)\s+(\d{1,2}),?\s+(\d{4})$/i);
+        const match2 = line.match(/^(\w+)\s+(\d{1,2}),?\s+(\d{4})/i);
         if (match2) {
           const monthName = match2[1].toLowerCase();
           const day = parseInt(match2[2]);
