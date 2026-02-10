@@ -3,6 +3,7 @@ import { Calendar, MapPin, Clock, Star, Check, Bell, Search, Filter, ChevronRigh
 import { supabase } from './lib/supabase';
 import { useUserData } from './hooks/useUserData';
 import { useCardAnimation } from './hooks/useCardAnimation';
+import { useMessaging } from './hooks/useMessaging';
 import { formatResponseTime } from './lib/businessAnalytics';
 import WellnessBooking from './components/WellnessBooking';
 import EventDetailModal from './components/modals/EventDetailModal';
@@ -435,90 +436,6 @@ export default function PulseApp() {
     fetchDeals();
   }, [dealsRefreshKey]);
 
-  // Fetch user conversations when messages modal opens
-  const fetchConversations = async () => {
-    if (!user?.id) {
-      setConversations([]);
-      setConversationsLoading(false);
-      return;
-    }
-    setConversationsLoading(true);
-    try {
-      const { data, error } = await supabase.rpc('get_user_conversations', { p_user_id: user.id });
-      if (error) throw error;
-      setConversations(data || []);
-    } catch (err) {
-      console.error('Error fetching conversations:', err);
-      setConversations([]);
-    } finally {
-      setConversationsLoading(false);
-    }
-  };
-
-  // Fetch messages for a specific conversation
-  const fetchMessages = async (conversationId) => {
-    if (!conversationId) return;
-    setMessagesLoading(true);
-    try {
-      const { data, error } = await supabase.rpc('get_conversation_messages', {
-        p_conversation_id: conversationId,
-        p_limit: 50
-      });
-      if (error) throw error;
-      setConversationMessages(data || []);
-      // Mark as read
-      await supabase.rpc('mark_conversation_read', {
-        p_conversation_id: conversationId,
-        p_reader_type: 'user'
-      });
-    } catch (err) {
-      console.error('Error fetching messages:', err);
-      setConversationMessages([]);
-    } finally {
-      setMessagesLoading(false);
-    }
-  };
-
-  // Send a message
-  const sendMessage = async () => {
-    if (!messageInput.trim() || !currentConversation || sendingMessage || !user?.id) return;
-    setSendingMessage(true);
-    try {
-      const { error } = await supabase.rpc('send_message', {
-        p_conversation_id: currentConversation.id,
-        p_sender_id: user.id,
-        p_sender_type: 'user',
-        p_content: messageInput.trim()
-      });
-      if (error) throw error;
-      setMessageInput('');
-      await fetchMessages(currentConversation.id);
-    } catch (err) {
-      console.error('Error sending message:', err);
-      showToast('Failed to send message. Please try again.', 'error');
-    } finally {
-      setSendingMessage(false);
-    }
-  };
-
-  // Start a new conversation with a business
-  const startConversation = async (businessId, subject, initialMessage) => {
-    if (!user?.id || !businessId) return null;
-    try {
-      const { data, error } = await supabase.rpc('get_or_create_conversation', {
-        p_user_id: user.id,
-        p_business_id: businessId,
-        p_subject: subject,
-        p_initial_message: initialMessage
-      });
-      if (error) throw error;
-      return data;
-    } catch (err) {
-      console.error('Error starting conversation:', err);
-      return null;
-    }
-  };
-
   // Track analytics event
   const trackAnalytics = async (eventType, businessId, referenceId = null) => {
     try {
@@ -645,131 +562,6 @@ export default function PulseApp() {
     }
   };
 
-  // Submit contact form
-  const submitContactForm = async () => {
-    if (!contactMessage.trim() || !contactBusiness) return;
-    setSendingMessage(true);
-    try {
-      const conversationId = await startConversation(
-        contactBusiness.id,
-        contactSubject || `Inquiry about ${contactBusiness.name}`,
-        contactMessage.trim()
-      );
-      if (conversationId) {
-        // Track message received
-        await trackAnalytics('message_received', contactBusiness.id);
-
-        setShowContactSheet(false);
-        setContactBusiness(null);
-        setContactSubject('');
-        setContactMessage('');
-
-        setCalendarToastMessage('Message sent!');
-        setShowCalendarToast(true);
-        setTimeout(() => setShowCalendarToast(false), 2000);
-      }
-    } catch (err) {
-      console.error('Error submitting contact form:', err);
-      showToast('Failed to send message. Please try again.', 'error');
-    } finally {
-      setSendingMessage(false);
-    }
-  };
-
-  // Open messages modal
-  const openMessages = () => {
-    if (user.isGuest) {
-      setShowAuthModal(true);
-      return;
-    }
-    fetchConversations();
-    setShowMessagesModal(true);
-    setCurrentConversation(null);
-  };
-
-  // Fetch business inbox conversations
-  const fetchBusinessInbox = async (businessId, type = 'all') => {
-    if (!businessId) return;
-    setBusinessConversationsLoading(true);
-    try {
-      const { data, error } = await supabase.rpc('get_business_inbox', {
-        p_business_id: businessId,
-        p_filter_type: type === 'all' ? null : type
-      });
-      if (error) throw error;
-      setBusinessConversations(data || []);
-    } catch (err) {
-      console.error('Error fetching business inbox:', err);
-      setBusinessConversations([]);
-    } finally {
-      setBusinessConversationsLoading(false);
-    }
-  };
-
-  // Fetch messages for a business conversation
-  const fetchBusinessMessages = async (conversationId) => {
-    if (!conversationId) return;
-    setBusinessMessagesLoading(true);
-    try {
-      const { data, error } = await supabase.rpc('get_conversation_messages', {
-        p_conversation_id: conversationId,
-        p_limit: 50
-      });
-      if (error) throw error;
-      setBusinessMessages(data || []);
-      // Mark as read by business
-      await supabase.rpc('mark_conversation_read', {
-        p_conversation_id: conversationId,
-        p_reader_type: 'business'
-      });
-    } catch (err) {
-      console.error('Error fetching business messages:', err);
-      setBusinessMessages([]);
-    } finally {
-      setBusinessMessagesLoading(false);
-    }
-  };
-
-  // Send reply from business
-  const sendBusinessReply = async () => {
-    if (!businessReplyInput.trim() || !selectedBusinessConversation) return;
-    setSendingMessage(true);
-    try {
-      const businessId = activeBusiness?.id;
-      const { error } = await supabase.rpc('send_message', {
-        p_conversation_id: selectedBusinessConversation.id,
-        p_sender_id: businessId,
-        p_sender_type: 'business',
-        p_content: businessReplyInput.trim()
-      });
-      if (error) throw error;
-      setBusinessReplyInput('');
-      await fetchBusinessMessages(selectedBusinessConversation.id);
-    } catch (err) {
-      console.error('Error sending reply:', err);
-      showToast('Failed to send reply. Please try again.', 'error');
-    } finally {
-      setSendingMessage(false);
-    }
-  };
-
-  // Mark conversation as resolved
-  const markConversationResolved = async (conversationId) => {
-    try {
-      await supabase
-        .from('conversations')
-        .update({ status: 'resolved' })
-        .eq('id', conversationId);
-
-      // Refresh inbox
-      if (activeBusiness?.id) {
-        fetchBusinessInbox(activeBusiness.id, businessInboxTab === 'bookings' ? 'booking_request' : 'general_inquiry');
-      }
-      setSelectedBusinessConversation(null);
-    } catch (err) {
-      console.error('Error marking resolved:', err);
-    }
-  };
 
   // Business Analytics State
   const [businessAnalytics, setBusinessAnalytics] = useState(null);
@@ -945,30 +737,37 @@ export default function PulseApp() {
   const [, setIframeFailed] = useState(false);
   const [showBookingConfirmation, setShowBookingConfirmation] = useState(false);
   const [bookingRequestMessage, setBookingRequestMessage] = useState('');
-  const [showMessagesModal, setShowMessagesModal] = useState(false);
   const [showEditVenueModal, setShowEditVenueModal] = useState(false);
   const [editingVenue, setEditingVenue] = useState(null);
   const [editVenueForm, setEditVenueForm] = useState({ name: '', address: '', phone: '', website: '', email: '', category: '' });
-  const [conversations, setConversations] = useState([]);
-  const [conversationsLoading, setConversationsLoading] = useState(true);
-  const [currentConversation, setCurrentConversation] = useState(null);
-  const [conversationMessages, setConversationMessages] = useState([]);
-  const [messagesLoading, setMessagesLoading] = useState(false);
-  const [messageInput, setMessageInput] = useState('');
-  const [sendingMessage, setSendingMessage] = useState(false);
-  const [showContactSheet, setShowContactSheet] = useState(false);
-  const [contactBusiness, setContactBusiness] = useState(null);
-  const [contactSubject, setContactSubject] = useState('');
-  const [contactMessage, setContactMessage] = useState('');
 
-  // Business Inbox State
-  const [businessInboxTab, setBusinessInboxTab] = useState('bookings'); // bookings, messages
-  const [businessConversations, setBusinessConversations] = useState([]);
-  const [businessConversationsLoading, setBusinessConversationsLoading] = useState(false);
-  const [selectedBusinessConversation, setSelectedBusinessConversation] = useState(null);
-  const [businessMessages, setBusinessMessages] = useState([]);
-  const [businessMessagesLoading, setBusinessMessagesLoading] = useState(false);
-  const [businessReplyInput, setBusinessReplyInput] = useState('');
+  // Messaging (hook replaces 19 state variables + 10 functions)
+  const msg = useMessaging(user, {
+    showToast,
+    onAuthRequired: () => setShowAuthModal(true),
+    activeBusiness,
+    trackAnalytics,
+  });
+  const {
+    showMessagesModal, setShowMessagesModal,
+    conversations, conversationsLoading,
+    currentConversation, setCurrentConversation,
+    conversationMessages, messagesLoading,
+    messageInput, setMessageInput,
+    sendingMessage, setSendingMessage,
+    showContactSheet, setShowContactSheet,
+    contactBusiness, contactSubject, setContactSubject,
+    contactMessage, setContactMessage,
+    businessInboxTab, setBusinessInboxTab,
+    businessConversations, businessConversationsLoading,
+    selectedBusinessConversation, setSelectedBusinessConversation,
+    businessMessages, businessMessagesLoading,
+    businessReplyInput, setBusinessReplyInput,
+    fetchConversations, fetchMessages, sendMessage,
+    startConversation, submitContactForm, openMessages,
+    fetchBusinessInbox, fetchBusinessMessages,
+    sendBusinessReply, markConversationResolved,
+  } = msg;
 
   // Build categories dynamically from actual event data, filtered by current section
   const categories = useMemo(() => {
