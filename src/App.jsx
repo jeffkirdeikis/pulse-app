@@ -26,7 +26,8 @@ import ContactSheet from './components/modals/ContactSheet';
 import EditEventModal from './components/modals/EditEventModal';
 import { REAL_DATA } from './data/realData';
 import { getBookingUrl, getBookingType } from './utils/bookingHelpers';
-import { generateSmartDealTitle, normalizeDealCategory, calculateDealScore, getDealSavingsDisplay, isRealDeal } from './utils/dealHelpers';
+import { generateSmartDealTitle, normalizeDealCategory, getDealSavingsDisplay } from './utils/dealHelpers';
+import { filterEvents as filterEventsUtil, filterDeals as filterDealsUtil } from './utils/filterHelpers';
 import './styles/pulse-app.css';
 
 // All dates/times in this app are in Squamish (Pacific) time, regardless of user's location.
@@ -951,145 +952,10 @@ export default function PulseApp() {
   const isVerified = (venueId) => REAL_DATA.venues.find(v => v.id === venueId)?.verified || false;
   
 
-  const filterEvents = () => {
-    const now = getPacificNow(); // Always filter based on Squamish time
-    // Combine hardcoded events with database events
-    let filtered = [...REAL_DATA.events, ...dbEvents];
-
-    // Filter out bad data - titles that are just booking status, not actual class names
-    filtered = filtered.filter(e => {
-      const title = e.title || '';
-      // Skip entries where title is just booking status like "(8 Reserved, 2 Open)"
-      if (/^\(\d+\s+Reserved,\s+\d+\s+Open\)$/.test(title)) return false;
-      // Skip entries with no meaningful title
-      if (title.length < 3) return false;
-      return true;
-    });
-
-    // Filter by section (events vs classes)
-    if (currentSection === 'events') {
-      filtered = filtered.filter(e => e.eventType === 'event');
-    } else if (currentSection === 'classes') {
-      filtered = filtered.filter(e => e.eventType === 'class');
-    }
-
-    // Day filtering - for infinite scroll, we get events for next 30 days when "today" is selected
-    // Only show events that haven't started yet (filter out past events from today)
-    if (filters.day === 'today') {
-      const thirtyDaysLater = new Date(now);
-      thirtyDaysLater.setDate(now.getDate() + 30);
-      filtered = filtered.filter(e => e.start >= now && e.start < thirtyDaysLater);
-    } else if (filters.day === 'tomorrow') {
-      const tomorrow = new Date(now);
-      tomorrow.setDate(now.getDate() + 1);
-      tomorrow.setHours(0, 0, 0, 0);
-      const dayAfter = new Date(tomorrow);
-      dayAfter.setDate(tomorrow.getDate() + 1);
-      filtered = filtered.filter(e => e.start >= tomorrow && e.start < dayAfter);
-    } else if (filters.day === 'thisWeekend') {
-      const friday = new Date(now);
-      const daysUntilFriday = (5 - now.getDay() + 7) % 7;
-      friday.setDate(now.getDate() + daysUntilFriday);
-      friday.setHours(0, 0, 0, 0);
-      const monday = new Date(friday);
-      monday.setDate(friday.getDate() + 3);
-      filtered = filtered.filter(e => e.start >= friday && e.start < monday);
-    } else if (filters.day === 'nextWeek') {
-      const nextMonday = new Date(now);
-      const daysUntilNextMonday = (8 - now.getDay()) % 7 || 7;
-      nextMonday.setDate(now.getDate() + daysUntilNextMonday);
-      nextMonday.setHours(0, 0, 0, 0);
-      const followingSunday = new Date(nextMonday);
-      followingSunday.setDate(nextMonday.getDate() + 7);
-      filtered = filtered.filter(e => e.start >= nextMonday && e.start < followingSunday);
-    }
-    // 'anytime' shows all future events
-
-    // Search query
-    if (searchQuery?.trim()) {
-      const query = searchQuery.trim().toLowerCase();
-      filtered = filtered.filter(e =>
-        e.title?.toLowerCase().includes(query) ||
-        e.description?.toLowerCase().includes(query) ||
-        getVenueName(e.venueId, e).toLowerCase().includes(query) ||
-        e.tags?.some(tag => tag.toLowerCase().includes(query))
-      );
-    }
-
-    // Age filtering
-    if (filters.age === 'kids') {
-      filtered = filtered.filter(e => {
-        // Basic kids filter - must be for kids or all ages
-        if (!e.ageGroup?.includes('Kids') && e.ageGroup !== 'All Ages') return false;
-
-        // If specific age range is selected, match against event titles/descriptions
-        if (kidsAgeRange[0] !== 0 || kidsAgeRange[1] !== 18) {
-          // Extract age numbers from title/description
-          const text = `${e.title} ${e.description}`.toLowerCase();
-
-          // Check for prenatal
-          if (kidsAgeRange[0] === -1 && kidsAgeRange[1] === 0) {
-            return text.includes('prenatal') || text.includes('perinatal') || text.includes('pregnant');
-          }
-
-          // Try to extract age range from title like "(3-5)" or "Ages 4-8"
-          const ageMatch = text.match(/(?:ages?\s*)?(\d+)\s*[-–]\s*(\d+)/i);
-          if (ageMatch) {
-            const eventMinAge = parseInt(ageMatch[1]);
-            const eventMaxAge = parseInt(ageMatch[2]);
-            // Check if event age range overlaps with selected range
-            return eventMinAge <= kidsAgeRange[1] && eventMaxAge >= kidsAgeRange[0];
-          }
-
-          // If no age range found in title, include it (generic kids class)
-          return true;
-        }
-
-        return true;
-      });
-    } else if (filters.age === 'adults') {
-      filtered = filtered.filter(e => e.ageGroup?.includes('Adults') || e.ageGroup === 'All Ages' || e.ageGroup === '19+' || e.ageGroup === 'Teens & Adults');
-    }
-
-    // Category
-    if (filters.category !== 'all') {
-      filtered = filtered.filter(e => e.category === filters.category || (e.tags && e.tags.includes(filters.category)));
-    }
-
-    // Time of day
-    // Time filtering - show classes from selected time onwards
-    if (filters.time !== 'all') {
-      const [filterHour, filterMin] = filters.time.split(':').map(Number);
-      const filterMinutes = filterHour * 60 + filterMin;
-      
-      filtered = filtered.filter(e => {
-        const eventHour = e.start.getHours();
-        const eventMin = e.start.getMinutes();
-        const eventMinutes = eventHour * 60 + eventMin;
-        return eventMinutes >= filterMinutes;
-      });
-    }
-
-    // Price
-    if (filters.price === 'free') {
-      filtered = filtered.filter(e => e.price?.toLowerCase() === 'free');
-    } else if (filters.price === 'paid') {
-      filtered = filtered.filter(e => e.price?.toLowerCase() !== 'free' && e.price);
-    }
-
-    // Location - simplified for demo
-    if (filters.location !== 'all') {
-      // In real app, would filter by venue location
-      // For now, just keep all results
-    }
-
-    // Sort by featured, then by date
-    return filtered.sort((a, b) => {
-      if (a.featured && !b.featured) return -1;
-      if (!a.featured && b.featured) return 1;
-      return a.start - b.start;
-    });
-  };
+  const filterEvents = () => filterEventsUtil(
+    [...REAL_DATA.events, ...dbEvents],
+    { currentSection, filters, searchQuery, kidsAgeRange, getVenueName, now: getPacificNow() }
+  );
 
   // Group events by date for infinite scroll with dividers
   const groupEventsByDate = (events) => {
@@ -1181,34 +1047,10 @@ export default function PulseApp() {
     });
   };
 
-  const filterDeals = () => {
-    // Combine hardcoded deals with database deals
-    let filtered = [...REAL_DATA.deals, ...dbDeals];
-
-    // Filter out vague deals with no real value
-    filtered = filtered.filter(deal => isRealDeal(deal));
-
-    if (searchQuery?.trim()) {
-      const query = searchQuery.trim().toLowerCase();
-      filtered = filtered.filter(d =>
-        d.title?.toLowerCase().includes(query) ||
-        d.description?.toLowerCase().includes(query) ||
-        d.venueName?.toLowerCase().includes(query) ||
-        getVenueName(d.venueId, d).toLowerCase().includes(query)
-      );
-    }
-
-    if (filters.category !== 'all') {
-      filtered = filtered.filter(d => d.category === filters.category);
-    }
-
-    // Sort by deal score (best deals first)
-    return filtered.sort((a, b) => {
-      const scoreA = calculateDealScore(a);
-      const scoreB = calculateDealScore(b);
-      return scoreB - scoreA; // Higher score = better deal = first
-    });
-  };
+  const filterDeals = () => filterDealsUtil(
+    [...REAL_DATA.deals, ...dbDeals],
+    { searchQuery, filters, getVenueName }
+  );
 
   const toggleSave = useCallback(async (id, type, name = '', data = {}) => {
     const itemKey = `${type}-${id}`;
