@@ -509,6 +509,9 @@ export default function PulseApp() {
     });
   };
 
+  // Check if any events/classes are free (for data-driven price filter)
+  const hasFreeItems = [...REAL_DATA.events, ...dbEvents].some(e => e.price?.toLowerCase() === 'free');
+
   const handleSignOut = async () => {
     await signOut();
     setShowProfileMenu(false);
@@ -775,6 +778,7 @@ export default function PulseApp() {
               ageRangeOptions={ageRangeOptions}
               categories={categories}
               getAvailableTimeSlots={getAvailableTimeSlots}
+              hasFreeItems={hasFreeItems}
             />
           )}
 

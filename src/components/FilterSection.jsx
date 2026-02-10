@@ -15,6 +15,7 @@ import { SlidersHorizontal, ChevronRight } from 'lucide-react';
  * @param {Array} props.ageRangeOptions - Age range quick-select options
  * @param {Array} props.categories - Available categories (includes 'All')
  * @param {Function} props.getAvailableTimeSlots - Returns sorted time slot strings
+ * @param {boolean} props.hasFreeItems - Whether any free events/classes exist in the data
  */
 const FilterSection = React.memo(function FilterSection({
   filters,
@@ -26,6 +27,7 @@ const FilterSection = React.memo(function FilterSection({
   ageRangeOptions,
   categories,
   getAvailableTimeSlots,
+  hasFreeItems,
 }) {
   return (
     <>
@@ -208,7 +210,7 @@ const FilterSection = React.memo(function FilterSection({
                 aria-label="Filter by price"
               >
                 <option value="all">💵 All Prices</option>
-                <option value="free">Free</option>
+                {hasFreeItems && <option value="free">Free</option>}
                 <option value="paid">Paid</option>
               </select>
             </div>
