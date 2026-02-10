@@ -4,6 +4,7 @@ import { supabase } from './lib/supabase';
 import { useUserData } from './hooks/useUserData';
 import { useCardAnimation } from './hooks/useCardAnimation';
 import { useMessaging } from './hooks/useMessaging';
+import { useSubmissions } from './hooks/useSubmissions';
 import { formatResponseTime } from './lib/businessAnalytics';
 import WellnessBooking from './components/WellnessBooking';
 import EventDetailModal from './components/modals/EventDetailModal';
@@ -634,61 +635,45 @@ export default function PulseApp() {
     }
   }, [view, activeBusiness?.id, analyticsPeriod]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Admin panel state (must be declared before useEffect that uses it)
-  const [pendingSubmissions, setPendingSubmissions] = useState([]);
+  // Admin panel state
   const [showAdminPanel, setShowAdminPanel] = useState(false);
-  const [adminTab, setAdminTab] = useState('pending'); // 'pending', 'approved', 'rejected'
+  const [adminTab, setAdminTab] = useState('pending');
   const [quickAddForm, setQuickAddForm] = useState({ title: '', venueId: '', venueName: '', startTime: '18:00', duration: '60', price: '', recurrence: 'Weekly' });
   const [showEditEventModal, setShowEditEventModal] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
   const [editEventForm, setEditEventForm] = useState({ title: '', description: '', date: '', startTime: '', endTime: '', price: '', category: '' });
+
+  // Submissions + Image Cropper (hook replaces 10 state variables + 12 functions)
+  const {
+    showSubmissionModal, setShowSubmissionModal,
+    submissionStep, setSubmissionStep,
+    submissionType, setSubmissionType,
+    submissionForm, setSubmissionForm,
+    pendingSubmissions,
+    showImageCropper, setShowImageCropper,
+    cropperType, setCropperType,
+    cropperImage, setCropperImage,
+    cropPosition, setCropPosition,
+    cropZoom, setCropZoom,
+    openSubmissionModal, closeSubmissionModal,
+    selectSubmissionType, selectBusinessType,
+    handleImageSelect, handleCropComplete,
+    removeImage, getSelectedBusinessInfo,
+    submitForApproval, approveSubmission, rejectSubmission,
+    loadPendingSubmissions, closeImageCropper,
+  } = useSubmissions(user, {
+    showToast,
+    userClaimedBusinesses,
+    updateAvatar,
+    updateCoverPhoto,
+  });
 
   // Load pending submissions when admin panel opens
   useEffect(() => {
     if (showAdminPanel && user?.isAdmin) {
       loadPendingSubmissions();
     }
-  }, [showAdminPanel, user?.isAdmin]);
-
-  // Submission system state
-  const [showSubmissionModal, setShowSubmissionModal] = useState(false);
-  const [submissionStep, setSubmissionStep] = useState(1); // 1: type select, 2: form, 3: success
-  const [submissionType, setSubmissionType] = useState(null); // 'event', 'class', 'deal'
-  
-  // User's claimed businesses (empty until they claim one)
-  const [submissionForm, setSubmissionForm] = useState({
-    businessType: '', // 'claimed', 'new', 'individual'
-    selectedBusinessId: '',
-    businessName: '',
-    businessAddress: '',
-    title: '',
-    description: '',
-    date: '',
-    startTime: '',
-    endTime: '',
-    price: '',
-    ageGroup: '',
-    category: '',
-    recurrence: 'none',
-    schedule: '', // for deals
-    terms: '', // for deals
-    discountType: 'percent', // for deals: percent, fixed, bogo, free_item
-    discountValue: '', // for deals
-    originalPrice: '', // for deals
-    dealPrice: '', // for deals
-    validUntil: '', // for deals
-    squareImage: null, // 1:1 image
-    bannerImage: null, // 3:1 image
-    squareImagePreview: '',
-    bannerImagePreview: ''
-  });
-  
-  // Image cropping state
-  const [showImageCropper, setShowImageCropper] = useState(false);
-  const [cropperType, setCropperType] = useState(null); // 'square' or 'banner'
-  const [cropperImage, setCropperImage] = useState(null);
-  const [cropPosition, setCropPosition] = useState({ x: 0, y: 0 });
-  const [cropZoom, setCropZoom] = useState(1);
+  }, [showAdminPanel, user?.isAdmin]);  // eslint-disable-line react-hooks/exhaustive-deps
 
   // Offline detection
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
@@ -863,373 +848,6 @@ export default function PulseApp() {
         date: new Date(date),
         events: events.sort((a, b) => a.start - b.start)
       }));
-  };
-
-  // ========== SUBMISSION SYSTEM HELPERS ==========
-  
-  // Open submission modal
-  const openSubmissionModal = () => {
-    setSubmissionStep(1);
-    setSubmissionType(null);
-    setSubmissionForm({
-      businessType: '',
-      selectedBusinessId: '',
-      businessName: '',
-      businessAddress: '',
-      title: '',
-      description: '',
-      date: '',
-      startTime: '',
-      endTime: '',
-      price: '',
-      ageGroup: '',
-      category: '',
-      recurrence: 'none',
-      schedule: '',
-      terms: '',
-      squareImage: null,
-      bannerImage: null,
-      squareImagePreview: '',
-      bannerImagePreview: ''
-    });
-    setShowImageCropper(false);
-    setCropperImage(null);
-    setShowSubmissionModal(true);
-    setShowProfileMenu(false);
-  };
-
-  // Close submission modal
-  const closeSubmissionModal = () => {
-    setShowSubmissionModal(false);
-    setSubmissionStep(1);
-    setSubmissionType(null);
-    setShowImageCropper(false);
-    setCropperImage(null);
-  };
-
-  // Handle type selection and move to form
-  const selectSubmissionType = (type) => {
-    setSubmissionType(type);
-    setSubmissionStep(2); // Go directly to form
-  };
-
-  // Handle business type selection
-  const selectBusinessType = (type, businessId = null) => {
-    if (type === 'claimed' && businessId) {
-      const business = userClaimedBusinesses.find(b => b.id === businessId);
-      setSubmissionForm(prev => ({
-        ...prev,
-        businessType: 'claimed',
-        selectedBusinessId: businessId,
-        businessName: business?.name || '',
-        businessAddress: business?.address || ''
-      }));
-    } else if (type === 'new') {
-      setSubmissionForm(prev => ({
-        ...prev,
-        businessType: 'new',
-        selectedBusinessId: '',
-        businessName: '',
-        businessAddress: ''
-      }));
-    } else if (type === 'individual') {
-      setSubmissionForm(prev => ({
-        ...prev,
-        businessType: 'individual',
-        selectedBusinessId: '',
-        businessName: user.name,
-        businessAddress: 'Squamish, BC'
-      }));
-    }
-  };
-
-  // Handle image selection
-  const handleImageSelect = (e, imageType) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setCropperImage(event.target.result);
-        setCropperType(imageType);
-        setCropPosition({ x: 0, y: 0 });
-        setCropZoom(1);
-        setShowImageCropper(true);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  // Handle crop completion with canvas
-  const handleCropComplete = async () => {
-    // Save the image with crop metadata
-    // In production, server would use position/zoom to create actual crop
-    const cropData = {
-      image: cropperImage,
-      position: cropPosition,
-      zoom: cropZoom,
-      type: cropperType
-    };
-    
-    if (cropperType === 'square') {
-      setSubmissionForm(prev => ({
-        ...prev,
-        squareImage: cropData,
-        squareImagePreview: cropperImage
-      }));
-    } else if (cropperType === 'banner') {
-      setSubmissionForm(prev => ({
-        ...prev,
-        bannerImage: cropData,
-        bannerImagePreview: cropperImage
-      }));
-    } else if (cropperType === 'profileAvatar') {
-      // Convert base64 to File and upload to Supabase Storage
-      const response = await fetch(cropperImage);
-      const blob = await response.blob();
-      const file = new File([blob], 'avatar.jpg', { type: 'image/jpeg' });
-      const { error } = await updateAvatar(file);
-      if (error) {
-        setCalendarToastMessage('Error uploading avatar. Please try again.');
-        setShowCalendarToast(true);
-        setTimeout(() => setShowCalendarToast(false), 3000);
-      } else {
-        setCalendarToastMessage('Profile photo updated!');
-        setShowCalendarToast(true);
-        setTimeout(() => setShowCalendarToast(false), 3000);
-      }
-    } else if (cropperType === 'profileCover') {
-      // Convert base64 to File and upload to Supabase Storage
-      const response = await fetch(cropperImage);
-      const blob = await response.blob();
-      const file = new File([blob], 'cover.jpg', { type: 'image/jpeg' });
-      const { error } = await updateCoverPhoto(file);
-      if (error) {
-        setCalendarToastMessage('Error uploading cover photo. Please try again.');
-        setShowCalendarToast(true);
-        setTimeout(() => setShowCalendarToast(false), 3000);
-      } else {
-        setCalendarToastMessage('Cover photo updated!');
-        setShowCalendarToast(true);
-        setTimeout(() => setShowCalendarToast(false), 3000);
-      }
-    }
-    
-    setShowImageCropper(false);
-    setCropperImage(null);
-    setCropPosition({ x: 0, y: 0 });
-    setCropZoom(1);
-  };
-
-  // Remove image
-  const removeImage = (imageType) => {
-    if (imageType === 'square') {
-      setSubmissionForm(prev => ({
-        ...prev,
-        squareImage: null,
-        squareImagePreview: ''
-      }));
-    } else if (imageType === 'banner') {
-      setSubmissionForm(prev => ({
-        ...prev,
-        bannerImage: null,
-        bannerImagePreview: ''
-      }));
-    }
-  };
-
-  // Get selected business info
-  const getSelectedBusinessInfo = () => {
-    if (submissionForm.businessType === 'claimed') {
-      return userClaimedBusinesses.find(b => b.id === submissionForm.selectedBusinessId);
-    }
-    return null;
-  };
-
-  // Submit for admin approval - persists to database
-  const submitForApproval = async () => {
-    const selectedBusiness = getSelectedBusinessInfo();
-
-    try {
-      const submissionData = {
-        item_type: submissionType,
-        action: 'create',
-        data: {
-          ...submissionForm,
-          submittedBy: { name: user.name, email: user.email },
-          business: {
-            type: submissionForm.businessType,
-            name: submissionForm.businessName || selectedBusiness?.name,
-            address: submissionForm.businessAddress,
-            verified: selectedBusiness?.verified || false
-          },
-          images: {
-            square: submissionForm.squareImagePreview,
-            banner: submissionForm.bannerImagePreview
-          }
-        },
-        source: 'web_app',
-        business_id: selectedBusiness?.id || null,
-        submitted_by: user.id || null,
-        status: 'pending'
-      };
-
-      const { data, error } = await supabase
-        .from('pending_items')
-        .insert(submissionData)
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      // Update local state with the new submission
-      setPendingSubmissions(prev => [...prev, {
-        id: data.id,
-        type: data.item_type,
-        status: data.status,
-        submittedAt: new Date(data.created_at),
-        submittedBy: { name: user.name, email: user.email },
-        business: submissionData.data.business,
-        data: data.data,
-        images: submissionData.data.images
-      }]);
-
-      setSubmissionStep(3); // Success step
-      showToast('Submission sent for review!', 'success');
-    } catch (err) {
-      console.error('Submission error:', err);
-      showToast('Failed to submit. Please try again.', 'error');
-    }
-  };
-
-  // Admin: Approve submission - updates database and creates the item
-  const approveSubmission = async (submissionId) => {
-    try {
-      // Get the submission data
-      const submission = pendingSubmissions.find(s => s.id === submissionId);
-      if (!submission) return;
-
-      // Update pending_items status
-      const { error: updateError } = await supabase
-        .from('pending_items')
-        .update({
-          status: 'approved',
-          reviewed_by: user.id,
-          reviewed_at: new Date().toISOString()
-        })
-        .eq('id', submissionId);
-
-      if (updateError) throw updateError;
-
-      // Create the actual event/class/deal in the events table
-      if (submission.type === 'event' || submission.type === 'class') {
-        const eventData = {
-          title: submission.data.title,
-          description: submission.data.description,
-          start_date: submission.data.date,
-          start_time: submission.data.startTime,
-          end_time: submission.data.endTime,
-          venue_name: submission.data.businessName || submission.business?.name,
-          venue_id: submission.business_id,
-          event_type: submission.type,
-          category: submission.data.category,
-          price: submission.data.price,
-          recurrence: submission.data.recurrence,
-          tags: ['user-submitted'],
-          status: 'active'
-        };
-
-        const { error: insertError } = await supabase
-          .from('events')
-          .insert(eventData);
-
-        if (insertError) throw insertError;
-      } else if (submission.type === 'deal') {
-        const dealData = {
-          title: submission.data.title,
-          description: submission.data.description,
-          business_name: submission.data.businessName || submission.data.business?.name || '',
-          business_address: submission.data.businessAddress || submission.data.business?.address || '',
-          category: submission.data.category || 'General',
-          discount_type: submission.data.discountType || 'special',
-          discount_value: submission.data.discountValue ? parseFloat(submission.data.discountValue) : null,
-          original_price: submission.data.originalPrice ? parseFloat(submission.data.originalPrice) : null,
-          deal_price: submission.data.dealPrice ? parseFloat(submission.data.dealPrice) : null,
-          valid_until: submission.data.validUntil || null,
-          terms_conditions: submission.data.terms || '',
-          schedule: submission.data.schedule || '',
-          status: 'active'
-        };
-
-        const { error: insertError } = await supabase
-          .from('deals')
-          .insert(dealData);
-
-        if (insertError) throw insertError;
-      }
-
-      // Update local state
-      setPendingSubmissions(prev =>
-        prev.map(s => s.id === submissionId ? { ...s, status: 'approved', approvedAt: new Date() } : s)
-      );
-
-      showToast('Submission approved and published!', 'success');
-    } catch (_err) {
-      showToast('Failed to approve. Please try again.', 'error');
-    }
-  };
-
-  // Admin: Reject submission - updates database
-  const rejectSubmission = async (submissionId, reason) => {
-    try {
-      const { error } = await supabase
-        .from('pending_items')
-        .update({
-          status: 'rejected',
-          reviewed_by: user.id,
-          reviewed_at: new Date().toISOString(),
-          review_notes: reason
-        })
-        .eq('id', submissionId);
-
-      if (error) throw error;
-
-      setPendingSubmissions(prev =>
-        prev.map(s => s.id === submissionId ? { ...s, status: 'rejected', rejectedAt: new Date(), rejectReason: reason } : s)
-      );
-
-      showToast('Submission rejected.', 'info');
-    } catch (err) {
-      console.error('Rejection error:', err);
-      showToast('Failed to reject. Please try again.', 'error');
-    }
-  };
-
-  // Load pending submissions from database
-  const loadPendingSubmissions = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('pending_items')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      if (data) {
-        setPendingSubmissions(data.map(item => ({
-          id: item.id,
-          type: item.item_type,
-          status: item.status,
-          submittedAt: new Date(item.created_at),
-          submittedBy: item.data?.submittedBy || { name: 'Unknown', email: '' },
-          business: item.data?.business || {},
-          data: item.data || {},
-          images: item.data?.images || {},
-          rejectReason: item.review_notes
-        })));
-      }
-    } catch (err) {
-      console.error('Failed to load submissions:', err);
-    }
   };
 
   // Get available time slots from actual events (30-min intervals)
@@ -2620,7 +2238,7 @@ export default function PulseApp() {
                     <span>Saved Items</span>
                   </button>
                   <div className="profile-menu-divider"></div>
-                  <button className="profile-menu-item" onClick={openSubmissionModal}>
+                  <button className="profile-menu-item" onClick={() => { setShowProfileMenu(false); openSubmissionModal(); }}>
                     <Plus size={18} />
                     <span>Add Event / Class / Deal</span>
                   </button>
@@ -3014,7 +2632,7 @@ export default function PulseApp() {
           setCropPosition={setCropPosition}
           cropZoom={cropZoom}
           setCropZoom={setCropZoom}
-          onClose={() => { setShowImageCropper(false); setCropPosition({ x: 0, y: 0 }); setCropZoom(1); }}
+          onClose={closeImageCropper}
           handleCropComplete={handleCropComplete}
         />
       )}
