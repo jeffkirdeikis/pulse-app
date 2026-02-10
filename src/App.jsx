@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { Calendar, MapPin, Clock, Star, Check, Bell, Search, Filter, ChevronRight, X, Plus, Eye, Users, DollarSign, CheckCircle, SlidersHorizontal, Building, Wrench, Navigation, Percent, Heart, Sparkles, MessageCircle, Send, WifiOff } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import { useUserData } from './hooks/useUserData';
+import { useCardAnimation } from './hooks/useCardAnimation';
 import { formatResponseTime } from './lib/businessAnalytics';
 import WellnessBooking from './components/WellnessBooking';
 import EventDetailModal from './components/modals/EventDetailModal';
@@ -1877,188 +1878,12 @@ export default function PulseApp() {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Intersection Observer for deal card animations
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      const observer = new IntersectionObserver(
-        (entries) => {
-          entries.forEach((entry) => {
-            if (entry.isIntersecting) {
-              entry.target.classList.add('deal-card-visible');
-            }
-          });
-        },
-        {
-          threshold: 0.2,
-          rootMargin: '0px 0px -50px 0px'
-        }
-      );
-
-      dealCardRefs.current.forEach((card) => {
-        if (card) {
-          observer.observe(card);
-          // Check if already visible on first load
-          const rect = card.getBoundingClientRect();
-          if (rect.top < window.innerHeight && rect.bottom > 0) {
-            card.classList.add('deal-card-visible');
-          }
-        }
-      });
-
-      return () => {
-        dealCardRefs.current.forEach((card) => {
-          if (card) observer.unobserve(card);
-        });
-      };
-    }, 100);
-
-    return () => clearTimeout(timer);
-  }, [currentSection, dealCategoryFilter, searchQuery]);
-
-  // Intersection Observer for event card animations
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      const observer = new IntersectionObserver(
-        (entries) => {
-          entries.forEach((entry) => {
-            if (entry.isIntersecting) {
-              entry.target.classList.add('event-card-visible');
-            }
-          });
-        },
-        {
-          threshold: 0.2,
-          rootMargin: '0px 0px -50px 0px'
-        }
-      );
-
-      eventCardRefs.current.forEach((card) => {
-        if (card) {
-          observer.observe(card);
-          // Check if already visible on first load
-          const rect = card.getBoundingClientRect();
-          if (rect.top < window.innerHeight && rect.bottom > 0) {
-            card.classList.add('event-card-visible');
-          }
-        }
-      });
-
-      return () => {
-        eventCardRefs.current.forEach((card) => {
-          if (card) observer.unobserve(card);
-        });
-      };
-    }, 100);
-
-    return () => clearTimeout(timer);
-  }, [currentSection, filters, searchQuery]);
-
-  // Intersection Observer for service card animations
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      const observer = new IntersectionObserver(
-        (entries) => {
-          entries.forEach((entry) => {
-            if (entry.isIntersecting) {
-              entry.target.classList.add('service-card-visible');
-            }
-          });
-        },
-        {
-          threshold: 0.2,
-          rootMargin: '0px 0px -50px 0px'
-        }
-      );
-
-      serviceCardRefs.current.forEach((card) => {
-        if (card) {
-          observer.observe(card);
-          // Check if already visible on first load
-          const rect = card.getBoundingClientRect();
-          if (rect.top < window.innerHeight && rect.bottom > 0) {
-            card.classList.add('service-card-visible');
-          }
-        }
-      });
-
-      return () => {
-        serviceCardRefs.current.forEach((card) => {
-          if (card) observer.unobserve(card);
-        });
-      };
-    }, 100);
-
-    return () => clearTimeout(timer);
-  }, [currentSection, serviceCategoryFilter, searchQuery]);
-
-  // Intersection Observer for class card animations
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      const observer = new IntersectionObserver(
-        (entries) => {
-          entries.forEach((entry) => {
-            if (entry.isIntersecting) {
-              entry.target.classList.add('class-card-visible');
-            }
-          });
-        },
-        {
-          threshold: 0.2,
-          rootMargin: '0px 0px -50px 0px'
-        }
-      );
-
-      classCardRefs.current.forEach((card) => {
-        if (card) {
-          observer.observe(card);
-          // Check if already visible on first load
-          const rect = card.getBoundingClientRect();
-          if (rect.top < window.innerHeight && rect.bottom > 0) {
-            card.classList.add('class-card-visible');
-          }
-        }
-      });
-
-      return () => {
-        classCardRefs.current.forEach((card) => {
-          if (card) observer.unobserve(card);
-        });
-      };
-    }, 100);
-
-    return () => clearTimeout(timer);
-  }, [currentSection]);
-
-  // Intersection Observer for venue card animations
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      const observer = new IntersectionObserver(
-        (entries) => {
-          entries.forEach((entry) => {
-            if (entry.isIntersecting) {
-              entry.target.classList.add('venue-card-visible');
-            }
-          });
-        },
-        {
-          threshold: 0.2,
-          rootMargin: '0px 0px -50px 0px'
-        }
-      );
-
-      venueCardRefs.current.forEach((card) => {
-        if (card) observer.observe(card);
-      });
-
-      return () => {
-        venueCardRefs.current.forEach((card) => {
-          if (card) observer.unobserve(card);
-        });
-      };
-    }, 100);
-
-    return () => clearTimeout(timer);
-  }, [currentSection]);
+  // Card scroll-in animations (IntersectionObserver)
+  useCardAnimation(dealCardRefs, 'deal-card-visible', [currentSection, dealCategoryFilter, searchQuery]);
+  useCardAnimation(eventCardRefs, 'event-card-visible', [currentSection, filters, searchQuery]);
+  useCardAnimation(serviceCardRefs, 'service-card-visible', [currentSection, serviceCategoryFilter, searchQuery]);
+  useCardAnimation(classCardRefs, 'class-card-visible', [currentSection]);
+  useCardAnimation(venueCardRefs, 'venue-card-visible', [currentSection], { checkInitial: false });
 
   const EventCard = React.forwardRef(({ event }, ref) => {
     const itemType = event.eventType === 'class' ? 'class' : 'event';
