@@ -2,6 +2,7 @@ import React, { memo, useState, useRef } from 'react';
 import { AlertCircle, Mail, MapPin, X } from 'lucide-react';
 import { Turnstile } from '@marsidev/react-turnstile';
 import { supabase } from '../../lib/supabase';
+import LegalModal from './LegalModal';
 
 const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY;
 
@@ -14,6 +15,7 @@ const AuthModal = memo(function AuthModal({ onClose, onSuccess }) {
   const [authLoading, setAuthLoading] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
   const [captchaToken, setCaptchaToken] = useState('');
+  const [legalModal, setLegalModal] = useState(null);
   const turnstileRef = useRef(null);
 
   const handleClose = () => {
@@ -182,9 +184,14 @@ const AuthModal = memo(function AuthModal({ onClose, onSuccess }) {
           </div>
         </div>
         <div className="auth-modal-footer">
-          <p>By continuing, you agree to our Terms of Service and Privacy Policy</p>
+          <p>By continuing, you agree to our{' '}
+            <button onClick={() => setLegalModal('terms')} style={{ background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', padding: 0, font: 'inherit', textDecoration: 'underline' }}>Terms of Service</button>
+            {' '}and{' '}
+            <button onClick={() => setLegalModal('privacy')} style={{ background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', padding: 0, font: 'inherit', textDecoration: 'underline' }}>Privacy Policy</button>
+          </p>
         </div>
       </div>
+      {legalModal && <LegalModal type={legalModal} onClose={() => setLegalModal(null)} />}
     </div>
   );
 });
