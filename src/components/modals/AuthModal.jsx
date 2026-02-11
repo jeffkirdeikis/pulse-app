@@ -1,6 +1,9 @@
-import React, { memo, useState } from 'react';
+import React, { memo, useState, useRef } from 'react';
 import { AlertCircle, Mail, MapPin, X } from 'lucide-react';
+import { Turnstile } from '@marsidev/react-turnstile';
 import { supabase } from '../../lib/supabase';
+
+const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY;
 
 const AuthModal = memo(function AuthModal({ onClose, onSuccess }) {
   const [authMode, setAuthMode] = useState('signin');
@@ -10,6 +13,8 @@ const AuthModal = memo(function AuthModal({ onClose, onSuccess }) {
   const [authError, setAuthError] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
+  const [captchaToken, setCaptchaToken] = useState('');
+  const turnstileRef = useRef(null);
 
   const handleClose = () => {
     setAuthError('');
@@ -49,7 +54,8 @@ const AuthModal = memo(function AuthModal({ onClose, onSuccess }) {
     try {
       const { error } = await supabase.auth.signInWithPassword({
         email: authEmail,
-        password: authPassword
+        password: authPassword,
+        options: TURNSTILE_SITE_KEY ? { captchaToken } : undefined
       });
 
       if (error) {
@@ -61,6 +67,8 @@ const AuthModal = memo(function AuthModal({ onClose, onSuccess }) {
       setAuthError('An unexpected error occurred');
     } finally {
       setAuthLoading(false);
+      setCaptchaToken('');
+      turnstileRef.current?.reset();
     }
   };
 
@@ -78,7 +86,8 @@ const AuthModal = memo(function AuthModal({ onClose, onSuccess }) {
           data: {
             full_name: authName,
             name: authName
-          }
+          },
+          ...(TURNSTILE_SITE_KEY ? { captchaToken } : {})
         }
       });
 
@@ -97,6 +106,8 @@ const AuthModal = memo(function AuthModal({ onClose, onSuccess }) {
       setAuthError('An unexpected error occurred');
     } finally {
       setAuthLoading(false);
+      setCaptchaToken('');
+      turnstileRef.current?.reset();
     }
   };
 
@@ -140,13 +151,24 @@ const AuthModal = memo(function AuthModal({ onClose, onSuccess }) {
               <input type="password" placeholder={authMode === 'signup' ? 'Create a password (min 6 chars)' : 'Your password'} value={authPassword} onChange={(e) => { setAuthPassword(e.target.value); if (fieldErrors.password) setFieldErrors(fe => ({...fe, password: ''})); }} aria-invalid={!!fieldErrors.password} />
               {fieldErrors.password && <span className="auth-field-error" role="alert" style={{color:'#dc2626',fontSize:'12px',marginTop:'4px',display:'block'}}>{fieldErrors.password}</span>}
             </div>
+            {TURNSTILE_SITE_KEY && (
+              <div style={{ display: 'flex', justifyContent: 'center', margin: '8px 0' }}>
+                <Turnstile
+                  ref={turnstileRef}
+                  siteKey={TURNSTILE_SITE_KEY}
+                  onSuccess={setCaptchaToken}
+                  onExpire={() => setCaptchaToken('')}
+                  options={{ size: 'compact', theme: 'light' }}
+                />
+              </div>
+            )}
             {authError && (
               <div className="auth-error">
                 <AlertCircle size={16} />
                 <span>{authError}</span>
               </div>
             )}
-            <button type="submit" className="auth-btn email" disabled={authLoading}>
+            <button type="submit" className="auth-btn email" disabled={authLoading || (TURNSTILE_SITE_KEY && !captchaToken)}>
               <Mail size={20} />
               {authLoading ? 'Please wait...' : (authMode === 'signin' ? 'Sign In' : 'Create Account')}
             </button>

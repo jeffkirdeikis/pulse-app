@@ -186,6 +186,21 @@ export function useSubmissions(user, { showToast, userClaimedBusinesses, updateA
   const submitForApproval = useCallback(async () => {
     const selectedBusiness = getSelectedBusinessInfo();
     try {
+      // Rate limit check: 5 submissions per hour
+      if (user?.id) {
+        const { data: rl } = await supabase.rpc('check_and_record_rate_limit', {
+          p_user_id: user.id,
+          p_action: 'submit_item',
+          p_max_attempts: 5,
+          p_window_minutes: 60
+        });
+        if (rl && !rl.allowed) {
+          const mins = Math.ceil(rl.retry_after_seconds / 60);
+          showToast?.(`Too many submissions. Try again in ${mins} minute${mins > 1 ? 's' : ''}.`, 'error');
+          return;
+        }
+      }
+
       const submissionData = {
         item_type: submissionType,
         action: 'create',

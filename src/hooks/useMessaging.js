@@ -87,6 +87,19 @@ export function useMessaging(user, { showToast, onAuthRequired, activeBusiness, 
     if (!messageInput.trim() || !currentConversation || sendingMessage || !user?.id) return;
     setSendingMessage(true);
     try {
+      // Rate limit: 20 messages per 10 minutes
+      const { data: rl } = await supabase.rpc('check_and_record_rate_limit', {
+        p_user_id: user.id,
+        p_action: 'send_message',
+        p_max_attempts: 20,
+        p_window_minutes: 10
+      });
+      if (rl && !rl.allowed) {
+        showToast?.('Slow down! Too many messages. Try again shortly.', 'error');
+        setSendingMessage(false);
+        return;
+      }
+
       const { error } = await supabase.rpc('send_message', {
         p_conversation_id: currentConversation.id,
         p_sender_id: user.id,
