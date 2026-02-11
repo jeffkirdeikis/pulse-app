@@ -104,6 +104,31 @@ const EVENT_SOURCES = [
     url: 'https://www.squamish.net/events-gatherings/calendar/',
     category: 'Community',
     type: 'events'
+  },
+  // === ADDED Feb 10, 2026: Missing sources ===
+  {
+    name: 'Together Nest - All',
+    url: 'https://together-nest.com/discover',
+    category: 'Community',
+    type: 'activities'
+  },
+  {
+    name: 'Squamish Chamber - Events & Programming',
+    url: 'https://www.squamishchamber.com/events-programming/',
+    category: 'Community',
+    type: 'events'
+  },
+  {
+    name: 'The Locals Board - Events',
+    url: 'https://thelocalsboard.com/events/',
+    category: 'Community',
+    type: 'events'
+  },
+  {
+    name: 'Sweet Threads Yarn & Fibre - Events',
+    url: 'https://www.sweetthreads.com/events',
+    category: 'Arts & Culture',
+    type: 'events'
   }
 ];
 
