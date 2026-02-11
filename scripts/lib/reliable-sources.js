@@ -222,6 +222,24 @@ export const RELIABLE_SOURCES = [
     priority: 9,
     verified: true,
     notes: 'Indoor climbing gym - yoga, fitness classes'
+  },
+
+  // ========================================
+  // PERFECTMIND (Municipal recreation)
+  // ========================================
+  {
+    name: 'Brennan Park Recreation Centre',
+    booking_system: 'perfectmind',
+    widget_id: '15f6af07-39c5-473e-b053-96653f77a406',
+    studio_id: null,
+    tab_id: null,
+    url: 'https://districtofsquamish.perfectmind.com/Contacts/BookMe4?widgetId=15f6af07-39c5-473e-b053-96653f77a406',
+    address: '1009 Centennial Way, Squamish, BC',
+    category: 'Recreation',
+    scrape_frequency: 'daily',
+    priority: 10,
+    verified: true,
+    notes: 'District of Squamish rec centre — 35 calendars: swim lessons, fitness, yoga, gymnastics, dance, sports, camps, arena, certifications'
   }
 ];
 

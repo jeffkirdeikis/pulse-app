@@ -31,6 +31,7 @@ import {
   recordScrapeFailure,
   syncSourcesToDatabase
 } from './lib/reliable-sources.js';
+import { scrapePerfectMindCalendars } from './scrape-perfectmind.js';
 
 puppeteer.use(StealthPlugin());
 
@@ -1101,6 +1102,15 @@ async function main() {
         case 'sendmoregetbeta':
           await scrapeSendMoreGetBeta(source, browser);
           break;
+        case 'perfectmind': {
+          const pmResult = await scrapePerfectMindCalendars(source, browser);
+          stats.classesFound += pmResult.classesFound;
+          stats.classesAdded += pmResult.classesAdded;
+          if (pmResult.classesFound > 0) stats.sourcesSuccessful++;
+          sourceResults.push({ name: source.name, classesFound: pmResult.classesFound, classesAdded: pmResult.classesAdded, error: null });
+          await recordScrapeSuccess(source.name, pmResult.classesFound);
+          break;
+        }
         default:
           console.log(`\n⚠️  Unknown booking system: ${source.booking_system} for ${source.name}`);
           stats.errors.push({ source: source.name, error: `Unknown booking system: ${source.booking_system}` });
