@@ -176,18 +176,21 @@ export const RELIABLE_SOURCES = [
     verified: true,
     notes: 'Martial arts classes'
   },
+  // ========================================
+  // MARIANA TEK (REST API)
+  // ========================================
   {
     name: 'Roundhouse Martial Arts & Fitness',
-    booking_system: 'wellnessliving',
+    booking_system: 'marianatek',
     widget_id: null,
-    studio_id: null,
-    url: 'https://www.wellnessliving.com/schedule/roundhouse_martial_arts',
+    studio_id: 'roundhousesquamish',
+    url: 'https://www.roundhousesquamish.com/programs-schedule',
     address: '38147 Cleveland Ave #201, Squamish, BC',
     category: 'Martial Arts',
     scrape_frequency: 'daily',
     priority: 8,
     verified: true,
-    notes: 'MMA, BJJ, Muay Thai, Kickboxing - UFC vet Cole Smith'
+    notes: 'MMA, BJJ, Muay Thai, Kickboxing - switched from WellnessLiving to Mariana Tek'
   },
 
   // ========================================

@@ -9,7 +9,7 @@
 
 | Tier | Count | Method | Schedule |
 |------|-------|--------|----------|
-| Dedicated booking system scrapers | 11 | Mindbody/WellnessLiving/Brandedweb/SMGB/PerfectMind | 6x daily |
+| Dedicated booking system scrapers | 12 | Mindbody/WellnessLiving/Brandedweb/SMGB/PerfectMind/MarianaTek | 6x daily |
 | Businesses with websites | ~620 | `scrape-orchestrator.js --verified` | 2x daily |
 | Event aggregators | 19 sources | `scrape-events.js` | 2x daily |
 | Deal aggregators | 8+ sources | `scrape-deals.js` | 1x daily |
@@ -20,7 +20,7 @@
 ## Crontab Schedule
 
 ```
-# Reliable sources (11 booking system venues): 6x daily
+# Reliable sources (12 booking system venues): 6x daily
 0 6,9,12,15,18,21 * * * node scripts/scrape-reliable-sources.js
 
 # Full orchestrator (ALL businesses): 2x daily at 2AM and 2PM
@@ -35,7 +35,7 @@
 
 ---
 
-## Dedicated Booking System Scrapers (11 venues)
+## Dedicated Booking System Scrapers (12 venues)
 
 These have the highest data reliability — they parse structured booking system data directly.
 
@@ -48,10 +48,11 @@ These have the highest data reliability — they parse structured booking system
 | 5 | Mountain Fitness Center | Mindbody Classic | studio:265219 | scrape-reliable-sources.js | Classes |
 | 6 | Breathe Fitness Studio | WellnessLiving | studio:338540 | scrape-reliable-sources.js | Classes |
 | 7 | The Sound Martial Arts | WellnessLiving | studio:414578 | scrape-reliable-sources.js | Classes |
-| 8 | Roundhouse Martial Arts | WellnessLiving | — | scrape-reliable-sources.js | Classes (empty schedule) |
+| 8 | Roundhouse Martial Arts | Mariana Tek | tenant:roundhousesquamish | scrape-marianatek.js | 117 classes (Boxing, BJJ, MMA, Muay Thai, Kickboxing) |
 | 9 | Oxygen Yoga & Fitness | Brandedweb | 5922581a2 | scrape-reliable-sources.js | Classes |
 | 10 | The Ledge Climbing Centre | SendMoreGetBeta | 13326 | scrape-reliable-sources.js | Classes |
 | 11 | Brennan Park Recreation Centre | PerfectMind | widget:15f6af07 | scrape-perfectmind.js | Classes, Courses, Swim Lessons (1,500+ entries) |
+| 12 | *(Total across all venues)* | | | | |
 
 ---
 

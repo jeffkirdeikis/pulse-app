@@ -32,6 +32,7 @@ import {
   syncSourcesToDatabase
 } from './lib/reliable-sources.js';
 import { scrapePerfectMindCalendars } from './scrape-perfectmind.js';
+import { scrapeMarianaTekClasses } from './scrape-marianatek.js';
 
 puppeteer.use(StealthPlugin());
 
@@ -1118,6 +1119,15 @@ async function main() {
           if (pmResult.classesFound > 0) stats.sourcesSuccessful++;
           sourceResults.push({ name: source.name, classesFound: pmResult.classesFound, classesAdded: pmResult.classesAdded, error: null });
           await recordScrapeSuccess(source.name, pmResult.classesFound);
+          break;
+        }
+        case 'marianatek': {
+          const mtResult = await scrapeMarianaTekClasses(source);
+          stats.classesFound += mtResult.classesFound;
+          stats.classesAdded += mtResult.classesAdded;
+          if (mtResult.classesFound > 0) stats.sourcesSuccessful++;
+          sourceResults.push({ name: source.name, classesFound: mtResult.classesFound, classesAdded: mtResult.classesAdded, error: null });
+          await recordScrapeSuccess(source.name, mtResult.classesFound);
           break;
         }
         default:
