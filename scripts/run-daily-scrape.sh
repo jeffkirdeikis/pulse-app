@@ -1,33 +1,52 @@
 #!/bin/bash
 
-# Daily Scrape Runner - Only runs once per day
-# This script checks if scraping already happened today and skips if so
+# Daily Scrape Runner - Scrapes EVERYTHING, EVERY TIME
 #
-# UPDATED Feb 10, 2026: Now uses unified scraper (scrape-reliable-sources.js)
-# which handles all 10 venues with delete-after-insert safety pattern.
+# CRITICAL RULE: Every single business in the Squamish directory (~500 businesses)
+# must be scraped on every run. No exceptions. No skips. No silent failures.
+#
+# This script runs ALL scrapers in sequence:
+# 1. Reliable sources (10 venues with dedicated booking system scrapers)
+# 2. Full orchestrator (ALL businesses with AI-verified extraction)
+# 3. Community events (aggregator sites: Together Nest, Eventbrite, Meetup, etc.)
+# 4. Deals (deal aggregators and business promotions)
+#
+# UPDATED Feb 10, 2026: Restored full scraping coverage. Previously only ran
+# scrape-reliable-sources.js (10 venues). Now runs ALL scrapers to cover
+# the entire business directory.
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
-LOCK_FILE="/tmp/pulse-scrape-$(date +%Y-%m-%d).done"
 LOG_FILE="/tmp/pulse-scraper.log"
 
-# Check if already ran today
-if [ -f "$LOCK_FILE" ]; then
-    echo "$(date): Scrape already completed today, skipping" >> "$LOG_FILE"
-    exit 0
-fi
-
-echo "$(date): Starting daily scrape..." >> "$LOG_FILE"
+echo "" >> "$LOG_FILE"
+echo "================================================================" >> "$LOG_FILE"
+echo "$(date): STARTING FULL DAILY SCRAPE — ALL BUSINESSES" >> "$LOG_FILE"
+echo "================================================================" >> "$LOG_FILE"
 
 cd "$PROJECT_DIR"
 
-# Run unified reliable sources scraper (all 10 venues)
-echo "$(date): Running unified scraper..." >> "$LOG_FILE"
+# STEP 1: Reliable sources (dedicated booking system scrapers — fast, high priority)
+echo "$(date): [1/4] Running reliable sources scraper (10 booking system venues)..." >> "$LOG_FILE"
 node scripts/scrape-reliable-sources.js >> "$LOG_FILE" 2>&1
+echo "$(date): [1/4] Reliable sources complete" >> "$LOG_FILE"
 
-# Mark as done for today
-touch "$LOCK_FILE"
-echo "$(date): Daily scrape completed" >> "$LOG_FILE"
+# STEP 2: Full orchestrator — scrapes ALL businesses with websites
+# Uses --verified flag for AI extraction with source text verification
+echo "$(date): [2/4] Running full orchestrator (ALL ~500 businesses)..." >> "$LOG_FILE"
+node scripts/scrape-orchestrator.js --verified >> "$LOG_FILE" 2>&1
+echo "$(date): [2/4] Full orchestrator complete" >> "$LOG_FILE"
 
-# Clean up old lock files (older than 2 days)
-find /tmp -name "pulse-scrape-*.done" -mtime +2 -delete 2>/dev/null
+# STEP 3: Community events (aggregator sites)
+echo "$(date): [3/4] Running community events scraper..." >> "$LOG_FILE"
+node scripts/scrape-events.js >> "$LOG_FILE" 2>&1
+echo "$(date): [3/4] Community events complete" >> "$LOG_FILE"
+
+# STEP 4: Deals
+echo "$(date): [4/4] Running deals scraper..." >> "$LOG_FILE"
+node scripts/scrape-deals.js >> "$LOG_FILE" 2>&1
+echo "$(date): [4/4] Deals scraper complete" >> "$LOG_FILE"
+
+echo "================================================================" >> "$LOG_FILE"
+echo "$(date): FULL DAILY SCRAPE COMPLETED — ALL 4 SCRAPERS RAN" >> "$LOG_FILE"
+echo "================================================================" >> "$LOG_FILE"

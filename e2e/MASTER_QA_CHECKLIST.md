@@ -7,6 +7,29 @@
 
 ---
 
+## 🚨🚨🚨 #1 HIGHEST PRIORITY: FULL BUSINESS DIRECTORY SCRAPE COVERAGE 🚨🚨🚨
+
+**The entire business directory (~500 businesses from `squamish_business_directory_updated.xlsx`) MUST be scraped on EVERY run.** Zero exceptions. Zero skips.
+
+### SCRAPE-001: Complete Coverage Verification
+
+| ID | Check | How to Verify | Pass Criteria |
+|----|-------|---------------|---------------|
+| SCRAPE-001 | All businesses attempted | Check scrape log for each business name from directory | Every business has a log entry (success or documented failure) |
+| SCRAPE-002 | No silent skips | Count businesses in directory vs businesses in scrape log | Counts match exactly |
+| SCRAPE-003 | Classes extracted | Query `events` table grouped by `venue_name` | All venues with known schedules have future classes |
+| SCRAPE-004 | Events extracted | Query `events` table for `event_type=event` | Events found from business websites |
+| SCRAPE-005 | Deals extracted | Query `deals` table | Deals found from business promotions |
+| SCRAPE-006 | Failures documented | Check failure log entries | Each failure has: business name, URL, error reason, attempted method |
+| SCRAPE-007 | No stale exclusions | Check if any business is hardcoded as "skip" | Zero businesses permanently excluded |
+| SCRAPE-008 | Booking system venues populated | Query future classes for all 10+ booking system venues | All return >0 classes (except verified empty schedules) |
+| SCRAPE-009 | AI-verified venues attempted | Check verified-extractor logs | All non-booking-system websites attempted with AI extraction |
+| SCRAPE-010 | Post-scrape data quality | Run validation queries from CLAUDE.md | No date duplication, no hallucinated data, dedup correct |
+
+**This section takes priority over ALL other QA checks. A scraper run that misses businesses is a critical failure.**
+
+---
+
 ## BUGS FOUND LOG
 
 This section tracks bugs that made it past QA and the lessons learned.

@@ -4,6 +4,49 @@
 
 ---
 
+## 🚨🚨🚨 #1 HIGHEST PRIORITY: SCRAPE EVERY BUSINESS — ZERO EXCEPTIONS 🚨🚨🚨
+
+**The entire Squamish business directory (`squamish_business_directory_updated.xlsx`, ~500 businesses) MUST be scraped in its entirety on EVERY scrape run.** This is the single most important rule in the project.
+
+### The Rule
+
+**Every single business website is scraped every single time.** No business is skipped. No business is deprioritized. No business is marked "can't scrape" and forgotten. We have already built systems for ALL booking platforms (Mindbody, WellnessLiving, JaneApp, Brandedweb, SendMoreGetBeta), custom site scraping, and AI-verified extraction. There are ZERO exceptions.
+
+### What Must Be Scraped
+
+For EVERY business in the directory, the scraper searches for:
+- **Classes & schedules** (fitness, yoga, martial arts, etc.)
+- **Events** (workshops, community events, special occasions, etc.)
+- **Deals & promotions** (discounts, specials, coupons, etc.)
+
+### If A Site Cannot Be Scraped
+
+1. **Log it** — Record the business name, URL, and the specific reason it failed
+2. **Do NOT skip it** — It stays in the scrape queue for every run
+3. **Find a solution** — Research alternative approaches (different selectors, API endpoints, cached pages, etc.)
+4. **Escalate** — If after multiple attempts no solution works, flag it for manual review with full diagnostic info
+5. **Never silently pass** — A silent skip is a bug
+
+### Coverage Requirements
+
+| Source | Method | Status |
+|--------|--------|--------|
+| Businesses with booking systems (Mindbody, WellnessLiving, etc.) | Dedicated booking system scrapers | ✅ Built |
+| Businesses with custom websites | AI-verified extraction (`verified-extractor.js`) | ✅ Built |
+| Businesses with JaneApp | JaneApp discover scraper | ✅ Built |
+| Businesses with no website | Flag for manual data entry | Required |
+| Businesses with WAF/Cloudflare blocking | Alternative extraction methods | Required |
+
+### QA Verification (Highest Priority)
+
+After every scrape run, verify:
+1. **All ~500 businesses were attempted** — check scrape logs for complete coverage
+2. **No business was silently skipped** — every business has a success or documented failure
+3. **Data was found where expected** — venues with known schedules produced classes/events
+4. **Failures are logged with diagnostics** — reason, URL, error message for every failure
+
+---
+
 ## 🚨 QA PROTOCOL (NON-NEGOTIABLE — READ THIS BEFORE ANY QA TASK)
 
 **Full protocol: `PULSE_QA_PROTOCOL.md`** — Read it in its entirety before any QA task.
