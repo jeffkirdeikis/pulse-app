@@ -298,12 +298,21 @@ function parseClassicSchedule(text, source) {
     // Check for time pattern
     const timeMatch = line.match(/^(\d{1,2}:\d{2}\s*(?:am|pm))\s*PST$/i);
     if (timeMatch && currentDate) {
-      const className = lines[i + 1];
+      // For future dates, Mindbody Classic inserts "(X Reserved, Y Open)" between
+      // the time and the class name. Skip this availability line if present.
+      let nameOffset = 1;
+      const nextLine = lines[i + 1] || '';
+      if (/^\(\d+ Reserved, \d+ Open\)$/.test(nextLine)) {
+        nameOffset = 2; // Skip availability line
+      }
+
+      const className = lines[i + nameOffset];
       if (!className) continue;
       if (/cancelled|all service|all class|all teachers|today|day|week/i.test(className)) continue;
       if (/^open gym$/i.test(className)) continue;
+      if (/^\(\d+ Reserved/.test(className)) continue; // Safety: skip any remaining availability text
 
-      let instructor = lines[i + 2] || '';
+      let instructor = lines[i + nameOffset + 1] || '';
       if (/^\d+\s*(hour|minute|hr|min)/i.test(instructor)) instructor = '';
       if (/^coach$/i.test(instructor)) instructor = '';
 
