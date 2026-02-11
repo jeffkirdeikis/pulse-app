@@ -33,6 +33,15 @@ import {
 } from './lib/reliable-sources.js';
 import { scrapePerfectMindCalendars } from './scrape-perfectmind.js';
 import { scrapeMarianaTekClasses } from './scrape-marianatek.js';
+import {
+  detectProviderChange,
+  applyProviderSwitch,
+  shouldAttemptDetection,
+  recordDetectionAttempt,
+  recordZeroResult,
+  resetZeroResult,
+  confirmProviderChange
+} from './lib/provider-detector.js';
 
 puppeteer.use(StealthPlugin());
 
@@ -1058,6 +1067,46 @@ async function scrapeSendMoreGetBeta(source, browser) {
 }
 
 // ============================================================
+// RE-SCRAPE HELPER (for provider change auto-switch)
+// ============================================================
+
+/**
+ * Re-scrape a single source after a provider switch.
+ * Returns { classesFound, classesAdded } or throws on error.
+ */
+async function reScrapeSource(source, browser) {
+  switch (source.booking_system) {
+    case 'mindbody-widget': {
+      await scrapeMindbodyWidget(source, browser);
+      // scrapeMindbodyWidget pushes to sourceResults internally
+      return null; // caller checks sourceResults
+    }
+    case 'mindbody-classic': {
+      await scrapeMindbodyClassic(source, browser);
+      return null;
+    }
+    case 'wellnessliving': {
+      await scrapeWellnessLiving(source, browser);
+      return null;
+    }
+    case 'brandedweb': {
+      await scrapeBrandedweb(source, browser);
+      return null;
+    }
+    case 'sendmoregetbeta': {
+      await scrapeSendMoreGetBeta(source, browser);
+      return null;
+    }
+    case 'perfectmind':
+      return await scrapePerfectMindCalendars(source, browser);
+    case 'marianatek':
+      return await scrapeMarianaTekClasses(source);
+    default:
+      throw new Error(`No scraper for booking system: ${source.booking_system}`);
+  }
+}
+
+// ============================================================
 // MAIN SCRAPER ORCHESTRATOR
 // ============================================================
 
@@ -1143,6 +1192,87 @@ async function main() {
       if (lastResult && lastResult.classesFound === 0 && !lastResult.error) {
         console.warn(`   ⚠️ ZERO CLASSES from ${source.name} — possible silent failure`);
         await telegramAlert(`⚠️ Scraper: ${source.name} returned 0 classes (${source.booking_system}). Possible format change or site issue.`);
+      }
+
+      // ---- PROVIDER CHANGE DETECTION ----
+      // Track zero-result runs persistently (separate from error failures)
+      if (lastResult && lastResult.classesFound === 0 && !lastResult.error) {
+        await recordZeroResult(source.name);
+      } else if (lastResult && lastResult.classesFound > 0) {
+        await resetZeroResult(source.name);
+      }
+
+      // If this source failed or returned 0, check if we should probe for a provider change
+      if (lastResult && (lastResult.error || lastResult.classesFound === 0)) {
+        const shouldDetect = await shouldAttemptDetection(source);
+        if (shouldDetect) {
+          console.log(`\n   🔍 Running provider change detection for ${source.name}...`);
+          await recordDetectionAttempt(source.name);
+
+          try {
+            const detection = await detectProviderChange(source);
+
+            if (detection.changed && detection.newProvider) {
+              const np = detection.newProvider;
+              console.log(`   🔄 PROVIDER CHANGE DETECTED: ${source.booking_system} → ${np.system}`);
+              console.log(`      Slug: ${np.slug}, Probe: ${np.probeSuccess ? 'PASSED' : 'N/A'}`);
+
+              await telegramAlert(
+                `🔄 Provider Change Detected: ${source.name}\n` +
+                `Old: ${source.booking_system}\n` +
+                `New: ${np.system} (${np.slug})\n` +
+                `Probe: ${np.probeSuccess ? 'PASSED — auto-switching' : 'No API probe — switching based on HTML detection'}\n` +
+                `Detected on: ${np.detectedOnUrl}`
+              );
+
+              // Apply the switch and attempt immediate re-scrape
+              const updatedSource = await applyProviderSwitch(source, np);
+              console.log(`   🔄 Attempting re-scrape with ${np.system}...`);
+
+              try {
+                const resultsBefore = sourceResults.length;
+                const directResult = await reScrapeSource(updatedSource, browser);
+
+                // Check results — either from return value or from sourceResults
+                let reClassesFound = 0;
+                if (directResult) {
+                  reClassesFound = directResult.classesFound || 0;
+                } else if (sourceResults.length > resultsBefore) {
+                  const newResult = sourceResults[sourceResults.length - 1];
+                  reClassesFound = newResult?.classesFound || 0;
+                }
+
+                if (reClassesFound > 0) {
+                  console.log(`   ✅ Re-scrape succeeded: ${reClassesFound} classes found`);
+                  await confirmProviderChange(source.name);
+                  await telegramAlert(
+                    `✅ Provider Switch Confirmed: ${source.name}\n` +
+                    `${source.booking_system} → ${np.system}\n` +
+                    `Classes found: ${reClassesFound}`
+                  );
+                } else {
+                  console.log(`   ⚠️ Re-scrape returned 0 classes — switch applied but unconfirmed`);
+                  await telegramAlert(
+                    `⚠️ Provider Switch Unconfirmed: ${source.name}\n` +
+                    `Switched to ${np.system} but got 0 classes.\n` +
+                    `Manual verification may be needed.`
+                  );
+                }
+              } catch (reErr) {
+                console.log(`   ❌ Re-scrape failed: ${reErr.message}`);
+                await telegramAlert(
+                  `❌ Provider Switch Re-scrape Failed: ${source.name}\n` +
+                  `Switched to ${np.system} but re-scrape errored: ${reErr.message}\n` +
+                  `Manual verification needed.`
+                );
+              }
+            } else {
+              console.log(`   🔍 No provider change detected (found: ${detection.allDetected.map(d => d.system).join(', ') || 'none'})`);
+            }
+          } catch (detectErr) {
+            console.log(`   ⚠️ Detection error: ${detectErr.message}`);
+          }
+        }
       }
 
       // Brief pause between sources

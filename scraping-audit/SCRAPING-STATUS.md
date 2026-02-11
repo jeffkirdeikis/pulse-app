@@ -52,7 +52,20 @@ These have the highest data reliability — they parse structured booking system
 | 9 | Oxygen Yoga & Fitness | Brandedweb | 5922581a2 | scrape-reliable-sources.js | Classes |
 | 10 | The Ledge Climbing Centre | SendMoreGetBeta | 13326 | scrape-reliable-sources.js | Classes |
 | 11 | Brennan Park Recreation Centre | PerfectMind | widget:15f6af07 | scrape-perfectmind.js | Classes, Courses, Swim Lessons (1,500+ entries) |
-| 12 | *(Total across all venues)* | | | | |
+---
+
+## Automated Provider Change Detection
+
+When a business switches booking providers (e.g., WellnessLiving → Mariana Tek), the system automatically detects and adapts:
+
+1. **Trigger**: 2+ consecutive zero-result scrapes or failures
+2. **Detect**: Scans business website HTML for 8 platform signatures (Mariana Tek, Mindbody Widget/Classic, WellnessLiving, JaneApp, PerfectMind, Brandedweb, SendMoreGetBeta)
+3. **Probe**: For platforms with APIs (Mariana Tek, Mindbody Widget, JaneApp), verifies data exists
+4. **Switch**: Auto-updates scraper config, preserves old config for rollback, re-scrapes immediately
+5. **Alert**: Telegram notifications at every stage (detected, confirmed, or failed)
+
+**Module**: `scripts/lib/provider-detector.js`
+**DB columns**: `previous_booking_system`, `provider_change_detected_at`, `provider_change_confirmed`, `consecutive_zero_results`, `last_detection_attempt`
 
 ---
 
