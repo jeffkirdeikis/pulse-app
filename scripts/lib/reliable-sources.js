@@ -75,12 +75,12 @@ export const RELIABLE_SOURCES = [
   // MINDBODY WIDGET API (HealCode widgets)
   // ========================================
   {
-    name: 'Shala Yoga Squamish',
+    name: 'Shala Yoga',
     booking_system: 'mindbody-widget',
     widget_id: '189264',
     studio_id: null,
     url: 'https://www.shalayoga.ca',
-    address: '1368 Main St, Squamish, BC',
+    address: '40383 Tantalus Rd, Unit 3, Squamish, BC',
     category: 'Yoga & Pilates',
     scrape_frequency: 'daily',
     priority: 10,

@@ -119,6 +119,9 @@ async function scrapeMindbodyWidget(source, browser) {
     // The API returns pre-rendered HTML that can be parsed without a browser.
     console.log(`   Using Mindbody API for widget ID: ${source.widget_id}`);
 
+    // Phase 1: Collect all classes into memory first
+    const collectedClasses = [];
+
     for (let dayOffset = 0; dayOffset < DAYS_TO_SCRAPE; dayOffset++) {
       // Use Pacific-timezone-aware date to avoid UTC shift at evening scrape times
       const dateStr = getEndDatePacific(dayOffset);
@@ -210,9 +213,6 @@ async function scrapeMindbodyWidget(source, browser) {
         stats.classesFound++;
 
         const parsedTime = parseTime(startTime);
-        const exists = await classExists(className, dateStr, source.name, parsedTime);
-        if (exists) continue;
-
         const parsedEndTime = endTimes[i] ? parseTime(endTimes[i]) : null;
         // Pass price if available from HTML
         const classPrice = hasPerClassPrices ? prices[i] : null;
@@ -220,7 +220,8 @@ async function scrapeMindbodyWidget(source, browser) {
           ? { price: classPrice, isFree: classPrice === 0, priceDescription: classPrice === 0 ? 'Free' : `$${classPrice.toFixed(2)}` }
           : {};
         if (classPrice != null) pricesFound++; else pricesNotFound++;
-        const success = await insertClass({
+
+        collectedClasses.push({
           title: className,
           time: parsedTime,
           endTime: parsedEndTime,
@@ -232,23 +233,30 @@ async function scrapeMindbodyWidget(source, browser) {
           bookingSystem: 'mindbody-widget',
           ...priceData
         });
-
-        if (success) {
-          classesAdded++;
-          stats.classesAdded++;
-        } else {
-          stats.insertFailures++;
-        }
       }
 
       // Small delay between API requests
       await new Promise(r => setTimeout(r, 300));
     }
 
-    // Delete old data AFTER successful scrape (not before) to avoid
-    // leaving zero classes if the scraper crashes mid-run
-    if (classesFound > 0) {
+    // Phase 2: Delete old data ONLY after confirming scrape found classes
+    // Must delete BEFORE inserting so new data isn't caught by the delete filter
+    if (collectedClasses.length > 0) {
       await deleteOldClasses(source.name, todayStr, 'mindbody-widget');
+    }
+
+    // Phase 3: Insert all collected classes
+    for (const cls of collectedClasses) {
+      const exists = await classExists(cls.title, cls.date, cls.venueName, cls.time);
+      if (exists) continue;
+
+      const success = await insertClass(cls);
+      if (success) {
+        classesAdded++;
+        stats.classesAdded++;
+      } else {
+        stats.insertFailures++;
+      }
     }
 
     console.log(`   ✅ Found: ${classesFound}, Added: ${classesAdded}`);
@@ -459,10 +467,16 @@ async function scrapeMindbodyClassic(source, browser) {
       return c.date >= todayStr && c.date <= endDateStr;
     });
 
-    for (const cls of classes) {
-      classesFound++;
-      stats.classesFound++;
+    classesFound = classes.length;
+    stats.classesFound += classesFound;
 
+    // Delete old data BEFORE inserting — but only after confirming scrape succeeded
+    if (classesFound > 0) {
+      await deleteOldClasses(source.name, todayStr, 'mindbody-classic');
+    }
+
+    // Now insert the collected classes
+    for (const cls of classes) {
       const exists = await classExists(cls.title, cls.date, cls.venueName, cls.time);
       if (exists) continue;
 
@@ -471,11 +485,6 @@ async function scrapeMindbodyClassic(source, browser) {
         classesAdded++;
         stats.classesAdded++;
       }
-    }
-
-    // Delete old data AFTER successful scrape to avoid zero-class gap
-    if (classesFound > 0) {
-      await deleteOldClasses(source.name, todayStr, 'mindbody-classic');
     }
 
     console.log(`   ✅ Found: ${classesFound}, Added: ${classesAdded}`);
@@ -608,6 +617,8 @@ async function scrapeWellnessLiving(source, browser) {
 
     // WellnessLiving shows a weekly schedule with day headers.
     // Navigate week by week to cover DAYS_TO_SCRAPE days.
+    // Phase 1: Collect all classes into memory
+    const collectedWLClasses = [];
     const weeksNeeded = Math.ceil(DAYS_TO_SCRAPE / 7);
     let lastWLDates = '';
 
@@ -661,26 +672,30 @@ async function scrapeWellnessLiving(source, browser) {
       for (const cls of classes) {
         // Skip classes before today
         if (cls.date < todayStr) continue;
-
-        classesFound++;
-        stats.classesFound++;
-
-        const exists = await classExists(cls.title, cls.date, source.name, cls.time);
-        if (exists) continue;
-
-        const success = await insertClass(cls);
-        if (success) {
-          classesAdded++;
-          stats.classesAdded++;
-        } else {
-          stats.insertFailures++;
-        }
+        collectedWLClasses.push(cls);
       }
     }
 
-    // Delete old data AFTER successful scrape to avoid zero-class gap
+    classesFound = collectedWLClasses.length;
+    stats.classesFound += classesFound;
+
+    // Phase 2: Delete old data BEFORE inserting — only after confirming scrape succeeded
     if (classesFound > 0) {
       await deleteOldClasses(source.name, todayStr, 'wellnessliving');
+    }
+
+    // Phase 3: Insert collected classes
+    for (const cls of collectedWLClasses) {
+      const exists = await classExists(cls.title, cls.date, source.name, cls.time);
+      if (exists) continue;
+
+      const success = await insertClass(cls);
+      if (success) {
+        classesAdded++;
+        stats.classesAdded++;
+      } else {
+        stats.insertFailures++;
+      }
     }
 
     console.log(`   ✅ Found: ${classesFound}, Added: ${classesAdded}`);
@@ -793,10 +808,12 @@ async function scrapeBrandedweb(source, browser) {
     await new Promise(r => setTimeout(r, 3000));
 
     // Brandedweb pages show a weekly schedule. Navigate week-by-week.
-    const weeksNeeded = Math.ceil(DAYS_TO_SCRAPE / 7);
+    // Phase 1: Collect all classes into memory
+    const collectedBWClasses = [];
+    const bwWeeksNeeded = Math.ceil(DAYS_TO_SCRAPE / 7);
     let lastBWDates = '';
 
-    for (let week = 0; week < weeksNeeded; week++) {
+    for (let week = 0; week < bwWeeksNeeded; week++) {
       if (week > 0) {
         // Try to navigate to next week
         try {
@@ -852,26 +869,30 @@ async function scrapeBrandedweb(source, browser) {
 
       for (const cls of classes) {
         if (cls.date < todayStr) continue;
-
-        classesFound++;
-        stats.classesFound++;
-
-        const exists = await classExists(cls.title, cls.date, cls.venueName, cls.time);
-        if (exists) continue;
-
-        const success = await insertClass(cls);
-        if (success) {
-          classesAdded++;
-          stats.classesAdded++;
-        } else {
-          stats.insertFailures++;
-        }
+        collectedBWClasses.push(cls);
       }
     }
 
-    // Delete old data AFTER successful scrape to avoid zero-class gap
+    classesFound = collectedBWClasses.length;
+    stats.classesFound += classesFound;
+
+    // Phase 2: Delete old data BEFORE inserting — only after confirming scrape succeeded
     if (classesFound > 0) {
       await deleteOldClasses(source.name, todayStr, 'brandedweb');
+    }
+
+    // Phase 3: Insert collected classes
+    for (const cls of collectedBWClasses) {
+      const exists = await classExists(cls.title, cls.date, cls.venueName, cls.time);
+      if (exists) continue;
+
+      const success = await insertClass(cls);
+      if (success) {
+        classesAdded++;
+        stats.classesAdded++;
+      } else {
+        stats.insertFailures++;
+      }
     }
 
     console.log(`   ✅ Found: ${classesFound}, Added: ${classesAdded}`);
@@ -977,18 +998,25 @@ async function scrapeSendMoreGetBeta(source, browser) {
     );
     await new Promise(r => setTimeout(r, 5000));
 
-    // Parse all classes from the widget text
+    // Phase 1: Collect all classes from the widget text
     const text = await page.evaluate(() => document.body.innerText);
-    const allClasses = parseSendMoreClasses(text, source);
+    const allSMClasses = parseSendMoreClasses(text, source);
 
     // Filter for fitness classes and date range (string comparison avoids UTC issues)
-    for (const cls of allClasses) {
-      if (cls.date < todayStr || cls.date > endDateStr) continue;
-      if (!isFitnessClass(cls.title)) continue;
+    const collectedSMClasses = allSMClasses.filter(cls =>
+      cls.date >= todayStr && cls.date <= endDateStr && isFitnessClass(cls.title)
+    );
 
-      classesFound++;
-      stats.classesFound++;
+    classesFound = collectedSMClasses.length;
+    stats.classesFound += classesFound;
 
+    // Phase 2: Delete old data BEFORE inserting — only after confirming scrape succeeded
+    if (classesFound > 0) {
+      await deleteOldClasses(source.name, todayStr, 'sendmoregetbeta');
+    }
+
+    // Phase 3: Insert collected classes
+    for (const cls of collectedSMClasses) {
       const exists = await classExists(cls.title, cls.date, cls.venueName, cls.time);
       if (exists) continue;
 
@@ -999,11 +1027,6 @@ async function scrapeSendMoreGetBeta(source, browser) {
       } else {
         stats.insertFailures++;
       }
-    }
-
-    // Delete old data AFTER successful scrape to avoid zero-class gap
-    if (classesFound > 0) {
-      await deleteOldClasses(source.name, todayStr, 'sendmoregetbeta');
     }
 
     console.log(`   ✅ Found: ${classesFound}, Added: ${classesAdded}`);

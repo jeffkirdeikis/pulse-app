@@ -2,6 +2,9 @@
 
 # Daily Scrape Runner - Only runs once per day
 # This script checks if scraping already happened today and skips if so
+#
+# UPDATED Feb 10, 2026: Now uses unified scraper (scrape-reliable-sources.js)
+# which handles all 10 venues with delete-after-insert safety pattern.
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
@@ -18,25 +21,9 @@ echo "$(date): Starting daily scrape..." >> "$LOG_FILE"
 
 cd "$PROJECT_DIR"
 
-# Run Mindbody scraper
-echo "$(date): Running Mindbody scraper..." >> "$LOG_FILE"
-node scripts/scrape-fitness-classes.js >> "$LOG_FILE" 2>&1
-
-# Run WellnessLiving scraper
-echo "$(date): Running WellnessLiving scraper..." >> "$LOG_FILE"
-node scripts/scrape-wellnessliving.js >> "$LOG_FILE" 2>&1
-
-# Run Brandedweb scraper (Oxygen Yoga)
-echo "$(date): Running Brandedweb scraper..." >> "$LOG_FILE"
-node scripts/scrape-brandedweb.js >> "$LOG_FILE" 2>&1
-
-# Run SendMoreGetBeta scraper (The Ledge)
-echo "$(date): Running SendMoreGetBeta scraper..." >> "$LOG_FILE"
-node scripts/scrape-sendmoregetbeta.js >> "$LOG_FILE" 2>&1
-
-# Run Classic Mindbody scraper (Squamish Barbell, Seed Studio)
-echo "$(date): Running Classic Mindbody scraper..." >> "$LOG_FILE"
-node scripts/scrape-mindbody-classic.js >> "$LOG_FILE" 2>&1
+# Run unified reliable sources scraper (all 10 venues)
+echo "$(date): Running unified scraper..." >> "$LOG_FILE"
+node scripts/scrape-reliable-sources.js >> "$LOG_FILE" 2>&1
 
 # Mark as done for today
 touch "$LOCK_FILE"
