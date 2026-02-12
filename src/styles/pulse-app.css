@@ -13539,3 +13539,38 @@
   }
 }
 
+/* H1 in logo — reset to match existing span styling */
+h1.logo-text-premium {
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  margin: 0;
+}
+
+/* H2 results count — reset to match existing div styling */
+h2.results-count {
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  margin: 0;
+}
+
+/* Footer */
+.app-footer {
+  text-align: center;
+  padding: 24px 16px;
+  color: #9ca3af;
+  font-size: 12px;
+  border-top: 1px solid #f3f4f6;
+}
+
+/* Accessibility: Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+

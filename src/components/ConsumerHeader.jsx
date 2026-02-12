@@ -80,7 +80,7 @@ const ConsumerHeader = React.memo(function ConsumerHeader({
                       strokeLinejoin="round"/>
               </svg>
               <div className="logo-text-container">
-                <span className="logo-text-premium">PULSE</span>
+                <h1 className="logo-text-premium">PULSE</h1>
                 <span className="city-tag">Squamish</span>
               </div>
             </div>

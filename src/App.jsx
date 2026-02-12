@@ -747,7 +747,7 @@ export default function PulseApp() {
             <button
               className="btn-secondary"
               onClick={() => setVisibleEventCount(c => c + 50)}
-              style={{ padding: '10px 24px', fontSize: '14px', fontWeight: 600 }}
+              style={{ padding: '12px 24px', fontSize: '14px', fontWeight: 600, minHeight: '44px' }}
             >
               Show More ({events.length - visibleEventCount} remaining)
             </button>
@@ -890,7 +890,7 @@ export default function PulseApp() {
           <PullToRefresh onRefresh={handlePullRefresh}>
           <main className="content" id="main-content">
             {currentSection !== 'wellness' && (
-            <div className="results-count" aria-live="polite" aria-atomic="true">
+            <h2 className="results-count" aria-live="polite" aria-atomic="true">
               {(() => {
                 let count;
                 if (currentSection === 'deals') {
@@ -913,7 +913,7 @@ export default function PulseApp() {
                 }
                 return `${count} ${count === 1 ? 'result' : 'results'}`;
               })()}
-            </div>
+            </h2>
             )}
 
             <AnimatePresence mode="wait">
@@ -1543,6 +1543,12 @@ export default function PulseApp() {
       </AnimatePresence>
 
       <FeedbackWidget />
+
+      {view === 'consumer' && (
+        <footer className="app-footer" role="contentinfo">
+          <p>&copy; {new Date().getFullYear()} Pulse Squamish</p>
+        </footer>
+      )}
     </div>
   );
 }
