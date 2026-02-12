@@ -22,3 +22,20 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+.vercel
+
+# Claude memory files
+**/.claude/CLAUDE.md
+**/CLAUDE.md
+!CLAUDE.md
+!CLAUDE-ARCHIVE.md
+
+# Test artifacts
+test-results/
+qa-reports/screenshots/
+*.png
+!public/*.png
+
+# Data files
+*.zip
+pulse/
