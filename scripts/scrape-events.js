@@ -17,7 +17,7 @@ const EVENT_SOURCES = [
     name: 'Together Nest - Activities',
     url: 'https://together-nest.com/discover?category=activities',
     category: 'Community',
-    type: 'activities' // Special handling for Together Nest
+    type: 'events'
   },
   {
     name: 'Together Nest - Events',
@@ -29,7 +29,7 @@ const EVENT_SOURCES = [
     name: 'Sea to Sky Kids - Directory',
     url: 'https://seatoskykids.ca/directory/',
     category: 'Family',
-    type: 'activities'
+    type: 'events'
   },
   {
     name: 'Explore Squamish - Event Calendar',
@@ -54,13 +54,13 @@ const EVENT_SOURCES = [
     name: 'District of Squamish Recreation',
     url: 'https://squamish.ca/rec/',
     category: 'Recreation',
-    type: 'activities'
+    type: 'events'
   },
   {
     name: 'Downtown Squamish Directory',
     url: 'https://www.downtownsquamish.com/listings/',
     category: 'Community',
-    type: 'activities'
+    type: 'events'
   },
   // === LOCAL NEWS & COMMUNITY ===
   {
@@ -110,7 +110,7 @@ const EVENT_SOURCES = [
     name: 'Together Nest - All',
     url: 'https://together-nest.com/discover',
     category: 'Community',
-    type: 'activities'
+    type: 'events'
   },
   {
     name: 'Squamish Chamber - Events & Programming',
@@ -415,7 +415,7 @@ async function main() {
     console.log('-'.repeat(40));
 
     const events = await scrapeUrl(source.url, source.name, source.type);
-    console.log(`   Found ${events.length} ${source.type === 'activities' ? 'activities' : 'events'}`);
+    console.log(`   Found ${events.length} events`);
 
     for (const event of events) {
       totalFound++;
@@ -425,20 +425,29 @@ async function main() {
         continue;
       }
 
-      // Activities (classes) don't need dates - they're ongoing
-      const isClass = event.isClass || source.type === 'activities';
+      // Only mark as class if explicitly flagged by the extractor
+      // Activities from community directories are events, not classes
+      const isClass = event.isClass === true;
       let dateStr;
 
       if (isClass) {
-        // For classes, use today's date as start (they're ongoing)
+        // For actual classes (explicitly flagged), use today's date
         dateStr = new Date().toISOString().split('T')[0];
       } else {
+        // Events need real dates — try to parse from the scraped data
         const eventDate = parseDate(event.date);
-        if (!eventDate || eventDate < new Date()) {
-          console.log(`   ⚪ Skipped: ${event.title.substring(0, 30)}... (past/invalid date)`);
+        if (!eventDate) {
+          // No date found — use today + 7 days as a reasonable near-future default
+          // for community activities/events with no specific date listed
+          const nearFuture = new Date();
+          nearFuture.setDate(nearFuture.getDate() + 7);
+          dateStr = nearFuture.toISOString().split('T')[0];
+        } else if (eventDate < new Date()) {
+          console.log(`   ⚪ Skipped: ${event.title.substring(0, 30)}... (past date)`);
           continue;
+        } else {
+          dateStr = eventDate.toISOString().split('T')[0];
         }
-        dateStr = eventDate.toISOString().split('T')[0];
       }
 
       // Check for duplicates
