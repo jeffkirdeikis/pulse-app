@@ -179,6 +179,21 @@ export default function PulseApp() {
     fetchAdminStats();
   }, [user?.isAdmin]);
 
+  // Handle /admin path route — auto-switch to admin view for admin users
+  useEffect(() => {
+    if (window.location.pathname === '/admin') {
+      if (user?.isAdmin) {
+        setView('admin');
+      } else if (user?.isGuest) {
+        // Guest on /admin — prompt sign in
+        setShowAuthModal(true);
+      } else {
+        // Logged in but not admin — redirect to home
+        window.history.replaceState(null, '', '/');
+      }
+    }
+  }, [user?.isAdmin, user?.isGuest]);
+
   // Browser history management for tab navigation
   useEffect(() => {
     const hash = window.location.hash.replace('#', '');
@@ -192,8 +207,8 @@ export default function PulseApp() {
       }, 2000);
     } else if (validSections.includes(hash)) {
       setCurrentSection(hash);
-    } else {
-      // Invalid hash — fix URL to default section
+    } else if (window.location.pathname !== '/admin') {
+      // Invalid hash — fix URL to default section (but not on /admin route)
       setCurrentSection('classes');
       window.history.replaceState({ section: 'classes' }, '', '#classes');
     }
