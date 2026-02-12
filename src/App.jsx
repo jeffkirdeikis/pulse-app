@@ -912,12 +912,6 @@ export default function PulseApp() {
             />
           )}
 
-          {/* Floating Action Button - Premium */}
-          <button className="fab-premium" onClick={() => { if (user.isGuest) { setShowAuthModal(true); return; } setShowAddEventModal(true); }}>
-            <Plus size={24} strokeWidth={2.5} />
-            <span className="fab-label">Add Event</span>
-          </button>
-
           {/* Profile Menu Dropdown */}
           {showProfileMenu && (
             <ProfileMenu
