@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')!
-const NOTIFY_EMAIL = 'jeffreykirdeikis@gmail.com'
+const NOTIFY_EMAIL = 'jeff@pulse-app.ca'
 
 serve(async (req) => {
   try {
@@ -72,7 +72,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'Pulse Feedback <onboarding@resend.dev>',
+        from: 'Pulse Feedback <feedback@pulse-app.ca>',
         to: [NOTIFY_EMAIL],
         subject,
         html: htmlBody,
