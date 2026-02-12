@@ -83,7 +83,7 @@ export function useAuth() {
   const handleGoogleSignIn = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: window.location.origin }
+      options: { redirectTo: window.location.origin, queryParams: { prompt: 'select_account' } }
     });
     if (error) console.error('Auth error:', error);
   };
