@@ -37,6 +37,9 @@ For every input: try empty submission, try special characters, try extremely lon
 ### Rule 6: DOCUMENT EVERYTHING — EVEN PASSES
 A QA report that says "everything works" with no detail is a FAILED QA. Every element must have its own line item with evidence.
 
+### Rule 7: NEVER BREAK PRIMARY BEHAVIOR TO FIX AN EDGE CASE
+When fixing a bug or edge case, the fix MUST preserve all existing correct behavior. If a fix weakens a filter, guard, or validation to handle an edge case, it is WRONG — it will break the primary flow. Add a specific branch for the edge case instead. **Always test the primary flow FIRST after any fix, then verify the edge case.** (Lesson: Feb 12, 2026 — event filter changed from current time to midnight to help evening users, broke daytime filtering for all users, showing already-passed events.)
+
 ---
 
 ## PHASE 1: ENVIRONMENT VERIFICATION

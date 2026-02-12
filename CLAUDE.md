@@ -4,6 +4,31 @@
 
 ---
 
+## 🚨🚨🚨 #0 ABSOLUTE RULE: NEVER BREAK EXISTING BEHAVIOR TO FIX AN EDGE CASE 🚨🚨🚨
+
+**On Feb 12, 2026: A fix for "evening users see empty app" changed the event filter from `e.start >= now` (current time) to `e.start >= todayMidnight` (start of day). This "fixed" the evening edge case but broke the PRIMARY behavior — users at noon saw 6 AM classes that already happened. 2,182 results included hundreds of stale events.**
+
+### The Rule
+
+**Every fix must preserve existing correct behavior.** If fixing edge case X would break primary behavior Y, the fix is WRONG. Find a solution that handles BOTH.
+
+### What This Means In Practice
+
+| Situation | WRONG approach | RIGHT approach |
+|-----------|---------------|----------------|
+| Evening users see empty list | Remove time filtering entirely | Show tomorrow's events when today's are done |
+| Edge case fails | Weaken the guard/filter | Add a specific branch for the edge case |
+| One user flow breaks | Change shared logic broadly | Fix the specific flow without touching others |
+
+### Before Committing Any Fix, Ask:
+
+1. **What currently works?** List the existing behaviors that depend on the code you're changing.
+2. **Does my fix preserve ALL of them?** If any existing behavior breaks, the fix is not ready.
+3. **Am I weakening a filter/guard/check?** Weakening (e.g. midnight instead of now, removing a validation) is almost always wrong. Add specificity instead.
+4. **Test the primary flow FIRST**, then the edge case. Not the other way around.
+
+---
+
 ## 🚨🚨🚨 #1 HIGHEST PRIORITY: SCRAPE EVERY BUSINESS — ZERO EXCEPTIONS 🚨🚨🚨
 
 **The entire Squamish business directory (`squamish_business_directory_updated.xlsx`, ~500 businesses) MUST be scraped in its entirety on EVERY scrape run.** This is the single most important rule in the project.
@@ -451,6 +476,7 @@ When a bug is reported:
 | **UTC vs Local Timezone** | Supabase runs in UTC. `CURRENT_DATE`/`CURRENT_TIME` are UTC. At 9 PM Pacific (5 AM UTC+1), CURRENT_DATE is tomorrow, CURRENT_TIME is 05:00. "Filter past slots" check using UTC lets 8:30 AM morning slots through because `08:30 > 05:00` | ALWAYS use `(now() AT TIME ZONE 'America/Vancouver')` for Pacific time comparisons. JS `toISOString()` also converts to UTC — use `getFullYear()/getMonth()/getDate()` for local dates |
 | **Scraper Data Must Be Verified** | Added 547 slots to database without verifying each clinic's data against live API. Dr. Thea Lanoue appeared to have false data until verified | After EVERY scraper run, run QA verification script comparing DB against live JaneApp API for each clinic. Never trust scraper output without cross-checking |
 | **CTA Button Wrong Action** | "Book Class" CTA in EventDetailModal used `<a href=Google search>` instead of `handleBookClick()` which opens the actual booking sheet/iframe. Quick action "Book" button was correct but CTA was a dead-end to Google. | EVERY button/CTA that performs an action must call the SAME handler as the equivalent action elsewhere. Don't use `<a>` tags with Google search fallbacks for in-app booking actions. When duplicating a button's purpose (quick action vs CTA), both MUST use the same `onClick` handler. |
+| **Fix Breaks Primary Behavior** | Changed event filter from `now` to `todayMidnight` to help evening users — broke daytime filtering, showing 6 AM classes at noon (2,182 stale results). | NEVER weaken a filter/guard to fix an edge case. Add a specific branch instead. Test the primary flow FIRST, then the edge case. |
 
 ---
 
@@ -471,6 +497,8 @@ Never mark complete if:
 - **Any date/time comparison uses CURRENT_DATE, CURRENT_TIME, or toISOString() without timezone awareness**
 - **Scraper data inserted without verifying against live API source**
 - **Wellness slots added without running QA verification across all clinics**
+- **Your fix weakens a filter, guard, or validation** — weakening shared logic to fix an edge case WILL break the primary behavior. Add specificity instead.
+- **You haven't tested the PRIMARY flow after your fix** — always verify existing behavior still works before checking the edge case
 
 ---
 
