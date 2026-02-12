@@ -1,8 +1,9 @@
-import React, { memo } from 'react';
+import React, { memo, useState, useEffect } from 'react';
 import {
-  Building, Check, CheckCircle, Eye, Percent, SlidersHorizontal,
+  Building, Check, CheckCircle, Eye, MessageSquare, Percent, SlidersHorizontal,
   Sparkles, X, Zap
 } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
 
 const AdminPanelModal = memo(function AdminPanelModal({
   adminTab,
@@ -13,6 +14,17 @@ const AdminPanelModal = memo(function AdminPanelModal({
   approveSubmission,
   rejectSubmission,
 }) {
+  const [feedbackItems, setFeedbackItems] = useState([]);
+  const [feedbackLoading, setFeedbackLoading] = useState(false);
+
+  useEffect(() => {
+    if (adminTab === 'feedback') {
+      setFeedbackLoading(true);
+      supabase.from('feedback').select('*').order('created_at', { ascending: false }).limit(50)
+        .then(({ data }) => { setFeedbackItems(data || []); setFeedbackLoading(false); })
+        .catch(() => setFeedbackLoading(false));
+    }
+  }, [adminTab]);
   return (
     <div className="modal-overlay admin-modal-overlay" role="dialog" aria-modal="true" aria-label="Admin panel" onClick={() => onClose()}>
       <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
@@ -54,10 +66,51 @@ const AdminPanelModal = memo(function AdminPanelModal({
                 <span className="tab-badge">{pendingSubmissions.filter(s => s.status === 'rejected').length}</span>
               )}
             </button>
+            <button className={`admin-tab ${adminTab === 'feedback' ? 'active' : ''}`} onClick={() => setAdminTab('feedback')}>
+              <MessageSquare size={14} />
+              Feedback
+            </button>
           </div>
 
           <div className="admin-submissions">
-            {pendingSubmissions.filter(s => s.status === adminTab).length === 0 ? (
+            {adminTab === 'feedback' ? (
+              feedbackLoading ? (
+                <div className="admin-empty"><p>Loading feedback...</p></div>
+              ) : feedbackItems.length === 0 ? (
+                <div className="admin-empty">
+                  <MessageSquare size={48} />
+                  <h3>No feedback yet</h3>
+                  <p>User feedback submissions will appear here</p>
+                </div>
+              ) : (
+                feedbackItems.map(fb => (
+                  <div key={fb.id} className="admin-submission-card">
+                    <div className="submission-card-header">
+                      <div className={`submission-type-badge ${fb.type}`}>
+                        {fb.type === 'bug' && '🐛'}
+                        {fb.type === 'comment' && '💬'}
+                        {fb.type === 'suggestion' && '💡'}
+                        {' '}{fb.type}
+                      </div>
+                      <span className="submission-time">
+                        {new Date(fb.created_at).toLocaleDateString()} {new Date(fb.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                    <p className="submission-desc" style={{ margin: '8px 0', whiteSpace: 'pre-wrap' }}>{fb.message}</p>
+                    {fb.email && (
+                      <div className="submission-meta"><span>Email: {fb.email}</span></div>
+                    )}
+                    <div className="submission-meta" style={{ fontSize: '11px', color: '#9ca3af' }}>
+                      <span>{fb.page_url}</span>
+                      {fb.viewport && <span>{fb.viewport}</span>}
+                    </div>
+                    {fb.screenshot_url && (
+                      <a href={fb.screenshot_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '12px', color: '#3b82f6' }}>View screenshot</a>
+                    )}
+                  </div>
+                ))
+              )
+            ) : pendingSubmissions.filter(s => s.status === adminTab).length === 0 ? (
               <div className="admin-empty">
                 <CheckCircle size={48} />
                 <h3>{adminTab === 'pending' ? 'All caught up!' : `No ${adminTab} submissions`}</h3>
