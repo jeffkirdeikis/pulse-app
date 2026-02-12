@@ -1,0 +1,22 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "matcher": "",
+        "command": "bash .claude/preflight-check.sh"
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "command": "echo '⚠️ FILE MODIFIED — Run: node qa.cjs (or npm run build + node screenshot.cjs + Read screenshot) BEFORE reporting to user. QA is MANDATORY. Do NOT skip.'"
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "command": "echo '⚠️ SESSION ENDING - Run: git status (must show nothing to commit or ask user to commit)'"
+      }
+    ]
+  }
+}
