@@ -73,6 +73,11 @@ const FeedbackWidget = memo(function FeedbackWidget() {
 
       if (insertError) throw insertError;
 
+      // Send email notification (fire-and-forget)
+      supabase.functions.invoke('notify-feedback', {
+        body: { type: selectedType, message: message.trim(), email: email.trim() || null, screenshot_url, page_url: window.location.href, user_agent: navigator.userAgent, viewport: `${window.innerWidth}x${window.innerHeight}`, user_id: session?.user?.id || null, created_at: new Date().toISOString() },
+      }).catch(() => {}); // Don't block on email failure
+
       setSubmitted(true);
       setTimeout(() => {
         setSubmitted(false);
