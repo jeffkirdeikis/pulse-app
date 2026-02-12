@@ -32,19 +32,15 @@ export function filterEvents(allEvents, { currentSection, filters, searchQuery, 
   }
 
   // Day filtering
-  // Always exclude past events regardless of day filter
-  const todayMidnight = new Date(now);
-  todayMidnight.setHours(0, 0, 0, 0);
-
+  // Filter out events/classes that have already started
   if (filters.day === 'anytime') {
     // "Anytime" = all future events (not past ones)
-    filtered = filtered.filter(e => e.start >= todayMidnight);
+    filtered = filtered.filter(e => e.start >= now);
   } else if (filters.day === 'today') {
-    // "Upcoming" = next 30 days from start of today (not current time)
-    // This ensures evening users still see today's earlier events
-    const thirtyDaysLater = new Date(todayMidnight);
-    thirtyDaysLater.setDate(todayMidnight.getDate() + 30);
-    filtered = filtered.filter(e => e.start >= todayMidnight && e.start < thirtyDaysLater);
+    // "Upcoming" = next 30 days, excluding events that already started
+    const thirtyDaysLater = new Date(now);
+    thirtyDaysLater.setDate(now.getDate() + 30);
+    filtered = filtered.filter(e => e.start >= now && e.start < thirtyDaysLater);
   } else if (filters.day === 'tomorrow') {
     const tomorrow = new Date(now);
     tomorrow.setDate(now.getDate() + 1);
