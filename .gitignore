@@ -38,4 +38,5 @@ qa-reports/screenshots/
 
 # Data files
 *.zip
+*.xlsx
 pulse/
