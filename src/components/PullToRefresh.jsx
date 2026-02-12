@@ -127,6 +127,7 @@ const PullToRefresh = ({ onRefresh, children }) => {
             right: 0,
             display: 'flex',
             justifyContent: 'center',
+            pointerEvents: 'none',
           }}
         >
           <PulseSpinner progress={pullDistance} refreshing={refreshing} />

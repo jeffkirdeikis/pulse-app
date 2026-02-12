@@ -193,9 +193,18 @@ export default function PulseApp() {
     } else if (validSections.includes(hash)) {
       setCurrentSection(hash);
     } else {
+      // Invalid hash — fix URL to default section
+      setCurrentSection('classes');
       window.history.replaceState({ section: 'classes' }, '', '#classes');
     }
     const handlePopState = (e) => {
+      // Close any open modals on back button (critical for mobile UX)
+      setSelectedEvent(null);
+      setSelectedDeal(null);
+      setSelectedService(null);
+      setShowBookingSheet(false);
+      setShowContactSheet(false);
+
       const section = e.state?.section || window.location.hash.replace('#', '') || 'classes';
       if (validSections.includes(section)) {
         setCurrentSection(section);
@@ -393,6 +402,9 @@ export default function PulseApp() {
   // User authentication state
   const [showAuthModal, setShowAuthModal] = useState(false);
 
+  // Pagination — render events incrementally to avoid 981+ DOM nodes
+  const [visibleEventCount, setVisibleEventCount] = useState(50);
+
   // Filter states - all dropdowns
   const [filters, setFilters] = useState({
     day: 'today', // today, tomorrow, thisWeekend, nextWeek, anytime
@@ -449,10 +461,10 @@ export default function PulseApp() {
     sendBusinessReply, markConversationResolved,
   } = msg;
 
-  // Build categories dynamically from actual event data, filtered by current section
+  // Build categories dynamically from actual DB event data only (not stale REAL_DATA)
   const categories = useMemo(() => {
     const catSet = new Set();
-    let events = [...REAL_DATA.events, ...dbEvents];
+    let events = dbEvents;
     // Only show categories relevant to the current section
     if (currentSection === 'classes') {
       events = events.filter(e => e.eventType === 'class');
@@ -509,24 +521,40 @@ export default function PulseApp() {
     showToast,
   });
 
-  // Get available time slots from actual events (30-min intervals)
-  const getAvailableTimeSlots = () => {
+  // Get available time slots from DB events only, filtered by active day filter
+  const getAvailableTimeSlots = useCallback(() => {
     const slots = new Set();
-    const allEvents = [...REAL_DATA.events, ...dbEvents];
-    const filteredByDay = allEvents.filter(e => {
-      const now = getPacificNow();
+    // Only use DB events (not stale REAL_DATA), and filter to current section
+    let events = dbEvents;
+    if (currentSection === 'classes') {
+      events = events.filter(e => e.eventType === 'class');
+    } else if (currentSection === 'events') {
+      events = events.filter(e => e.eventType === 'event');
+    }
+
+    // Filter time slots by the active day filter so they're relevant
+    const now = getPacificNow();
+    const todayMidnight = new Date(now);
+    todayMidnight.setHours(0, 0, 0, 0);
+
+    events = events.filter(e => {
       if (filters.day === 'today') {
-        const today = new Date(now);
-        today.setHours(0, 0, 0, 0);
-        const tomorrow = new Date(today);
-        tomorrow.setDate(today.getDate() + 1);
-        return e.start >= today && e.start < tomorrow;
+        const thirtyDays = new Date(todayMidnight);
+        thirtyDays.setDate(todayMidnight.getDate() + 30);
+        return e.start >= todayMidnight && e.start < thirtyDays;
+      } else if (filters.day === 'tomorrow') {
+        const tomorrow = new Date(todayMidnight);
+        tomorrow.setDate(todayMidnight.getDate() + 1);
+        const dayAfter = new Date(tomorrow);
+        dayAfter.setDate(tomorrow.getDate() + 1);
+        return e.start >= tomorrow && e.start < dayAfter;
       }
-      return true;
+      return e.start >= todayMidnight;
     });
 
-    filteredByDay.forEach(event => {
+    events.forEach(event => {
       const hour = event.start.getHours();
+      if (hour < 6) return; // Skip suspicious pre-6AM times from dropdown
       const minute = event.start.getMinutes();
       const timeStr = `${hour}:${String(minute).padStart(2, '0')}`;
       slots.add(timeStr);
@@ -537,10 +565,10 @@ export default function PulseApp() {
       const [bHour, bMin] = b.split(':').map(Number);
       return (aHour * 60 + aMin) - (bHour * 60 + bMin);
     });
-  };
+  }, [dbEvents, currentSection, filters.day]);
 
-  // Check if any events/classes are free (for data-driven price filter)
-  const hasFreeItems = [...REAL_DATA.events, ...dbEvents].some(e => e.price?.toLowerCase() === 'free');
+  // Check if any events/classes are free (for data-driven price filter) — DB only
+  const hasFreeItems = dbEvents.some(e => e.price?.toLowerCase() === 'free');
 
   const handleSignOut = async () => {
     await signOut();
@@ -599,10 +627,14 @@ export default function PulseApp() {
     }
   };
 
-  const filterEvents = () => filterEventsUtil(
-    [...REAL_DATA.events, ...dbEvents],
-    { currentSection, filters, searchQuery, kidsAgeRange, getVenueName, now: getPacificNow() }
-  );
+  // Memoized filter — only recomputes when inputs change (Bug #20: called twice per render)
+  const filteredEvents = useMemo(() => {
+    setVisibleEventCount(50); // Reset pagination when filters change
+    return filterEventsUtil(
+      dbEvents,
+      { currentSection, filters, searchQuery, kidsAgeRange, getVenueName, now: getPacificNow() }
+    );
+  }, [dbEvents, currentSection, filters, searchQuery, kidsAgeRange]);
 
   // Group events by date for infinite scroll with dividers
   const groupEventsByDate = (events) => {
@@ -626,7 +658,7 @@ export default function PulseApp() {
       return <SkeletonCards count={6} />;
     }
 
-    const events = filterEvents();
+    const events = filteredEvents;
     if (events.length === 0) {
       return (
         <div className="empty-state">
@@ -642,7 +674,11 @@ export default function PulseApp() {
       );
     }
 
-    const groupedEvents = groupEventsByDate(events);
+    // Paginate: only render up to visibleEventCount events
+    const paginatedEvents = events.slice(0, visibleEventCount);
+    const hasMore = events.length > visibleEventCount;
+
+    const groupedEvents = groupEventsByDate(paginatedEvents);
     const dateKeys = Object.keys(groupedEvents).sort((a, b) => new Date(a) - new Date(b));
     const now = getPacificNow();
     const today = new Date(now);
@@ -652,7 +688,7 @@ export default function PulseApp() {
 
     let globalEventIndex = 0; // Global counter for refs
 
-    return dateKeys.map((dateKey, index) => {
+    const renderedDays = dateKeys.map((dateKey, index) => {
       // Use first event's date for formatting to avoid timezone re-parse issues
       const firstEvent = groupedEvents[dateKey][0];
       const date = firstEvent.start;
@@ -688,12 +724,30 @@ export default function PulseApp() {
         </div>
       );
     });
+
+    return (
+      <>
+        {renderedDays}
+        {hasMore && (
+          <div style={{ textAlign: 'center', padding: '16px 0 24px' }}>
+            <button
+              className="btn-secondary"
+              onClick={() => setVisibleEventCount(c => c + 50)}
+              style={{ padding: '10px 24px', fontSize: '14px', fontWeight: 600 }}
+            >
+              Show More ({events.length - visibleEventCount} remaining)
+            </button>
+          </div>
+        )}
+      </>
+    );
   };
 
-  const filterDeals = () => filterDealsUtil(
-    [...REAL_DATA.deals, ...dbDeals],
+  // Memoized deals filter
+  const filteredDeals = useMemo(() => filterDealsUtil(
+    dbDeals,
     { searchQuery, filters, getVenueName }
-  );
+  ), [dbDeals, searchQuery, filters]);
 
   const toggleSave = useCallback(async (id, type, name = '', data = {}) => {
     const itemKey = `${type}-${id}`;
@@ -741,10 +795,17 @@ export default function PulseApp() {
     return localSavedItems.includes(itemKey) || isItemSaved(type, String(id));
   }, [localSavedItems, isItemSaved]);
 
-  // Clear search when switching tabs to prevent cross-tab confusion
+  // Reset search AND filters when switching tabs to prevent cross-tab confusion
   useEffect(() => {
     setSearchQuery('');
     setDebouncedSearch('');
+    // Reset all filters to defaults when switching sections (Bug #6: filter state leaks)
+    setFilters({ day: 'today', time: 'all', age: 'all', category: 'all', price: 'all' });
+    setKidsAgeRange([0, 18]);
+    // Reset pagination when switching sections
+    setVisibleEventCount(50);
+    // Scroll to top when switching sections (Bug #9)
+    window.scrollTo(0, 0);
   }, [currentSection]);
 
   // Debounce search for smoother performance
@@ -816,7 +877,7 @@ export default function PulseApp() {
                 let count;
                 if (currentSection === 'deals') {
                   if (dealsLoading) return 'Loading...';
-                  count = filterDeals().filter(d => dealCategoryFilter === 'All' || normalizeDealCategory(d.category) === dealCategoryFilter).length;
+                  count = filteredDeals.filter(d => dealCategoryFilter === 'All' || normalizeDealCategory(d.category) === dealCategoryFilter).length;
                 } else if (currentSection === 'services') {
                   count = services.filter(s => {
                     if (debouncedSearch) {
@@ -830,7 +891,7 @@ export default function PulseApp() {
                   }).length;
                 } else {
                   if (eventsLoading) return 'Loading...';
-                  count = filterEvents().length;
+                  count = filteredEvents.length;
                 }
                 return `${count} ${count === 1 ? 'result' : 'results'}`;
               })()}
@@ -847,7 +908,7 @@ export default function PulseApp() {
               >
                 {currentSection === 'deals' ? (
                   <DealsGrid
-                    deals={filterDeals()}
+                    deals={filteredDeals}
                     dealsLoading={dealsLoading}
                     dealCategoryFilter={dealCategoryFilter}
                     setDealCategoryFilter={setDealCategoryFilter}
@@ -957,7 +1018,7 @@ export default function PulseApp() {
               session={session}
               onAuthRequired={() => setShowAuthModal(true)}
               supabase={supabase}
-              allDeals={[...REAL_DATA.deals, ...dbDeals]}
+              allDeals={dbDeals}
             />
             </motion.div>
           )}

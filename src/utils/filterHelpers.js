@@ -40,9 +40,11 @@ export function filterEvents(allEvents, { currentSection, filters, searchQuery, 
     // "Anytime" = all future events (not past ones)
     filtered = filtered.filter(e => e.start >= todayMidnight);
   } else if (filters.day === 'today') {
-    const thirtyDaysLater = new Date(now);
-    thirtyDaysLater.setDate(now.getDate() + 30);
-    filtered = filtered.filter(e => e.start >= now && e.start < thirtyDaysLater);
+    // "Upcoming" = next 30 days from start of today (not current time)
+    // This ensures evening users still see today's earlier events
+    const thirtyDaysLater = new Date(todayMidnight);
+    thirtyDaysLater.setDate(todayMidnight.getDate() + 30);
+    filtered = filtered.filter(e => e.start >= todayMidnight && e.start < thirtyDaysLater);
   } else if (filters.day === 'tomorrow') {
     const tomorrow = new Date(now);
     tomorrow.setDate(now.getDate() + 1);
@@ -51,9 +53,17 @@ export function filterEvents(allEvents, { currentSection, filters, searchQuery, 
     dayAfter.setDate(tomorrow.getDate() + 1);
     filtered = filtered.filter(e => e.start >= tomorrow && e.start < dayAfter);
   } else if (filters.day === 'thisWeekend') {
+    const dayOfWeek = now.getDay(); // 0=Sun, 5=Fri, 6=Sat
     const friday = new Date(now);
-    const daysUntilFriday = (5 - now.getDay() + 7) % 7;
-    friday.setDate(now.getDate() + daysUntilFriday);
+    if (dayOfWeek === 5 || dayOfWeek === 6 || dayOfWeek === 0) {
+      // Already Fri/Sat/Sun — show THIS weekend (go back to this Friday)
+      const daysBackToFriday = dayOfWeek === 0 ? 2 : dayOfWeek - 5;
+      friday.setDate(now.getDate() - daysBackToFriday);
+    } else {
+      // Mon-Thu — show the upcoming weekend
+      const daysUntilFriday = 5 - dayOfWeek;
+      friday.setDate(now.getDate() + daysUntilFriday);
+    }
     friday.setHours(0, 0, 0, 0);
     const monday = new Date(friday);
     monday.setDate(friday.getDate() + 3);
@@ -127,11 +137,11 @@ export function filterEvents(allEvents, { currentSection, filters, searchQuery, 
     });
   }
 
-  // Price
+  // Price — null/unknown pricing shows in both "All" and "Paid" but not "Free"
   if (filters.price === 'free') {
     filtered = filtered.filter(e => e.price?.toLowerCase() === 'free');
   } else if (filters.price === 'paid') {
-    filtered = filtered.filter(e => e.price?.toLowerCase() !== 'free' && e.price);
+    filtered = filtered.filter(e => e.price && e.price.toLowerCase() !== 'free');
   }
 
   // Sort by featured, then by date
@@ -157,6 +167,13 @@ export function filterDeals(allDeals, { searchQuery, filters, getVenueName }) {
 
   // Filter out vague deals with no real value
   filtered = filtered.filter(deal => isRealDeal(deal));
+
+  // Filter out expired deals
+  const now = new Date();
+  filtered = filtered.filter(deal => {
+    if (!deal.validUntil) return true; // No expiry = always valid
+    return new Date(deal.validUntil) >= now;
+  });
 
   if (searchQuery?.trim()) {
     const query = searchQuery.trim().toLowerCase();

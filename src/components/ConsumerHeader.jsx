@@ -102,7 +102,6 @@ const ConsumerHeader = React.memo(function ConsumerHeader({
                   <div style={{ color: '#374151', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <Bell size={22} strokeWidth={2} />
                   </div>
-                  <span className="notification-dot"></span>
                 </button>
                 <div className="profile-btn" onClick={() => setShowProfileMenu(!showProfileMenu)}>
                   <div className="profile-avatar">{user.avatar ? <img src={user.avatar} alt="" onError={(e) => { console.error('Avatar failed to load:', user.avatar); e.target.style.display = 'none'; }} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (user.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'U')}</div>

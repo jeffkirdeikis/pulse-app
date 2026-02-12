@@ -123,25 +123,41 @@ export function useAppData() {
       setEventsLoading(true);
       const localDateStr = getPacificDateStr();
 
-      const { data, error } = await supabase
-        .from('events')
-        .select('*')
-        .eq('status', 'active')
-        .gte('start_date', localDateStr)
-        .order('start_date', { ascending: true });
+      // Supabase PostgREST server caps at 1000 rows per request.
+      // Paginate to fetch all active future events.
+      let allData = [];
+      let page = 0;
+      const PAGE_SIZE = 1000;
+      let hasMore = true;
 
-      if (error) {
-        console.error('Error fetching events:', error);
-        setEventsLoading(false);
-        return;
+      while (hasMore) {
+        const { data: pageData, error } = await supabase
+          .from('events')
+          .select('*')
+          .eq('status', 'active')
+          .gte('start_date', localDateStr)
+          .order('start_date', { ascending: true })
+          .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+
+        if (error) {
+          console.error('Error fetching events:', error);
+          setEventsLoading(false);
+          return;
+        }
+
+        allData = allData.concat(pageData);
+        hasMore = pageData.length === PAGE_SIZE;
+        page++;
       }
+
+      const data = allData;
 
       const mappedEvents = data.map(event => {
         let startTimeStr = event.start_time || '09:00';
         let [hours, minutes] = startTimeStr.split(':').map(Number);
 
-        // Fix suspicious times: classes at 1-5 AM are likely data errors
-        if (hours >= 1 && hours <= 5) {
+        // Fix suspicious times: classes at midnight or 1-5 AM are likely data errors
+        if (hours === 0 || (hours >= 1 && hours <= 5)) {
           hours = 9;
           minutes = 0;
         } else if (minutes === 26) {
@@ -180,7 +196,7 @@ export function useAppData() {
             ? event.category.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
             : 'Community',
           ageGroup: inferAgeGroup(event.title, event.description),
-          price: event.is_free ? 'Free' : (event.price > 0 ? `$${event.price}` : (event.price_description && !/^see (venue|studio) for pricing$/i.test(event.price_description) ? event.price_description : null)),
+          price: event.is_free ? 'Free' : (event.price > 0 ? `$${event.price}` : (event.price_description && !/^see (venue|studio) for pricing$/i.test(event.price_description) ? event.price_description : 'See venue for pricing')),
           recurrence: 'none',
           description: event.description || '',
           featured: event.featured || false,
