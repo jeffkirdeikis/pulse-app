@@ -1,5 +1,6 @@
 import React from 'react';
 import { Star, MapPin, Wrench, ChevronRight } from 'lucide-react';
+import SkeletonCards from './SkeletonCards';
 import { formatResponseTime } from '../lib/businessAnalytics';
 
 /**
@@ -174,15 +175,13 @@ const ServicesGrid = React.memo(function ServicesGrid({
 
       <div className="services-grid" key={debouncedSearch}>
         {servicesLoading ? (
-          <div style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>
-            Loading services...
-          </div>
+          <SkeletonCards count={6} />
         ) : filteredServices.map((service, index) => {
           const isTier1 = (service.reviews || 0) >= 50 && (service.rating || 0) >= 4;
           const socialProof = getSocialProof(service, index, isTier1);
 
           return (
-            <div key={service.id} className="service-card" ref={(el) => serviceCardRefs.current[index] = el} onClick={() => onSelectService(service)}>
+            <div key={service.id} className="service-card card-enter" style={index < 10 ? { animationDelay: `${index * 50}ms` } : undefined} ref={(el) => serviceCardRefs.current[index] = el} onClick={() => onSelectService(service)}>
               <div className="service-card-header-new">
                 <div className="service-title-section">
                   <h3>{service.name}</h3>

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { Calendar, Star, DollarSign, Search, X, Heart, Wrench, MessageCircle, Bell, WifiOff } from 'lucide-react';
 
 /**
@@ -21,6 +21,34 @@ const ConsumerHeader = React.memo(function ConsumerHeader({
   openMessages,
   showToast,
 }) {
+  const row1Tabs = ['classes', 'events', 'deals'];
+  const row2Tabs = ['services', 'wellness'];
+  const tabRefs = useRef({});
+  const [indicator1, setIndicator1] = useState({ x: 0, w: 0 });
+  const [indicator2, setIndicator2] = useState({ x: 0, w: 0 });
+
+  const updateIndicator = useCallback(() => {
+    const el = tabRefs.current[currentSection];
+    if (!el) return;
+    const parent = el.parentElement;
+    if (!parent) return;
+    const x = el.offsetLeft;
+    const w = el.offsetWidth;
+    if (row1Tabs.includes(currentSection)) {
+      setIndicator1({ x, w });
+      setIndicator2({ x: 0, w: 0 });
+    } else {
+      setIndicator2({ x, w });
+      setIndicator1({ x: 0, w: 0 });
+    }
+  }, [currentSection]);
+
+  useEffect(() => {
+    updateIndicator();
+    window.addEventListener('resize', updateIndicator);
+    return () => window.removeEventListener('resize', updateIndicator);
+  }, [updateIndicator]);
+
   return (
     <>
       <header className="app-header-premium">
@@ -98,6 +126,7 @@ const ConsumerHeader = React.memo(function ConsumerHeader({
         <div className="banner-content-premium">
           <div className="banner-tabs" role="tablist" aria-label="Content sections">
             <button
+              ref={el => tabRefs.current.classes = el}
               role="tab"
               aria-selected={currentSection === 'classes'}
               className={`banner-tab ${currentSection === 'classes' ? 'active' : ''}`}
@@ -107,6 +136,7 @@ const ConsumerHeader = React.memo(function ConsumerHeader({
               <span>Classes</span>
             </button>
             <button
+              ref={el => tabRefs.current.events = el}
               role="tab"
               aria-selected={currentSection === 'events'}
               className={`banner-tab ${currentSection === 'events' ? 'active' : ''}`}
@@ -116,6 +146,7 @@ const ConsumerHeader = React.memo(function ConsumerHeader({
               <span>Events</span>
             </button>
             <button
+              ref={el => tabRefs.current.deals = el}
               role="tab"
               aria-selected={currentSection === 'deals'}
               className={`banner-tab ${currentSection === 'deals' ? 'active' : ''}`}
@@ -124,9 +155,13 @@ const ConsumerHeader = React.memo(function ConsumerHeader({
               <DollarSign size={18} />
               <span>Deals</span>
             </button>
+            {indicator1.w > 0 && (
+              <div className="tab-indicator" style={{ transform: `translateX(${indicator1.x}px)`, width: `${indicator1.w}px` }} />
+            )}
           </div>
           <div className="banner-tabs banner-tabs-row2" role="tablist" aria-label="More sections">
             <button
+              ref={el => tabRefs.current.services = el}
               role="tab"
               aria-selected={currentSection === 'services'}
               className={`banner-tab ${currentSection === 'services' ? 'active' : ''}`}
@@ -136,6 +171,7 @@ const ConsumerHeader = React.memo(function ConsumerHeader({
               <span>Services</span>
             </button>
             <button
+              ref={el => tabRefs.current.wellness = el}
               role="tab"
               aria-selected={currentSection === 'wellness'}
               className={`banner-tab ${currentSection === 'wellness' ? 'active' : ''}`}
@@ -144,6 +180,9 @@ const ConsumerHeader = React.memo(function ConsumerHeader({
               <Heart size={18} />
               <span>Wellness</span>
             </button>
+            {indicator2.w > 0 && (
+              <div className="tab-indicator" style={{ transform: `translateX(${indicator2.x}px)`, width: `${indicator2.w}px` }} />
+            )}
           </div>
         </div>
       </nav>

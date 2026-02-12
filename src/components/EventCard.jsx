@@ -2,7 +2,7 @@ import React from 'react';
 import { Calendar, Check, ChevronRight, Clock, MapPin, Star } from 'lucide-react';
 import { PACIFIC_TZ } from '../utils/timezoneHelpers';
 
-const EventCard = React.forwardRef(({ event, venues, isItemSavedLocal, toggleSave, getVenueName, onSelect, onBookClick }, ref) => {
+const EventCard = React.forwardRef(({ event, venues, isItemSavedLocal, toggleSave, getVenueName, onSelect, onBookClick, index = 0 }, ref) => {
   const itemType = event.eventType === 'class' ? 'class' : 'event';
   const isSaved = isItemSavedLocal(itemType, event.id);
 
@@ -12,7 +12,7 @@ const EventCard = React.forwardRef(({ event, venues, isItemSavedLocal, toggleSav
   };
 
   return (
-    <div ref={ref} className="event-card" onClick={() => onSelect(event)}>
+    <div ref={ref} className="event-card card-enter" style={index < 10 ? { animationDelay: `${index * 50}ms` } : undefined} onClick={() => onSelect(event)}>
       <div className="event-card-header">
         <div className="event-title-section">
           <h3>{event.title}</h3>

@@ -1286,7 +1286,6 @@
         
         .banner-tab.active {
           color: #2563eb;
-          border-bottom-color: #2563eb;
           background: linear-gradient(to bottom, rgba(59, 130, 246, 0.05), transparent);
         }
         
@@ -13395,6 +13394,124 @@
   .feedback-fab {
     bottom: 16px;
     right: 16px;
+  }
+}
+
+/* ============================================================
+   Premium UI Animations
+   ============================================================ */
+
+/* Tap feedback — scale down on press */
+.event-card:active,
+.deal-card:active,
+.service-card:active,
+.banner-tab:active,
+.feedback-fab:active {
+  transform: scale(0.97) !important;
+  transition: transform 0.1s cubic-bezier(0.2, 0, 0, 1) !important;
+}
+
+/* Sliding tab indicator */
+.banner-tabs {
+  position: relative;
+}
+
+.tab-indicator {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  background: #2563eb;
+  border-radius: 3px 3px 0 0;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform, width;
+  z-index: 2;
+}
+
+/* Skeleton loading shimmer */
+.skeleton-card {
+  background: #f3f4f6;
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 12px;
+  overflow: hidden;
+  position: relative;
+}
+
+.skeleton-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.6) 50%,
+    transparent 100%
+  );
+  animation: shimmer 1.5s infinite;
+  transform: translateX(-100%);
+}
+
+@keyframes shimmer {
+  100% { transform: translateX(100%); }
+}
+
+.skeleton-line {
+  background: #e5e7eb;
+  border-radius: 6px;
+  height: 14px;
+  margin-bottom: 10px;
+}
+
+.skeleton-line.title {
+  width: 65%;
+  height: 18px;
+  margin-bottom: 14px;
+}
+
+.skeleton-line.subtitle {
+  width: 45%;
+  height: 12px;
+}
+
+.skeleton-line.short {
+  width: 30%;
+}
+
+.skeleton-line.medium {
+  width: 55%;
+}
+
+.skeleton-tags {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.skeleton-tag {
+  background: #e5e7eb;
+  border-radius: 12px;
+  height: 24px;
+  width: 60px;
+}
+
+/* Card entrance stagger */
+.card-enter {
+  animation: cardFadeUp 0.3s ease both;
+}
+
+@keyframes cardFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 

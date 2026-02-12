@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { MapPin, Clock, Star, Check, ChevronRight, DollarSign } from 'lucide-react';
+import SkeletonCards from './SkeletonCards';
 import { generateSmartDealTitle, normalizeDealCategory, getDealSavingsDisplay } from '../utils/dealHelpers';
 
 /**
@@ -83,11 +84,13 @@ const DealsGrid = React.memo(function DealsGrid({
         </div>
       </div>
 
+      {dealsLoading && <SkeletonCards count={6} />}
       <div className="deals-grid">
         {filteredDeals.map((deal, index) => (
           <div
             key={deal.id}
-            className="deal-card"
+            className="deal-card card-enter"
+            style={index < 10 ? { animationDelay: `${index * 50}ms` } : undefined}
             onClick={() => onSelectDeal(deal)}
             ref={(el) => dealCardRefs.current[index] = el}
           >

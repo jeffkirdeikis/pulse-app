@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Calendar, Check, X, Plus, CheckCircle, Percent, Sparkles } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import { useUserData } from './hooks/useUserData';
@@ -33,6 +34,7 @@ import ImageCropperModal from './components/modals/ImageCropperModal';
 import ContactSheet from './components/modals/ContactSheet';
 import EditEventModal from './components/modals/EditEventModal';
 import EventCard from './components/EventCard';
+import SkeletonCards from './components/SkeletonCards';
 import { REAL_DATA } from './data/realData';
 import { normalizeDealCategory } from './utils/dealHelpers';
 import { filterEvents as filterEventsUtil, filterDeals as filterDealsUtil } from './utils/filterHelpers';
@@ -601,11 +603,7 @@ export default function PulseApp() {
   const renderEventsWithDividers = () => {
     // Show loading state while fetching database events
     if (eventsLoading) {
-      return (
-        <div className="loading-state" style={{padding: '40px 20px', textAlign: 'center'}}>
-          <div style={{fontSize: '14px', color: '#6b7280'}}>Loading {currentSection}...</div>
-        </div>
-      );
+      return <SkeletonCards count={6} />;
     }
 
     const events = filterEvents();
@@ -665,7 +663,7 @@ export default function PulseApp() {
           
           {groupedEvents[dateKey].map((event) => {
             const currentIndex = globalEventIndex++;
-            return <EventCard key={event.id} event={event} ref={(el) => eventCardRefs.current[currentIndex] = el} venues={REAL_DATA.venues} isItemSavedLocal={isItemSavedLocal} toggleSave={toggleSave} getVenueName={getVenueName} onSelect={setSelectedEvent} onBookClick={handleBookClick} />;
+            return <EventCard key={event.id} event={event} index={currentIndex} ref={(el) => eventCardRefs.current[currentIndex] = el} venues={REAL_DATA.venues} isItemSavedLocal={isItemSavedLocal} toggleSave={toggleSave} getVenueName={getVenueName} onSelect={setSelectedEvent} onBookClick={handleBookClick} />;
           })}
         </div>
       );
@@ -747,13 +745,13 @@ export default function PulseApp() {
   return (
     <div className="pulse-app">
       <a href="#main-content" className="skip-to-content" style={{position:'absolute',left:'-9999px',top:'auto',width:'1px',height:'1px',overflow:'hidden',zIndex:9999}} onFocus={(e)=>{e.target.style.position='fixed';e.target.style.left='50%';e.target.style.top='8px';e.target.style.transform='translateX(-50%)';e.target.style.width='auto';e.target.style.height='auto';e.target.style.overflow='visible';e.target.style.background='#1f2937';e.target.style.color='#fff';e.target.style.padding='8px 16px';e.target.style.borderRadius='8px';e.target.style.fontSize='14px';e.target.style.fontWeight='600';e.target.style.textDecoration='none';}} onBlur={(e)=>{e.target.style.position='absolute';e.target.style.left='-9999px';e.target.style.width='1px';e.target.style.height='1px';e.target.style.overflow='hidden';}}>Skip to content</a>
-      <div className="view-switcher">
-        <button tabIndex={-1} className={view === 'consumer' ? 'active' : ''} onClick={() => { if (impersonatedBusiness) setImpersonatedBusiness(null); setView('consumer'); }}>Consumer</button>
-        <button tabIndex={-1} className={view === 'business' ? 'active' : ''} onClick={() => { if (impersonatedBusiness) setImpersonatedBusiness(null); setView('business'); }}>Business</button>
-        {user.isAdmin && (
+      {user.isAdmin && (
+        <div className="view-switcher">
+          <button tabIndex={-1} className={view === 'consumer' ? 'active' : ''} onClick={() => { if (impersonatedBusiness) setImpersonatedBusiness(null); setView('consumer'); }}>Consumer</button>
+          <button tabIndex={-1} className={view === 'business' ? 'active' : ''} onClick={() => { if (impersonatedBusiness) setImpersonatedBusiness(null); setView('business'); }}>Business</button>
           <button tabIndex={-1} className={view === 'admin' ? 'active' : ''} onClick={() => { if (impersonatedBusiness) { exitImpersonation(); } else { setView('admin'); } }}>Admin</button>
-        )}
-      </div>
+        </div>
+      )}
 
       {view === 'consumer' && (
         <div className="consumer-view">
@@ -818,57 +816,67 @@ export default function PulseApp() {
             </div>
             )}
 
-            {currentSection === 'deals' ? (
-              <DealsGrid
-                deals={filterDeals()}
-                dealsLoading={dealsLoading}
-                dealCategoryFilter={dealCategoryFilter}
-                setDealCategoryFilter={setDealCategoryFilter}
-                dealCardRefs={dealCardRefs}
-                searchQuery={searchQuery}
-                setSearchQuery={setSearchQuery}
-                getVenueName={getVenueName}
-                isItemSavedLocal={isItemSavedLocal}
-                toggleSave={toggleSave}
-                onSelectDeal={setSelectedDeal}
-              />
-            ) : currentSection === 'services' ? (
-              <>
-                {servicesSubView === 'booking' ? (
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={currentSection}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.2, ease: 'easeOut' }}
+              >
+                {currentSection === 'deals' ? (
+                  <DealsGrid
+                    deals={filterDeals()}
+                    dealsLoading={dealsLoading}
+                    dealCategoryFilter={dealCategoryFilter}
+                    setDealCategoryFilter={setDealCategoryFilter}
+                    dealCardRefs={dealCardRefs}
+                    searchQuery={searchQuery}
+                    setSearchQuery={setSearchQuery}
+                    getVenueName={getVenueName}
+                    isItemSavedLocal={isItemSavedLocal}
+                    toggleSave={toggleSave}
+                    onSelectDeal={setSelectedDeal}
+                  />
+                ) : currentSection === 'services' ? (
+                  <>
+                    {servicesSubView === 'booking' ? (
+                      <WellnessBooking
+                        onBack={() => setServicesSubView('directory')}
+                        isAuthenticated={isAuthenticated}
+                        session={session}
+                        showToast={showToast}
+                        setShowAuthModal={setShowAuthModal}
+                      />
+                    ) : (
+                    <ServicesGrid
+                        services={services}
+                        servicesLoading={servicesLoading}
+                        debouncedSearch={debouncedSearch}
+                        searchQuery={searchQuery}
+                        setSearchQuery={setSearchQuery}
+                        serviceCategoryFilter={serviceCategoryFilter}
+                        setServiceCategoryFilter={setServiceCategoryFilter}
+                        serviceCardRefs={serviceCardRefs}
+                        onSelectService={setSelectedService}
+                      />
+                    )}
+                  </>
+                ) : currentSection === 'wellness' ? (
                   <WellnessBooking
-                    onBack={() => setServicesSubView('directory')}
+                    onBack={() => setCurrentSection('services')}
                     isAuthenticated={isAuthenticated}
                     session={session}
                     showToast={showToast}
                     setShowAuthModal={setShowAuthModal}
                   />
                 ) : (
-                <ServicesGrid
-                    services={services}
-                    servicesLoading={servicesLoading}
-                    debouncedSearch={debouncedSearch}
-                    searchQuery={searchQuery}
-                    setSearchQuery={setSearchQuery}
-                    serviceCategoryFilter={serviceCategoryFilter}
-                    setServiceCategoryFilter={setServiceCategoryFilter}
-                    serviceCardRefs={serviceCardRefs}
-                    onSelectService={setSelectedService}
-                  />
+                  <div className="events-list">
+                    {renderEventsWithDividers()}
+                  </div>
                 )}
-              </>
-            ) : currentSection === 'wellness' ? (
-              <WellnessBooking
-                onBack={() => setCurrentSection('services')}
-                isAuthenticated={isAuthenticated}
-                session={session}
-                showToast={showToast}
-                setShowAuthModal={setShowAuthModal}
-              />
-            ) : (
-              <div className="events-list">
-                {renderEventsWithDividers()}
-              </div>
-            )}
+              </motion.div>
+            </AnimatePresence>
           </main>
 
           {/* Event/Class Detail Modal */}
