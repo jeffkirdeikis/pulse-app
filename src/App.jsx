@@ -161,7 +161,14 @@ export default function PulseApp() {
   useEffect(() => {
     const hash = window.location.hash.replace('#', '');
     const validSections = ['classes', 'events', 'deals', 'services', 'wellness'];
-    if (validSections.includes(hash)) {
+    // Don't overwrite hash if it contains OAuth callback tokens
+    if (hash.includes('access_token') || hash.includes('error_description')) {
+      // Let Supabase client handle the auth callback, then default to classes
+      setTimeout(() => {
+        if (!window.location.hash.includes('access_token')) return;
+        window.history.replaceState({ section: 'classes' }, '', '#classes');
+      }, 2000);
+    } else if (validSections.includes(hash)) {
       setCurrentSection(hash);
     } else {
       window.history.replaceState({ section: 'classes' }, '', '#classes');
