@@ -13507,6 +13507,12 @@
   width: 60px;
 }
 
+/* Pull-to-refresh indicator pulse */
+@keyframes ptrPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.15); opacity: 0.7; }
+}
+
 /* Progressive image blur-up */
 .progressive-image-container {
   background: #f3f4f6;

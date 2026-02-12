@@ -5,6 +5,7 @@ import {
   Activity, Stethoscope, Sparkles, RefreshCw, Check, AlertCircle
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import ProgressiveImage from './ProgressiveImage';
 
 // Discipline config
 const DISCIPLINES = [
@@ -638,7 +639,7 @@ function TimelineView({ groups, onSlotClick, onProviderClick }) {
               >
                 <div className="wb-slot-avatar" onClick={(e) => { e.stopPropagation(); onProviderClick(slot); }}>
                   {slot.photo_url ? (
-                    <img src={slot.photo_url} alt={slot.provider_name} />
+                    <ProgressiveImage src={slot.photo_url} alt={slot.provider_name} style={{ width: '100%', height: '100%', borderRadius: '50%' }} />
                   ) : (
                     <span>{getInitials(slot.provider_name)}</span>
                   )}
@@ -672,7 +673,7 @@ function ProviderView({ groups, onSlotClick, onProviderClick, onAlertClick, user
             <div className="wb-provider-header" onClick={() => onProviderClick(provider)}>
               <div className="wb-provider-avatar">
                 {provider.photo_url ? (
-                  <img src={provider.photo_url} alt={provider.provider_name} />
+                  <ProgressiveImage src={provider.photo_url} alt={provider.provider_name} style={{ width: '100%', height: '100%', borderRadius: '50%' }} />
                 ) : (
                   <span>{getInitials(provider.provider_name)}</span>
                 )}
@@ -739,7 +740,7 @@ function BookingSheet({ slot, onClose, onBook, onViewProfile }) {
           <div className="wb-sheet-header">
             <div className="wb-sheet-avatar">
               {slot.photo_url ? (
-                <img src={slot.photo_url} alt={slot.provider_name} />
+                <ProgressiveImage src={slot.photo_url} alt={slot.provider_name} style={{ width: '100%', height: '100%', borderRadius: '50%' }} />
               ) : (
                 <span>{getInitials(slot.provider_name)}</span>
               )}
@@ -806,7 +807,7 @@ function ProviderDetailModal({ provider, slots, onClose, onSlotClick, onBook, ha
         <div className="wb-modal-hero">
           <div className="wb-modal-avatar">
             {provider.photo_url ? (
-              <img src={provider.photo_url} alt={provider.provider_name} />
+              <ProgressiveImage src={provider.photo_url} alt={provider.provider_name} style={{ width: '100%', height: '100%', borderRadius: '50%' }} />
             ) : (
               <span>{getInitials(provider.provider_name)}</span>
             )}

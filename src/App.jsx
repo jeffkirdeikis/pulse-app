@@ -36,6 +36,7 @@ import ContactSheet from './components/modals/ContactSheet';
 import EditEventModal from './components/modals/EditEventModal';
 import EventCard from './components/EventCard';
 import SkeletonCards from './components/SkeletonCards';
+import PullToRefresh from './components/PullToRefresh';
 import { REAL_DATA } from './data/realData';
 import { normalizeDealCategory } from './utils/dealHelpers';
 import { filterEvents as filterEventsUtil, filterDeals as filterDealsUtil } from './utils/filterHelpers';
@@ -138,6 +139,21 @@ export default function PulseApp() {
 
   // Route prefetching for instant detail navigation
   const { prefetchEvent, prefetchDeal, prefetchService } = usePrefetch();
+
+  // Pull-to-refresh handler — force refresh current section's data
+  const handlePullRefresh = useCallback(async () => {
+    if (currentSection === 'services' || currentSection === 'wellness') {
+      await fetchServices(true);
+    } else if (currentSection === 'deals') {
+      setDealsRefreshKey(k => k + 1);
+      // Wait a moment for the data to load
+      await new Promise(r => setTimeout(r, 800));
+    } else {
+      // classes or events
+      setEventsRefreshKey(k => k + 1);
+      await new Promise(r => setTimeout(r, 800));
+    }
+  }, [currentSection, fetchServices, setDealsRefreshKey, setEventsRefreshKey]);
 
   // Fetch admin stats (claimed/verified business counts) when admin panel is shown
   useEffect(() => {
@@ -792,6 +808,7 @@ export default function PulseApp() {
             />
           )}
 
+          <PullToRefresh onRefresh={handlePullRefresh}>
           <main className="content" id="main-content">
             {currentSection !== 'wellness' && (
             <div className="results-count" aria-live="polite" aria-atomic="true">
@@ -884,6 +901,7 @@ export default function PulseApp() {
               </motion.div>
             </AnimatePresence>
           </main>
+          </PullToRefresh>
 
           {/* Event/Class Detail Modal */}
           <AnimatePresence>
@@ -967,7 +985,9 @@ export default function PulseApp() {
           </AnimatePresence>
 
           {/* Profile Menu Dropdown */}
+          <AnimatePresence>
           {showProfileMenu && (
+            <motion.div key="profile-menu" initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ type: 'spring', stiffness: 400, damping: 30 }}>
             <ProfileMenu
               user={user}
               myCalendar={myCalendar}
@@ -982,12 +1002,15 @@ export default function PulseApp() {
               onSettingsOpen={() => { setShowProfileModal(true); setProfileTab('settings'); setShowProfileMenu(false); }}
               onSignOut={handleSignOut}
             />
+            </motion.div>
           )}
+          </AnimatePresence>
 
           {/* Add Event Modal */}
+          <AnimatePresence>
           {showAddEventModal && (
-            <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Add event" onClick={closeAddEventModal}>
-              <div className="modal-content add-event-modal" onClick={(e) => e.stopPropagation()}>
+            <motion.div key="add-event" className="modal-overlay" role="dialog" aria-modal="true" aria-label="Add event" onClick={closeAddEventModal} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
+              <motion.div className="modal-content add-event-modal" onClick={(e) => e.stopPropagation()} initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 20 }} transition={{ type: 'spring', stiffness: 400, damping: 30 }}>
                 <button className="close-btn" onClick={closeAddEventModal}><X size={24} /></button>
                 <div className="modal-header-premium">
                   <Plus size={32} className="modal-icon" />
@@ -1018,12 +1041,15 @@ export default function PulseApp() {
                     <button className="btn-secondary" onClick={closeAddEventModal}>Cancel</button>
                   </div>
                 </div>
-              </div>
-            </div>
+              </motion.div>
+            </motion.div>
           )}
+          </AnimatePresence>
 
           {/* Claim Business Modal - Premium Purple Theme */}
+          <AnimatePresence>
           {showClaimBusinessModal && (
+            <motion.div key="claim-biz" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} style={{ position: 'fixed', inset: 0, zIndex: 1000 }}>
             <ClaimBusinessModal
               claimSearchQuery={claimSearchQuery}
               setClaimSearchQuery={setClaimSearchQuery}
@@ -1038,10 +1064,14 @@ export default function PulseApp() {
               setShowAuthModal={setShowAuthModal}
               handleClaimBusiness={handleClaimBusiness}
             />
+            </motion.div>
           )}
+          </AnimatePresence>
 
           {/* My Calendar Modal - Premium */}
+          <AnimatePresence>
           {showMyCalendarModal && (
+            <motion.div key="calendar" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} style={{ position: 'fixed', inset: 0, zIndex: 1000 }}>
             <MyCalendarModal
               myCalendar={myCalendar}
               showCalendarToast={showCalendarToast}
@@ -1055,7 +1085,9 @@ export default function PulseApp() {
               generateGoogleCalendarUrl={generateGoogleCalendarUrl}
               removeFromCalendar={removeFromCalendar}
             />
+            </motion.div>
           )}
+          </AnimatePresence>
 
           {/* Calendar Toast Notification */}
           <AnimatePresence>
@@ -1079,7 +1111,9 @@ export default function PulseApp() {
           </AnimatePresence>
 
           {/* Submission Modal - Add Event/Class/Deal */}
+          <AnimatePresence>
           {showSubmissionModal && (
+            <motion.div key="submission" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} style={{ position: 'fixed', inset: 0, zIndex: 1000 }}>
             <SubmissionModal
               submissionStep={submissionStep}
               submissionType={submissionType}
@@ -1109,10 +1143,14 @@ export default function PulseApp() {
               getSelectedBusinessInfo={getSelectedBusinessInfo}
               showToast={showToast}
             />
+            </motion.div>
           )}
+          </AnimatePresence>
 
           {/* Premium Profile Modal */}
+          <AnimatePresence>
           {showProfileModal && (
+            <motion.div key="profile" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} style={{ position: 'fixed', inset: 0, zIndex: 1000 }}>
             <ProfileModal
               user={user}
               session={session}
@@ -1151,9 +1189,13 @@ export default function PulseApp() {
               showToast={showToast}
               toggleSaveItem={toggleSaveItem}
             />
+            </motion.div>
           )}
+          </AnimatePresence>
           {/* Booking Bottom Sheet */}
+          <AnimatePresence>
           {showBookingSheet && bookingEvent && (
+            <motion.div key="booking" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }} style={{ position: 'fixed', inset: 0, zIndex: 1000 }}>
             <BookingSheet
               bookingEvent={bookingEvent}
               bookingStep={bookingStep}
@@ -1169,7 +1211,9 @@ export default function PulseApp() {
               setCalendarToastMessage={setCalendarToastMessage}
               setShowCalendarToast={setShowCalendarToast}
             />
+            </motion.div>
           )}
+          </AnimatePresence>
 
           {/* Booking Confirmation Dialog */}
           <AnimatePresence>
@@ -1218,7 +1262,9 @@ export default function PulseApp() {
           </AnimatePresence>
 
           {/* Contact Business Sheet */}
+          <AnimatePresence>
           {showContactSheet && contactBusiness && (
+            <motion.div key="contact" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }} style={{ position: 'fixed', inset: 0, zIndex: 1000 }}>
             <ContactSheet
               contactBusiness={contactBusiness}
               contactSubject={contactSubject}
@@ -1229,10 +1275,14 @@ export default function PulseApp() {
               onClose={() => setShowContactSheet(false)}
               submitContactForm={submitContactForm}
             />
+            </motion.div>
           )}
+          </AnimatePresence>
 
           {/* Messages Modal */}
+          <AnimatePresence>
           {showMessagesModal && (
+            <motion.div key="messages" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} style={{ position: 'fixed', inset: 0, zIndex: 1000 }}>
             <MessagesModal
               currentConversation={currentConversation}
               setCurrentConversation={setCurrentConversation}
@@ -1247,10 +1297,14 @@ export default function PulseApp() {
               fetchMessages={fetchMessages}
               sendMessage={sendMessage}
             />
+            </motion.div>
           )}
+          </AnimatePresence>
 
           {/* Admin Panel Modal */}
+          <AnimatePresence>
           {showAdminPanel && user.isAdmin && (
+            <motion.div key="admin-panel" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} style={{ position: 'fixed', inset: 0, zIndex: 1000 }}>
             <AdminPanelModal
               adminTab={adminTab}
               setAdminTab={setAdminTab}
@@ -1260,7 +1314,9 @@ export default function PulseApp() {
               approveSubmission={approveSubmission}
               rejectSubmission={rejectSubmission}
             />
+            </motion.div>
           )}
+          </AnimatePresence>
         </div>
       )}
 
@@ -1340,7 +1396,9 @@ export default function PulseApp() {
       )}
 
       {/* Edit Venue Modal - Global (works from any view) */}
+      <AnimatePresence>
       {showEditVenueModal && editingVenue && (
+        <motion.div key="edit-venue" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} style={{ position: 'fixed', inset: 0, zIndex: 1000 }}>
         <EditVenueModal
           editingVenue={editingVenue}
           editVenueForm={editVenueForm}
@@ -1349,10 +1407,14 @@ export default function PulseApp() {
           showToast={showToast}
           fetchServices={fetchServices}
         />
+        </motion.div>
       )}
+      </AnimatePresence>
 
       {/* Edit Event/Class Modal */}
+      <AnimatePresence>
       {showEditEventModal && editingEvent && (
+        <motion.div key="edit-event" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} style={{ position: 'fixed', inset: 0, zIndex: 1000 }}>
         <EditEventModal
           editingEvent={editingEvent}
           editEventForm={editEventForm}
@@ -1361,10 +1423,14 @@ export default function PulseApp() {
           showToast={showToast}
           setEventsRefreshKey={setEventsRefreshKey}
         />
+        </motion.div>
       )}
+      </AnimatePresence>
 
       {/* Global Image Cropper Modal - Works from any context */}
+      <AnimatePresence>
       {showImageCropper && cropperImage && (
+        <motion.div key="cropper" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }} style={{ position: 'fixed', inset: 0, zIndex: 1100 }}>
         <ImageCropperModal
           cropperImage={cropperImage}
           cropperType={cropperType}
@@ -1375,12 +1441,16 @@ export default function PulseApp() {
           onClose={closeImageCropper}
           handleCropComplete={handleCropComplete}
         />
+        </motion.div>
       )}
+      </AnimatePresence>
 
       {/* ========== GLOBAL MODALS (render regardless of view) ========== */}
 
       {/* Auth Modal */}
+      <AnimatePresence>
       {showAuthModal && (
+        <motion.div key="auth" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} style={{ position: 'fixed', inset: 0, zIndex: 1000 }}>
         <AuthModal
           onClose={() => setShowAuthModal(false)}
           onSuccess={(msg) => {
@@ -1389,7 +1459,9 @@ export default function PulseApp() {
             setTimeout(() => setShowCalendarToast(false), 5000);
           }}
         />
+        </motion.div>
       )}
+      </AnimatePresence>
 
       <FeedbackWidget />
     </div>
