@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useCallback } from 'react';
+import { motion } from 'framer-motion';
 import { Calendar, Check, ChevronRight, Clock, MapPin, Star } from 'lucide-react';
 import { PACIFIC_TZ } from '../utils/timezoneHelpers';
 
-const EventCard = React.forwardRef(({ event, venues, isItemSavedLocal, toggleSave, getVenueName, onSelect, onBookClick, index = 0 }, ref) => {
+const EventCard = React.forwardRef(({ event, venues, isItemSavedLocal, toggleSave, getVenueName, onSelect, onBookClick, onPrefetch, index = 0 }, ref) => {
   const itemType = event.eventType === 'class' ? 'class' : 'event';
   const isSaved = isItemSavedLocal(itemType, event.id);
 
@@ -11,8 +12,22 @@ const EventCard = React.forwardRef(({ event, venues, isItemSavedLocal, toggleSav
     await toggleSave(event.id, itemType, event.title, { venue: getVenueName(event.venueId, event), date: event.start ? event.start.toISOString() : event.date });
   };
 
+  const handlePrefetch = useCallback(() => {
+    if (onPrefetch && event.id) onPrefetch(event.id);
+  }, [onPrefetch, event.id]);
+
   return (
-    <div ref={ref} className="event-card card-enter" style={index < 10 ? { animationDelay: `${index * 50}ms` } : undefined} onClick={() => onSelect(event)}>
+    <motion.div
+      ref={ref}
+      className="event-card card-enter"
+      layout
+      style={index < 10 ? { animationDelay: `${index * 50}ms` } : undefined}
+      onClick={() => onSelect(event)}
+      onMouseEnter={handlePrefetch}
+      onTouchStart={handlePrefetch}
+      whileTap={{ scale: 0.97 }}
+      transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+    >
       <div className="event-card-header">
         <div className="event-title-section">
           <h3>{event.title}</h3>
@@ -82,7 +97,7 @@ const EventCard = React.forwardRef(({ event, venues, isItemSavedLocal, toggleSav
         <Star size={24} fill={isSaved ? "#f59e0b" : "none"} stroke={isSaved ? "#f59e0b" : "#9ca3af"} strokeWidth={2} />
       </button>
       <ChevronRight className="event-chevron" size={20} />
-    </div>
+    </motion.div>
   );
 });
 

@@ -1,22 +1,9 @@
-import React from 'react';
+import React, { useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Star, MapPin, Wrench, ChevronRight } from 'lucide-react';
 import SkeletonCards from './SkeletonCards';
 import { formatResponseTime } from '../lib/businessAnalytics';
 
-/**
- * Services directory grid with filtering, sorting, and social proof.
- *
- * @param {Object} props
- * @param {Array} props.services - All services from useAppData
- * @param {boolean} props.servicesLoading - Loading state
- * @param {string} props.debouncedSearch - Debounced search query
- * @param {string} props.searchQuery - Raw search query (for display)
- * @param {Function} props.setSearchQuery - Search query setter
- * @param {string} props.serviceCategoryFilter - Active category filter
- * @param {Function} props.setServiceCategoryFilter - Category filter setter
- * @param {Object} props.serviceCardRefs - Ref object for card animations
- * @param {Function} props.onSelectService - Callback when service card clicked
- */
 const ServicesGrid = React.memo(function ServicesGrid({
   services,
   servicesLoading,
@@ -27,8 +14,8 @@ const ServicesGrid = React.memo(function ServicesGrid({
   setServiceCategoryFilter,
   serviceCardRefs,
   onSelectService,
+  onPrefetch,
 }) {
-  // Main categories with 10+ businesses
   const mainCategories = [
     'Restaurants & Dining', 'Retail & Shopping', 'Cafes & Bakeries',
     'Outdoor Adventures', 'Auto Services', 'Real Estate',
@@ -39,12 +26,10 @@ const ServicesGrid = React.memo(function ServicesGrid({
     'Churches & Religious', 'Salons & Spas', 'Arts & Culture'
   ];
 
-  // Generate social proof - uses real Pulse data when available, falls back to Google data
   const getSocialProof = (svc, idx, tier1) => {
     const reviews = svc.reviews || 0;
     const rating = svc.rating || 0;
 
-    // If service has pre-fetched Pulse social proof data, use it
     if (svc.pulseData) {
       const pd = svc.pulseData;
       if (pd.jobs_completed >= 100) {
@@ -74,7 +59,6 @@ const ServicesGrid = React.memo(function ServicesGrid({
       }
     }
 
-    // Fallback to Google data
     if (tier1 && idx < 3 && rating >= 4.5) {
       return { type: 'rank', text: `⭐ Top rated in ${svc.category.split('&')[0].trim()}` };
     }
@@ -98,7 +82,6 @@ const ServicesGrid = React.memo(function ServicesGrid({
 
   const filteredServices = services
     .filter(service => {
-      // Search filter
       if (debouncedSearch) {
         const query = debouncedSearch.toLowerCase().trim();
         const nameMatch = service.name.toLowerCase().includes(query);
@@ -106,7 +89,6 @@ const ServicesGrid = React.memo(function ServicesGrid({
         const addressMatch = service.address?.toLowerCase().includes(query);
         if (!nameMatch && !categoryMatch && !addressMatch) return false;
       }
-      // Category filter
       if (serviceCategoryFilter === 'All') return true;
       if (serviceCategoryFilter === 'Other') return !mainCategories.includes(service.category);
       return service.category === serviceCategoryFilter;
@@ -123,6 +105,10 @@ const ServicesGrid = React.memo(function ServicesGrid({
       if (bRating !== aRating) return bRating - aRating;
       return bReviews - aReviews;
     });
+
+  const handlePrefetch = useCallback((serviceId) => {
+    if (onPrefetch) onPrefetch(serviceId);
+  }, [onPrefetch]);
 
   return (
     <>
@@ -176,61 +162,78 @@ const ServicesGrid = React.memo(function ServicesGrid({
       <div className="services-grid" key={debouncedSearch}>
         {servicesLoading ? (
           <SkeletonCards count={6} />
-        ) : filteredServices.map((service, index) => {
-          const isTier1 = (service.reviews || 0) >= 50 && (service.rating || 0) >= 4;
-          const socialProof = getSocialProof(service, index, isTier1);
+        ) : (
+          <AnimatePresence>
+          {filteredServices.map((service, index) => {
+            const isTier1 = (service.reviews || 0) >= 50 && (service.rating || 0) >= 4;
+            const socialProof = getSocialProof(service, index, isTier1);
 
-          return (
-            <div key={service.id} className="service-card card-enter" style={index < 10 ? { animationDelay: `${index * 50}ms` } : undefined} ref={(el) => serviceCardRefs.current[index] = el} onClick={() => onSelectService(service)}>
-              <div className="service-card-header-new">
-                <div className="service-title-section">
-                  <h3>{service.name}</h3>
-                </div>
-                {service.rating && (
-                  <div className="service-rating-badge">
-                    <Star size={14} fill="#fbbf24" stroke="#fbbf24" />
-                    <span>{service.rating}</span>
-                    {service.reviews && <span className="review-count">({service.reviews})</span>}
+            return (
+              <motion.div
+                key={service.id}
+                className="service-card card-enter"
+                layout
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 30, delay: index < 10 ? index * 0.04 : 0 }}
+                ref={(el) => serviceCardRefs.current[index] = el}
+                onClick={() => onSelectService(service)}
+                onMouseEnter={() => handlePrefetch(service.id)}
+                onTouchStart={() => handlePrefetch(service.id)}
+                whileTap={{ scale: 0.97 }}
+              >
+                <div className="service-card-header-new">
+                  <div className="service-title-section">
+                    <h3>{service.name}</h3>
                   </div>
-                )}
-              </div>
-
-              <div className="service-card-body-new">
-                <div className="service-detail-row">
-                  <div className="service-detail-item">
-                    <div className="detail-icon category-icon">
-                      <Wrench size={16} />
+                  {service.rating && (
+                    <div className="service-rating-badge">
+                      <Star size={14} fill="#fbbf24" stroke="#fbbf24" />
+                      <span>{service.rating}</span>
+                      {service.reviews && <span className="review-count">({service.reviews})</span>}
                     </div>
-                    <span className="detail-text service-category-text">{service.category}</span>
-                  </div>
+                  )}
                 </div>
 
-                <a
-                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(service.name + ' ' + service.address)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="service-detail-row service-link-row"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <div className="service-detail-item">
-                    <div className="detail-icon location-icon">
-                      <MapPin size={16} />
+                <div className="service-card-body-new">
+                  <div className="service-detail-row">
+                    <div className="service-detail-item">
+                      <div className="detail-icon category-icon">
+                        <Wrench size={16} />
+                      </div>
+                      <span className="detail-text service-category-text">{service.category}</span>
                     </div>
-                    <span className="detail-text detail-link">{service.address}</span>
                   </div>
-                </a>
-              </div>
 
-              {/* Social Proof Banner with Arrow */}
-              <div className={`service-social-proof ${socialProof.type}`}>
-                <span className="social-proof-text">{socialProof.text}</span>
-                <div className="social-proof-arrow">
-                  <ChevronRight size={16} />
+                  <a
+                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(service.name + ' ' + service.address)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="service-detail-row service-link-row"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="service-detail-item">
+                      <div className="detail-icon location-icon">
+                        <MapPin size={16} />
+                      </div>
+                      <span className="detail-text detail-link">{service.address}</span>
+                    </div>
+                  </a>
                 </div>
-              </div>
-            </div>
-          );
-        })}
+
+                {/* Social Proof Banner with Arrow */}
+                <div className={`service-social-proof ${socialProof.type}`}>
+                  <span className="social-proof-text">{socialProof.text}</span>
+                  <div className="social-proof-arrow">
+                    <ChevronRight size={16} />
+                  </div>
+                </div>
+              </motion.div>
+            );
+          })}
+          </AnimatePresence>
+        )}
       </div>
       {/* No results state for services */}
       {debouncedSearch && filteredServices.length === 0 && (

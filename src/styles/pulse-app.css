@@ -13401,12 +13401,20 @@
    Premium UI Animations
    ============================================================ */
 
-/* Tap feedback — scale down on press */
-.event-card:active,
-.deal-card:active,
-.service-card:active,
+/* Tap feedback — scale down on press (for elements not using framer-motion whileTap) */
 .banner-tab:active,
-.feedback-fab:active {
+.feedback-fab:active,
+.btn-primary:active,
+.btn-secondary:active,
+.filter-dropdown:active,
+.sign-in-btn:active,
+.header-btn-icon:active,
+.profile-btn:active,
+.event-book-btn:active,
+.save-star-btn:active,
+.confirm-btn:active,
+.clear-search-btn:active,
+.search-clear-btn:active {
   transform: scale(0.97) !important;
   transition: transform 0.1s cubic-bezier(0.2, 0, 0, 1) !important;
 }
@@ -13497,6 +13505,15 @@
   border-radius: 12px;
   height: 24px;
   width: 60px;
+}
+
+/* Progressive image blur-up */
+.progressive-image-container {
+  background: #f3f4f6;
+}
+
+.progressive-image-placeholder {
+  will-change: opacity;
 }
 
 /* Card entrance stagger */

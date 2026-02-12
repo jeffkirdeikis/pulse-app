@@ -9,6 +9,7 @@ import { useSubmissions } from './hooks/useSubmissions';
 import { useBooking } from './hooks/useBooking';
 import { useCalendar } from './hooks/useCalendar';
 import { useAppData } from './hooks/useAppData';
+import { usePrefetch } from './hooks/usePrefetch';
 import ServicesGrid from './components/ServicesGrid';
 import DealsGrid from './components/DealsGrid';
 import FilterSection from './components/FilterSection';
@@ -134,6 +135,9 @@ export default function PulseApp() {
     dbEvents, eventsLoading, eventsRefreshKey, setEventsRefreshKey,
     dbDeals, dealsLoading, dealsRefreshKey, setDealsRefreshKey,
   } = useAppData();
+
+  // Route prefetching for instant detail navigation
+  const { prefetchEvent, prefetchDeal, prefetchService } = usePrefetch();
 
   // Fetch admin stats (claimed/verified business counts) when admin panel is shown
   useEffect(() => {
@@ -663,7 +667,7 @@ export default function PulseApp() {
           
           {groupedEvents[dateKey].map((event) => {
             const currentIndex = globalEventIndex++;
-            return <EventCard key={event.id} event={event} index={currentIndex} ref={(el) => eventCardRefs.current[currentIndex] = el} venues={REAL_DATA.venues} isItemSavedLocal={isItemSavedLocal} toggleSave={toggleSave} getVenueName={getVenueName} onSelect={setSelectedEvent} onBookClick={handleBookClick} />;
+            return <EventCard key={event.id} event={event} index={currentIndex} ref={(el) => eventCardRefs.current[currentIndex] = el} venues={REAL_DATA.venues} isItemSavedLocal={isItemSavedLocal} toggleSave={toggleSave} getVenueName={getVenueName} onSelect={setSelectedEvent} onBookClick={handleBookClick} onPrefetch={prefetchEvent} />;
           })}
         </div>
       );
@@ -819,10 +823,10 @@ export default function PulseApp() {
             <AnimatePresence mode="wait">
               <motion.div
                 key={currentSection}
-                initial={{ opacity: 0, y: 8 }}
+                initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.2, ease: 'easeOut' }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
               >
                 {currentSection === 'deals' ? (
                   <DealsGrid
@@ -837,6 +841,7 @@ export default function PulseApp() {
                     isItemSavedLocal={isItemSavedLocal}
                     toggleSave={toggleSave}
                     onSelectDeal={setSelectedDeal}
+                    onPrefetch={prefetchDeal}
                   />
                 ) : currentSection === 'services' ? (
                   <>
@@ -859,6 +864,7 @@ export default function PulseApp() {
                         setServiceCategoryFilter={setServiceCategoryFilter}
                         serviceCardRefs={serviceCardRefs}
                         onSelectService={setSelectedService}
+                        onPrefetch={prefetchService}
                       />
                     )}
                   </>
@@ -880,7 +886,16 @@ export default function PulseApp() {
           </main>
 
           {/* Event/Class Detail Modal */}
+          <AnimatePresence>
           {selectedEvent && (
+            <motion.div
+              key="event-modal"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              style={{ position: 'fixed', inset: 0, zIndex: 1000 }}
+            >
             <EventDetailModal
               event={selectedEvent}
               onClose={() => setSelectedEvent(null)}
@@ -893,10 +908,21 @@ export default function PulseApp() {
               toggleSave={toggleSave}
               showToast={(msg) => { setCalendarToastMessage(msg); setShowCalendarToast(true); setTimeout(() => setShowCalendarToast(false), 2000); }}
             />
+            </motion.div>
           )}
+          </AnimatePresence>
 
           {/* Deal Detail Modal */}
+          <AnimatePresence>
           {selectedDeal && (
+            <motion.div
+              key="deal-modal"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              style={{ position: 'fixed', inset: 0, zIndex: 1000 }}
+            >
             <DealDetailModal
               deal={selectedDeal}
               onClose={() => setSelectedDeal(null)}
@@ -915,9 +941,20 @@ export default function PulseApp() {
               supabase={supabase}
               allDeals={[...REAL_DATA.deals, ...dbDeals]}
             />
+            </motion.div>
           )}
+          </AnimatePresence>
           {/* Service Detail Modal */}
+          <AnimatePresence>
           {selectedService && (
+            <motion.div
+              key="service-modal"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              style={{ position: 'fixed', inset: 0, zIndex: 1000 }}
+            >
             <ServiceDetailModal
               service={selectedService}
               onClose={() => setSelectedService(null)}
@@ -925,7 +962,9 @@ export default function PulseApp() {
               toggleSave={toggleSave}
               showToast={showToast}
             />
+            </motion.div>
           )}
+          </AnimatePresence>
 
           {/* Profile Menu Dropdown */}
           {showProfileMenu && (
@@ -1019,14 +1058,25 @@ export default function PulseApp() {
           )}
 
           {/* Calendar Toast Notification */}
+          <AnimatePresence>
           {showCalendarToast && (
-            <div className="calendar-toast" role="alert" aria-live="assertive">
+            <motion.div
+              key="toast"
+              className="calendar-toast"
+              role="alert"
+              aria-live="assertive"
+              initial={{ opacity: 0, y: 20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.95 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+            >
               <div className="toast-icon">
                 <Calendar size={20} />
               </div>
               <span>{calendarToastMessage}</span>
-            </div>
+            </motion.div>
           )}
+          </AnimatePresence>
 
           {/* Submission Modal - Add Event/Class/Deal */}
           {showSubmissionModal && (
@@ -1122,9 +1172,26 @@ export default function PulseApp() {
           )}
 
           {/* Booking Confirmation Dialog */}
+          <AnimatePresence>
           {showBookingConfirmation && (
-            <div className="modal-overlay confirmation-overlay" role="dialog" aria-modal="true" aria-label="Confirm booking">
-              <div className="confirmation-dialog">
+            <motion.div
+              key="booking-confirm"
+              className="modal-overlay confirmation-overlay"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Confirm booking"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              <motion.div
+                className="confirmation-dialog"
+                initial={{ scale: 0.9, y: 20 }}
+                animate={{ scale: 1, y: 0 }}
+                exit={{ scale: 0.9, y: 20 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+              >
                 <div className="confirmation-icon">
                   <CheckCircle size={48} />
                 </div>
@@ -1145,9 +1212,10 @@ export default function PulseApp() {
                     No, just browsing
                   </button>
                 </div>
-              </div>
-            </div>
+              </motion.div>
+            </motion.div>
           )}
+          </AnimatePresence>
 
           {/* Contact Business Sheet */}
           {showContactSheet && contactBusiness && (

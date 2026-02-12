@@ -1,24 +1,9 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { MapPin, Clock, Star, Check, ChevronRight, DollarSign } from 'lucide-react';
 import SkeletonCards from './SkeletonCards';
 import { generateSmartDealTitle, normalizeDealCategory, getDealSavingsDisplay } from '../utils/dealHelpers';
 
-/**
- * Deals grid with category filtering, cards, and empty state.
- *
- * @param {Object} props
- * @param {Array} props.deals - Filtered deals array (from filterDeals())
- * @param {boolean} props.dealsLoading - Loading state
- * @param {string} props.dealCategoryFilter - Active category filter
- * @param {Function} props.setDealCategoryFilter - Category filter setter
- * @param {Object} props.dealCardRefs - Ref object for card animations
- * @param {string} props.searchQuery - Search query for display
- * @param {Function} props.setSearchQuery - Search query setter
- * @param {Function} props.getVenueName - Venue name lookup
- * @param {Function} props.isItemSavedLocal - Check if item is saved
- * @param {Function} props.toggleSave - Toggle save callback
- * @param {Function} props.onSelectDeal - Deal card click callback
- */
 const DealsGrid = React.memo(function DealsGrid({
   deals,
   dealsLoading,
@@ -31,15 +16,14 @@ const DealsGrid = React.memo(function DealsGrid({
   isItemSavedLocal,
   toggleSave,
   onSelectDeal,
+  onPrefetch,
 }) {
-  // Build category options dynamically from actual deal data (prevents mismatch)
   const categoryOptions = useMemo(() => {
     const catCounts = {};
     deals.forEach(deal => {
       const normalized = normalizeDealCategory(deal.category);
       catCounts[normalized] = (catCounts[normalized] || 0) + 1;
     });
-    // Only show categories that have deals, sorted by count descending
     return Object.entries(catCounts)
       .filter(([cat]) => cat !== 'Other' || catCounts['Other'] > 0)
       .sort((a, b) => b[1] - a[1])
@@ -62,6 +46,10 @@ const DealsGrid = React.memo(function DealsGrid({
     if (dealCategoryFilter === 'All') return true;
     return normalizeDealCategory(deal.category) === dealCategoryFilter;
   });
+
+  const handlePrefetch = useCallback((dealId) => {
+    if (onPrefetch) onPrefetch(dealId);
+  }, [onPrefetch]);
 
   return (
     <>
@@ -86,12 +74,20 @@ const DealsGrid = React.memo(function DealsGrid({
 
       {dealsLoading && <SkeletonCards count={6} />}
       <div className="deals-grid">
+        <AnimatePresence>
         {filteredDeals.map((deal, index) => (
-          <div
+          <motion.div
             key={deal.id}
             className="deal-card card-enter"
-            style={index < 10 ? { animationDelay: `${index * 50}ms` } : undefined}
+            layout
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 30, delay: index < 10 ? index * 0.04 : 0 }}
             onClick={() => onSelectDeal(deal)}
+            onMouseEnter={() => handlePrefetch(deal.id)}
+            onTouchStart={() => handlePrefetch(deal.id)}
+            whileTap={{ scale: 0.97 }}
             ref={(el) => dealCardRefs.current[index] = el}
           >
             {/* Prominent savings badge at top */}
@@ -154,8 +150,9 @@ const DealsGrid = React.memo(function DealsGrid({
               <Star size={24} fill={isItemSavedLocal('deal', deal.id) ? "#f59e0b" : "none"} stroke={isItemSavedLocal('deal', deal.id) ? "#f59e0b" : "#9ca3af"} strokeWidth={2} />
             </button>
             <ChevronRight className="deal-chevron" size={20} />
-          </div>
+          </motion.div>
         ))}
+        </AnimatePresence>
       </div>
 
       {/* Deals empty state */}

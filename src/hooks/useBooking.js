@@ -74,47 +74,59 @@ export function useBooking({ getVenueName, venues, trackAnalytics, addToCalendar
   }, [bookingEvent, bookingStep, getBusinessForEvent]);
 
   // Handle booking confirmation response
+  // Optimistic: add to calendar and close immediately, track analytics in background
   const handleBookingConfirmation = useCallback(async (didBook) => {
-    if (didBook && bookingEvent) {
-      const business = getBusinessForEvent(bookingEvent);
+    // Optimistic: close confirmation and show feedback immediately
+    setShowBookingConfirmation(false);
 
-      await trackAnalytics('booking_confirmed', business.id, bookingEvent.id);
-      addToCalendar(bookingEvent);
+    if (didBook && bookingEvent) {
+      const eventSnapshot = bookingEvent;
+      const business = getBusinessForEvent(eventSnapshot);
+
+      // Instant UI update
+      addToCalendar(eventSnapshot);
       showToast('Great! Added to your calendar');
+
+      // Track analytics in background (don't block UI)
+      trackAnalytics('booking_confirmed', business.id, eventSnapshot.id).catch(() => {});
     }
 
-    setShowBookingConfirmation(false);
     setBookingEvent(null);
   }, [bookingEvent, getBusinessForEvent, trackAnalytics, addToCalendar, showToast]);
 
   // Submit booking request (for businesses without booking URL)
+  // Optimistic UI: close sheet and show success immediately, send in background
   const submitBookingRequest = useCallback(async () => {
     if (!bookingEvent) return;
 
     const business = getBusinessForEvent(bookingEvent);
+    const eventSnapshot = bookingEvent;
+    const messageSnapshot = bookingRequestMessage;
 
+    // Optimistic: close immediately and show success
+    setShowBookingSheet(false);
+    setBookingEvent(null);
+    showToast('Request sent! You\'ll hear back soon.');
+
+    // Fire API call in background
     setSendingMessage(true);
     try {
-      const subject = `Booking Request: ${bookingEvent.title}`;
+      const subject = `Booking Request: ${eventSnapshot.title}`;
       const message = `Hi, I'd like to book:\n\n` +
-        `Class: ${bookingEvent.title}\n` +
-        `Date: ${bookingEvent.start.toLocaleDateString('en-US', { timeZone: PACIFIC_TZ, weekday: 'long', month: 'long', day: 'numeric' })}\n` +
-        `Time: ${bookingEvent.start.toLocaleTimeString('en-US', { timeZone: PACIFIC_TZ, hour: 'numeric', minute: '2-digit' })}\n\n` +
-        (bookingRequestMessage ? `Message: ${bookingRequestMessage}` : '');
+        `Class: ${eventSnapshot.title}\n` +
+        `Date: ${eventSnapshot.start.toLocaleDateString('en-US', { timeZone: PACIFIC_TZ, weekday: 'long', month: 'long', day: 'numeric' })}\n` +
+        `Time: ${eventSnapshot.start.toLocaleTimeString('en-US', { timeZone: PACIFIC_TZ, hour: 'numeric', minute: '2-digit' })}\n\n` +
+        (messageSnapshot ? `Message: ${messageSnapshot}` : '');
 
       const conversationId = await startConversation(business.id, subject, message);
 
       if (conversationId) {
-        await trackAnalytics('message_received', business.id, bookingEvent.id);
-
-        setShowBookingSheet(false);
-        setBookingEvent(null);
-
-        showToast('Request sent! You\'ll hear back soon.');
+        await trackAnalytics('message_received', business.id, eventSnapshot.id);
         setTimeout(() => openMessages(), 1500);
       }
     } catch (err) {
       console.error('Error submitting booking request:', err);
+      // Rollback: show error since the request actually failed
       showToast('Failed to send request. Please try again.', 'error');
     } finally {
       setSendingMessage(false);
