@@ -28,6 +28,7 @@ import MessagesModal from './components/modals/MessagesModal';
 import BookingSheet from './components/modals/BookingSheet';
 import AdminPanelModal from './components/modals/AdminPanelModal';
 import EditVenueModal from './components/modals/EditVenueModal';
+import FeedbackWidget from './components/FeedbackWidget';
 import ImageCropperModal from './components/modals/ImageCropperModal';
 import ContactSheet from './components/modals/ContactSheet';
 import EditEventModal from './components/modals/EditEventModal';
@@ -1313,6 +1314,7 @@ export default function PulseApp() {
         />
       )}
 
+      <FeedbackWidget />
     </div>
   );
 }
