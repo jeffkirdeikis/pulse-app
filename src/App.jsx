@@ -462,8 +462,9 @@ export default function PulseApp() {
   } = msg;
 
   // Build categories dynamically from actual DB event data only (not stale REAL_DATA)
+  // Only include categories that have >0 results in the current day-filtered view
   const categories = useMemo(() => {
-    const catSet = new Set();
+    const catCounts = {};
     let events = dbEvents;
     // Only show categories relevant to the current section
     if (currentSection === 'classes') {
@@ -471,11 +472,24 @@ export default function PulseApp() {
     } else if (currentSection === 'events') {
       events = events.filter(e => e.eventType === 'event');
     }
+    // Apply day filter so category options reflect visible date range
+    const now = getPacificNow();
+    const todayMidnight = new Date(now);
+    todayMidnight.setHours(0, 0, 0, 0);
+    if (filters.day === 'anytime') {
+      events = events.filter(e => e.start >= todayMidnight);
+    } else if (filters.day === 'today') {
+      const thirtyDays = new Date(todayMidnight);
+      thirtyDays.setDate(todayMidnight.getDate() + 30);
+      events = events.filter(e => e.start >= todayMidnight && e.start < thirtyDays);
+    }
     events.forEach(e => {
-      if (e.category) catSet.add(e.category);
+      if (e.category) catCounts[e.category] = (catCounts[e.category] || 0) + 1;
     });
-    return ['All', ...Array.from(catSet).sort()];
-  }, [dbEvents, currentSection]);
+    // Only include categories with >0 matching events (Bug #7-9: empty dropdown options)
+    const cats = Object.keys(catCounts).filter(c => catCounts[c] > 0).sort();
+    return ['All', ...cats];
+  }, [dbEvents, currentSection, filters.day]);
 
   // Helper to close Add Event modal
   const closeAddEventModal = () => {
@@ -760,7 +774,9 @@ export default function PulseApp() {
           ? prev.filter(k => k !== itemKey)
           : [...prev, itemKey];
         localStorage.setItem('pulse_local_saves', JSON.stringify(newSaves));
-        if (!exists) {
+        if (exists) {
+          showToast('Removed from saved items.', 'info');
+        } else {
           showToast('Saved locally. Sign in to sync across devices.', 'info');
         }
         return newSaves;
@@ -866,6 +882,8 @@ export default function PulseApp() {
               categories={categories}
               getAvailableTimeSlots={getAvailableTimeSlots}
               hasFreeItems={hasFreeItems}
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
             />
           )}
 

@@ -89,10 +89,12 @@ export function filterEvents(allEvents, { currentSection, filters, searchQuery, 
     );
   }
 
-  // Age filtering
+  // Age filtering — show only items with EXPLICIT age tagging (not 'All Ages' default)
+  // This makes filters useful: "Kids" shows kid-specific content, "Adults" shows adult-specific
+  // The default "All Ages" option already shows everything
   if (filters.age === 'kids') {
     filtered = filtered.filter(e => {
-      if (!e.ageGroup?.includes('Kids') && e.ageGroup !== 'All Ages') return false;
+      if (!e.ageGroup?.includes('Kids')) return false;
 
       if (kidsAgeRange[0] !== 0 || kidsAgeRange[1] !== 18) {
         const text = `${e.title} ${e.description}`.toLowerCase();
@@ -116,6 +118,7 @@ export function filterEvents(allEvents, { currentSection, filters, searchQuery, 
       return true;
     });
   } else if (filters.age === 'adults') {
+    // Adults includes 'All Ages' since most general events are adult-suitable
     filtered = filtered.filter(e => e.ageGroup?.includes('Adults') || e.ageGroup === 'All Ages' || e.ageGroup === '19+' || e.ageGroup === 'Teens & Adults');
   }
 

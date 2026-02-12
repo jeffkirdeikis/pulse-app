@@ -28,6 +28,8 @@ const FilterSection = React.memo(function FilterSection({
   categories,
   getAvailableTimeSlots,
   hasFreeItems,
+  searchQuery,
+  setSearchQuery,
 }) {
   return (
     <>
@@ -225,6 +227,7 @@ const FilterSection = React.memo(function FilterSection({
                   onClick={() => {
                     setFilters({day: 'today', time: 'all', age: 'all', category: 'all', price: 'all'});
                     setKidsAgeRange([0, 18]);
+                    if (setSearchQuery) setSearchQuery('');
                   }}
                   className="reset-btn"
                 >
