@@ -1167,15 +1167,27 @@ async function scrapeTourismSquamish() {
         const costMatch = bodyText.match(/Cost:\s*\n\s*\n\s*([^\n]+)/i);
         const costInfo = costMatch ? parseCost(costMatch[1].trim()) : { price: 0, isFree: false, priceDescription: 'See venue for pricing' };
 
-        // Extract Venue
-        const venueSection = bodyText.match(/Venue\n\s*([^\n]+)(?:\n\s*([^\n]+))?(?:\n\s*(\w[\w\s]*,\s*BC))?/);
-        let venueName = venueSection ? venueSection[1].trim() : '';
+        // Extract Venue — try "Venue" section first, fall back to "Contact & Details"
+        let venueName = '';
         let venueAddress = '';
+        const venueSection = bodyText.match(/Venue\n\s*([^\n]+)(?:\n\s*([^\n]+))?(?:\n\s*(\w[\w\s]*,\s*BC))?/);
         if (venueSection) {
+          venueName = venueSection[1].trim();
           const parts = [venueSection[1], venueSection[2], venueSection[3]].filter(Boolean).map(s => s.trim());
           if (parts.length > 1) {
             venueName = parts[0];
             venueAddress = parts.slice(1).join(', ');
+          }
+        }
+        // Fallback: extract from "Contact & Details" section
+        if (!venueName) {
+          const contactSection = bodyText.match(/Contact\s*(?:&|and)\s*Details\n\s*([^\n]+)/i);
+          if (contactSection) {
+            const candidate = contactSection[1].trim();
+            // Only use if it looks like a venue name (not a phone number or email)
+            if (candidate && !/^\d/.test(candidate) && !candidate.includes('@')) {
+              venueName = candidate;
+            }
           }
         }
 
