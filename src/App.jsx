@@ -630,6 +630,12 @@ export default function PulseApp() {
     todayMidnight.setHours(0, 0, 0, 0);
     if (filters.day === 'anytime') {
       events = events.filter(e => e.start >= todayMidnight);
+    } else if (/^\d{4}-\d{2}-\d{2}$/.test(filters.day)) {
+      // Specific date — show categories for that day
+      const [y, m, d] = filters.day.split('-').map(Number);
+      const dayStart = new Date(y, m - 1, d, 0, 0, 0, 0);
+      const dayEnd = new Date(y, m - 1, d + 1, 0, 0, 0, 0);
+      events = events.filter(e => e.start >= dayStart && e.start < dayEnd);
     } else if (filters.day === 'today') {
       const thirtyDays = new Date(todayMidnight);
       thirtyDays.setDate(todayMidnight.getDate() + 30);
@@ -707,7 +713,12 @@ export default function PulseApp() {
     todayMidnight.setHours(0, 0, 0, 0);
 
     events = events.filter(e => {
-      if (filters.day === 'today') {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(filters.day)) {
+        const [y, m, d] = filters.day.split('-').map(Number);
+        const dayStart = new Date(y, m - 1, d, 0, 0, 0, 0);
+        const dayEnd = new Date(y, m - 1, d + 1, 0, 0, 0, 0);
+        return e.start >= dayStart && e.start < dayEnd;
+      } else if (filters.day === 'today') {
         const thirtyDays = new Date(todayMidnight);
         thirtyDays.setDate(todayMidnight.getDate() + 30);
         return e.start >= todayMidnight && e.start < thirtyDays;

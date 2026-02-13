@@ -72,6 +72,17 @@ export function filterEvents(allEvents, { currentSection, filters, searchQuery, 
     const followingSunday = new Date(nextMonday);
     followingSunday.setDate(nextMonday.getDate() + 7);
     filtered = filtered.filter(e => e.start >= nextMonday && e.start < followingSunday);
+  } else if (/^\d{4}-\d{2}-\d{2}$/.test(filters.day)) {
+    // Specific date selected from date picker (e.g. '2026-02-13')
+    const [year, month, day] = filters.day.split('-').map(Number);
+    const dayStart = new Date(year, month - 1, day, 0, 0, 0, 0);
+    const dayEnd = new Date(year, month - 1, day + 1, 0, 0, 0, 0);
+    // For today's date, also exclude events that already started
+    const isToday = dayStart.getFullYear() === now.getFullYear() &&
+                    dayStart.getMonth() === now.getMonth() &&
+                    dayStart.getDate() === now.getDate();
+    const startCutoff = isToday ? now : dayStart;
+    filtered = filtered.filter(e => e.start >= startCutoff && e.start < dayEnd);
   }
 
   // Search query

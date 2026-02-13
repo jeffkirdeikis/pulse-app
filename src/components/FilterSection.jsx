@@ -1,21 +1,35 @@
-import React from 'react';
+import React, { useMemo, useRef, useEffect } from 'react';
 import { SlidersHorizontal, ChevronRight } from 'lucide-react';
 
 /**
+ * Generate array of next N days starting from today (Pacific time).
+ */
+function getDateStrip(count = 14) {
+  const now = new Date();
+  // Get today in Pacific timezone
+  const pacific = new Date(now.toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }));
+  const days = [];
+  for (let i = 0; i < count; i++) {
+    const d = new Date(pacific);
+    d.setDate(pacific.getDate() + i);
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    days.push({
+      dateStr: `${yyyy}-${mm}-${dd}`,
+      dayName: d.toLocaleDateString('en-US', { weekday: 'short' }), // Mon, Tue
+      dayNum: d.getDate(),
+      monthShort: d.toLocaleDateString('en-US', { month: 'short' }), // Feb, Mar
+      isToday: i === 0,
+      isWeekend: d.getDay() === 0 || d.getDay() === 6,
+    });
+  }
+  return days;
+}
+
+/**
  * Collapsible filter section for classes/events tabs.
- * Includes day, time, age (with kids age range slider), category, and price filters.
- *
- * @param {Object} props
- * @param {Object} props.filters - Current filter state { day, time, age, category, price }
- * @param {Function} props.setFilters - Filter state setter
- * @param {boolean} props.showFilters - Whether filters are expanded
- * @param {Function} props.setShowFilters - Toggle filters visibility
- * @param {Array} props.kidsAgeRange - [min, max] age range
- * @param {Function} props.setKidsAgeRange - Age range setter
- * @param {Array} props.ageRangeOptions - Age range quick-select options
- * @param {Array} props.categories - Available categories (includes 'All')
- * @param {Function} props.getAvailableTimeSlots - Returns sorted time slot strings
- * @param {boolean} props.hasFreeItems - Whether any free events/classes exist in the data
+ * Includes horizontal date picker, time, age (with kids age range slider), category, and price filters.
  */
 const FilterSection = React.memo(function FilterSection({
   filters,
@@ -31,8 +45,67 @@ const FilterSection = React.memo(function FilterSection({
   searchQuery,
   setSearchQuery,
 }) {
+  const dateStrip = useMemo(() => getDateStrip(14), []);
+  const stripRef = useRef(null);
+  const selectedRef = useRef(null);
+
+  // Scroll selected date into view on mount or when filter changes
+  useEffect(() => {
+    if (selectedRef.current && stripRef.current) {
+      const container = stripRef.current;
+      const el = selectedRef.current;
+      const scrollLeft = el.offsetLeft - container.offsetWidth / 2 + el.offsetWidth / 2;
+      container.scrollTo({ left: Math.max(0, scrollLeft), behavior: 'smooth' });
+    }
+  }, [filters.day]);
+
+  const isDateSelected = /^\d{4}-\d{2}-\d{2}$/.test(filters.day);
+  const activeFilterCount = [
+    filters.time !== 'all',
+    filters.age !== 'all',
+    filters.category !== 'all',
+    filters.price !== 'all',
+  ].filter(Boolean).length;
+
   return (
     <>
+      {/* Horizontal Date Picker Strip */}
+      <div className="date-strip-section">
+        <div className="date-strip" ref={stripRef} role="tablist" aria-label="Select date">
+          {/* Upcoming chip (default) */}
+          <button
+            className={`date-chip ${filters.day === 'today' ? 'date-chip-active' : ''}`}
+            onClick={() => setFilters({ ...filters, day: 'today' })}
+            ref={filters.day === 'today' ? selectedRef : null}
+            role="tab"
+            aria-selected={filters.day === 'today'}
+          >
+            <span className="date-chip-day">All</span>
+            <span className="date-chip-label">Upcoming</span>
+          </button>
+
+          {/* Individual day chips */}
+          {dateStrip.map((d) => {
+            const isSelected = filters.day === d.dateStr;
+            return (
+              <button
+                key={d.dateStr}
+                className={`date-chip ${isSelected ? 'date-chip-active' : ''} ${d.isWeekend ? 'date-chip-weekend' : ''}`}
+                onClick={() => setFilters({ ...filters, day: d.dateStr })}
+                ref={isSelected ? selectedRef : null}
+                role="tab"
+                aria-selected={isSelected}
+                aria-label={`${d.dayName} ${d.monthShort} ${d.dayNum}${d.isToday ? ' (Today)' : ''}`}
+              >
+                <span className="date-chip-day">{d.isToday ? 'Today' : d.dayName}</span>
+                <span className="date-chip-num">{d.dayNum}</span>
+                {d.isToday && !isSelected && <span className="date-chip-dot" />}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Filters Toggle Button */}
       <div className="filters-toggle-section">
         <button
@@ -40,7 +113,10 @@ const FilterSection = React.memo(function FilterSection({
           onClick={() => setShowFilters(!showFilters)}
         >
           <SlidersHorizontal size={18} />
-          <span>{showFilters ? 'Hide Filters' : 'Show Filters'}</span>
+          <span>{showFilters ? 'Hide Filters' : 'Filters'}</span>
+          {activeFilterCount > 0 && (
+            <span className="filter-count-badge">{activeFilterCount}</span>
+          )}
           <ChevronRight
             size={18}
             style={{
@@ -55,22 +131,6 @@ const FilterSection = React.memo(function FilterSection({
       {showFilters && (
         <div className="filters-section">
           <div className="filters-row-top">
-            {/* Day Filter */}
-            <div className="filter-group">
-              <select
-                value={filters.day}
-                onChange={(e) => setFilters({...filters, day: e.target.value})}
-                className="filter-dropdown"
-                aria-label="Filter by day"
-              >
-                <option value="today">📅 Upcoming</option>
-                <option value="tomorrow">Tomorrow</option>
-                <option value="thisWeekend">This Weekend</option>
-                <option value="nextWeek">Next Week</option>
-                <option value="anytime">Anytime</option>
-              </select>
-            </div>
-
             {/* Time Filter - Dynamic 30-min slots */}
             <div className="filter-group">
               <select
@@ -79,7 +139,7 @@ const FilterSection = React.memo(function FilterSection({
                 className="filter-dropdown"
                 aria-label="Filter by time"
               >
-                <option value="all">🕐 All Times</option>
+                <option value="all">All Times</option>
                 {getAvailableTimeSlots().map(timeSlot => {
                   const [hour, min] = timeSlot.split(':');
                   const hourNum = parseInt(hour);
@@ -108,7 +168,7 @@ const FilterSection = React.memo(function FilterSection({
                 }}
                 className={`filter-dropdown ${filters.age === 'kids' ? 'filter-active' : ''}`}
               >
-                <option value="all">👥 All Ages</option>
+                <option value="all">All Ages</option>
                 <option value="kids">Kids</option>
                 <option value="adults">Adults</option>
               </select>
@@ -198,7 +258,7 @@ const FilterSection = React.memo(function FilterSection({
                 className="filter-dropdown"
                 aria-label="Filter by category"
               >
-                <option value="all">🏷️ All Categories</option>
+                <option value="all">All Categories</option>
                 {categories.slice(1).map(cat => <option key={cat} value={cat}>{cat}</option>)}
               </select>
             </div>
@@ -211,7 +271,7 @@ const FilterSection = React.memo(function FilterSection({
                 className="filter-dropdown"
                 aria-label="Filter by price"
               >
-                <option value="all">💵 All Prices</option>
+                <option value="all">All Prices</option>
                 {hasFreeItems && <option value="free">Free</option>}
                 <option value="paid">Paid</option>
               </select>
@@ -231,7 +291,7 @@ const FilterSection = React.memo(function FilterSection({
                   }}
                   className="reset-btn"
                 >
-                  ↺ Reset
+                  Reset All
                 </button>
               ) : null;
             })()}
