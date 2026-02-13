@@ -44,6 +44,7 @@ const FilterSection = React.memo(function FilterSection({
   hasFreeItems,
   searchQuery,
   setSearchQuery,
+  dateEventCounts = {},
 }) {
   const dateStrip = useMemo(() => getDateStrip(14), []);
   const stripRef = useRef(null);
@@ -87,19 +88,24 @@ const FilterSection = React.memo(function FilterSection({
           {/* Individual day chips */}
           {dateStrip.map((d) => {
             const isSelected = filters.day === d.dateStr;
+            const count = dateEventCounts[d.dateStr] || 0;
+            const hasEvents = count > 0;
             return (
               <button
                 key={d.dateStr}
-                className={`date-chip ${isSelected ? 'date-chip-active' : ''} ${d.isWeekend ? 'date-chip-weekend' : ''}`}
+                className={`date-chip ${isSelected ? 'date-chip-active' : ''} ${d.isWeekend ? 'date-chip-weekend' : ''} ${!hasEvents && !isSelected ? 'date-chip-empty' : ''}`}
                 onClick={() => setFilters({ ...filters, day: d.dateStr })}
                 ref={isSelected ? selectedRef : null}
                 role="tab"
                 aria-selected={isSelected}
-                aria-label={`${d.dayName} ${d.monthShort} ${d.dayNum}${d.isToday ? ' (Today)' : ''}`}
+                aria-label={`${d.dayName} ${d.monthShort} ${d.dayNum}${d.isToday ? ' (Today)' : ''} — ${count} ${count === 1 ? 'item' : 'items'}`}
               >
                 <span className="date-chip-day">{d.isToday ? 'Today' : d.dayName}</span>
                 <span className="date-chip-num">{d.dayNum}</span>
-                {d.isToday && !isSelected && <span className="date-chip-dot" />}
+                {hasEvents && !isSelected && (
+                  <span className="date-chip-count">{count > 99 ? '99+' : count}</span>
+                )}
+                {d.isToday && !isSelected && !hasEvents && <span className="date-chip-dot" />}
               </button>
             );
           })}

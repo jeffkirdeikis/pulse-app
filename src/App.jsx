@@ -1002,6 +1002,25 @@ export default function PulseApp() {
     return Array.from(suggestions).sort((a, b) => a.localeCompare(b));
   }, [dbEvents]);
 
+  // Count events per day for date picker chips (next 14 days)
+  const dateEventCounts = useMemo(() => {
+    const counts = {};
+    const now = getPacificNow();
+    // Filter to current section only
+    const sectionEvents = dbEvents.filter(e =>
+      currentSection === 'classes' ? e.eventType === 'class' :
+      currentSection === 'events' ? e.eventType === 'event' : true
+    ).filter(e => e.start >= now);
+    sectionEvents.forEach(e => {
+      const y = e.start.getFullYear();
+      const m = String(e.start.getMonth() + 1).padStart(2, '0');
+      const d = String(e.start.getDate()).padStart(2, '0');
+      const key = `${y}-${m}-${d}`;
+      counts[key] = (counts[key] || 0) + 1;
+    });
+    return counts;
+  }, [dbEvents, currentSection]);
+
   // Group events by date for infinite scroll with dividers
   const groupEventsByDate = (events) => {
     const grouped = {};
@@ -1267,6 +1286,7 @@ export default function PulseApp() {
               hasFreeItems={hasFreeItems}
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}
+              dateEventCounts={dateEventCounts}
             />
           )}
 
