@@ -1107,24 +1107,59 @@ export default function PulseApp() {
         const dateObj = new Date(y, m - 1, d);
         const dateLabel = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
         emptyMessage = `No ${currentSection} on ${dateLabel}.`;
+      } else if (filters.day === 'happeningNow') {
+        emptyMessage = `Nothing happening right now.`;
       } else if (searchQuery?.trim()) {
         emptyMessage = `No ${currentSection} match "${searchQuery.trim()}".`;
       }
+
+      // Build smart suggestions: try removing each active filter and count results
+      const suggestions = [];
+      const activeFilters = {
+        time: filters.time !== 'all' ? filters.time : null,
+        price: filters.price !== 'all' ? filters.price : null,
+        age: filters.age !== 'all' ? filters.age : null,
+        category: filters.category !== 'all' ? filters.category : null,
+      };
+      const filterLabels = {
+        time: { morning: 'Morning', afternoon: 'Afternoon', evening: 'Evening' },
+        price: { free: 'Free', paid: 'Paid' },
+        age: { kids: 'Kids', adults: 'Adults' },
+      };
+      for (const [key, val] of Object.entries(activeFilters)) {
+        if (!val) continue;
+        const tryFilters = { ...filters, [key]: 'all' };
+        const tryEvents = filterEventsUtil(dbEvents, { currentSection, filters: tryFilters, searchQuery, kidsAgeRange, getVenueName, now: getPacificNow() });
+        if (tryEvents.length > 0) {
+          const label = filterLabels[key]?.[val] || val;
+          suggestions.push({ label: `Remove "${label}" filter`, count: tryEvents.length, action: () => setFilters({ ...filters, [key]: 'all' }) });
+        }
+      }
+      if (filters.day === 'happeningNow') {
+        suggestions.push({ label: 'Show upcoming instead', count: null, action: () => setFilters({ ...filters, day: 'today' }) });
+      }
+
       return (
         <div className="empty-state">
           <div className="empty-state-icon">
             {currentSection === 'classes' ? '🧘' : '📅'}
           </div>
           <p className="empty-state-message">{emptyMessage}</p>
-          {isSpecificDate && (
-            <p className="empty-state-hint">Try checking nearby days or switch to "All Upcoming".</p>
+          {suggestions.length > 0 && (
+            <div className="empty-state-suggestions">
+              {suggestions.slice(0, 3).map((s, i) => (
+                <button key={i} className="empty-state-suggestion" onClick={s.action}>
+                  {s.label}{s.count ? ` (${s.count} results)` : ''}
+                </button>
+              ))}
+            </div>
           )}
           <button className="empty-state-btn" onClick={() => {
             setFilters({ day: 'today', age: 'all', category: 'all', time: 'all', price: 'all', location: 'all' });
             setKidsAgeRange([0, 18]);
             setSearchQuery('');
           }}>
-            Show All Upcoming
+            Reset All Filters
           </button>
         </div>
       );
