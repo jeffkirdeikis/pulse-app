@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Calendar, CalendarPlus, Check, ChevronRight, Clock, MapPin, Star, Zap } from 'lucide-react';
+import { Calendar, CalendarPlus, Check, ChevronRight, Clock, MapPin, Share2, Star, Zap } from 'lucide-react';
 import { PACIFIC_TZ } from '../utils/timezoneHelpers';
 
 function getTimeBadge(start) {
@@ -27,7 +27,7 @@ function getRelativeTime(start) {
   return null;
 }
 
-const EventCard = React.forwardRef(({ event, venues, isItemSavedLocal, toggleSave, getVenueName, onSelect, onBookClick, onPrefetch, addToCalendar, isInMyCalendar, index = 0 }, ref) => {
+const EventCard = React.forwardRef(({ event, venues, isItemSavedLocal, toggleSave, getVenueName, onSelect, onBookClick, onPrefetch, addToCalendar, isInMyCalendar, showToast, index = 0 }, ref) => {
   const itemType = event.eventType === 'class' ? 'class' : 'event';
   const isSaved = isItemSavedLocal(itemType, event.id);
   const inCalendar = isInMyCalendar?.(event.id);
@@ -47,6 +47,22 @@ const EventCard = React.forwardRef(({ event, venues, isItemSavedLocal, toggleSav
   const handlePrefetch = useCallback(() => {
     if (onPrefetch && event.id) onPrefetch(event.id);
   }, [onPrefetch, event.id]);
+
+  const handleShare = useCallback(async (e) => {
+    e.stopPropagation();
+    const venue = getVenueName(event.venueId, event);
+    const time = event.start.toLocaleString('en-US', { timeZone: PACIFIC_TZ, weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+    const text = `${event.title}\n📍 ${venue}\n🕐 ${time}`;
+    const url = `${window.location.origin}${window.location.pathname}#${event.eventType === 'class' ? 'classes' : 'events'}`;
+    if (navigator.share) {
+      try { await navigator.share({ title: event.title, text, url }); } catch { /* user cancelled */ }
+    } else {
+      try {
+        await navigator.clipboard.writeText(`${text}\n${url}`);
+        if (showToast) showToast('Link copied to clipboard');
+      } catch { /* silent */ }
+    }
+  }, [event, getVenueName, showToast]);
 
   return (
     <motion.div
@@ -143,14 +159,23 @@ const EventCard = React.forwardRef(({ event, venues, isItemSavedLocal, toggleSav
         </button>
       )}
 
-      <button
-        className={`save-star-btn ${isSaved ? 'saved' : ''}`}
-        onClick={handleSave}
-        data-tooltip={isSaved ? "Saved" : "Save"}
-        aria-label={isSaved ? "Remove from saved" : "Save to favorites"}
-      >
-        <Star size={24} fill={isSaved ? "#f59e0b" : "none"} stroke={isSaved ? "#f59e0b" : "#9ca3af"} strokeWidth={2} />
-      </button>
+      <div className="event-card-actions">
+        <button
+          className="share-btn"
+          onClick={handleShare}
+          aria-label="Share"
+        >
+          <Share2 size={18} stroke="#9ca3af" strokeWidth={2} />
+        </button>
+        <button
+          className={`save-star-btn ${isSaved ? 'saved' : ''}`}
+          onClick={handleSave}
+          data-tooltip={isSaved ? "Saved" : "Save"}
+          aria-label={isSaved ? "Remove from saved" : "Save to favorites"}
+        >
+          <Star size={22} fill={isSaved ? "#f59e0b" : "none"} stroke={isSaved ? "#f59e0b" : "#9ca3af"} strokeWidth={2} />
+        </button>
+      </div>
       <ChevronRight className="event-chevron" size={20} />
     </motion.div>
   );
