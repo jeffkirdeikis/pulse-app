@@ -1,6 +1,20 @@
 import React, { useMemo, useRef, useEffect } from 'react';
 import { SlidersHorizontal, ChevronRight, Sparkles, Sun, Sunset, Moon, Baby, DollarSign, CalendarDays, CalendarRange, Zap } from 'lucide-react';
 
+function getCategoryColor(cat) {
+  const c = (cat || '').toLowerCase();
+  if (c.includes('fitness') || c.includes('gym') || c.includes('yoga') || c.includes('pilates')) return '#3b82f6';
+  if (c.includes('martial') || c.includes('boxing') || c.includes('combat')) return '#ef4444';
+  if (c.includes('outdoor') || c.includes('hike') || c.includes('climb') || c.includes('nature')) return '#22c55e';
+  if (c.includes('art') || c.includes('music') || c.includes('dance') || c.includes('creative')) return '#a855f7';
+  if (c.includes('kids') || c.includes('child') || c.includes('family') || c.includes('youth')) return '#f59e0b';
+  if (c.includes('swim') || c.includes('aqua') || c.includes('water') || c.includes('pool')) return '#06b6d4';
+  if (c.includes('wellness') || c.includes('meditation') || c.includes('mindful')) return '#14b8a6';
+  if (c.includes('sport') || c.includes('ball') || c.includes('bowl') || c.includes('recreation')) return '#f97316';
+  if (c.includes('community') || c.includes('social') || c.includes('workshop')) return '#8b5cf6';
+  return null;
+}
+
 /**
  * Generate array of next N days starting from today (Pacific time).
  */
@@ -347,15 +361,19 @@ const FilterSection = React.memo(function FilterSection({
                 >
                   All
                 </button>
-                {categories.slice(1).map(cat => (
-                  <button
-                    key={cat}
-                    className={`filter-cat-pill ${filters.category === cat ? 'filter-cat-pill-active' : ''}`}
-                    onClick={() => setFilters({...filters, category: filters.category === cat ? 'all' : cat})}
-                  >
-                    {cat}
-                  </button>
-                ))}
+                {categories.slice(1).map(cat => {
+                  const dotColor = getCategoryColor(cat);
+                  return (
+                    <button
+                      key={cat}
+                      className={`filter-cat-pill ${filters.category === cat ? 'filter-cat-pill-active' : ''}`}
+                      onClick={() => setFilters({...filters, category: filters.category === cat ? 'all' : cat})}
+                    >
+                      {dotColor && <span className="cat-dot" style={{ background: dotColor }} />}
+                      {cat}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}
