@@ -1168,7 +1168,7 @@ async function scrapeTourismSquamish() {
         const costInfo = costMatch ? parseCost(costMatch[1].trim()) : { price: 0, isFree: false, priceDescription: 'See venue for pricing' };
 
         // Extract Venue
-        const venueSection = bodyText.match(/Venue\n\s*([^\n]+?)(?:\n\s*([^\n]+?))?(?:\n\s*(\w[\w\s]*,\s*BC))?/);
+        const venueSection = bodyText.match(/Venue\n\s*([^\n]+)(?:\n\s*([^\n]+))?(?:\n\s*(\w[\w\s]*,\s*BC))?/);
         let venueName = venueSection ? venueSection[1].trim() : '';
         let venueAddress = '';
         if (venueSection) {
