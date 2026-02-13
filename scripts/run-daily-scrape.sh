@@ -9,7 +9,8 @@
 # 1. Reliable sources (10 venues with dedicated booking system scrapers)
 # 2. Full orchestrator (ALL businesses with AI-verified extraction)
 # 3. Community events (aggregator sites: Together Nest, Eventbrite, Meetup, etc.)
-# 4. Deals (deal aggregators and business promotions)
+# 4. Venue-specific event scrapers (Trickster's Hideout, Brackendale Art Gallery)
+# 5. Deals (deal aggregators and business promotions)
 #
 # UPDATED Feb 10, 2026: Restored full scraping coverage. Previously only ran
 # scrape-reliable-sources.js (10 venues). Now runs ALL scrapers to cover
@@ -38,15 +39,22 @@ node scripts/scrape-orchestrator.js --verified >> "$LOG_FILE" 2>&1
 echo "$(date): [2/4] Full orchestrator complete" >> "$LOG_FILE"
 
 # STEP 3: Community events (aggregator sites)
-echo "$(date): [3/4] Running community events scraper..." >> "$LOG_FILE"
+echo "$(date): [3/5] Running community events scraper..." >> "$LOG_FILE"
 node scripts/scrape-events.js >> "$LOG_FILE" 2>&1
-echo "$(date): [3/4] Community events complete" >> "$LOG_FILE"
+echo "$(date): [3/5] Community events complete" >> "$LOG_FILE"
 
-# STEP 4: Deals
-echo "$(date): [4/4] Running deals scraper..." >> "$LOG_FILE"
+# STEP 4: Venue-specific event scrapers (Trickster's Hideout, Brackendale Art Gallery)
+# These venues use JS-rendered event pages (WP Tribe Events API, Eventbrite widget)
+# that generic AI extraction can't reach — they need dedicated scrapers.
+echo "$(date): [4/5] Running venue event scrapers (Trickster's, BAG)..." >> "$LOG_FILE"
+node scripts/scrape-tricksters-bag.js >> "$LOG_FILE" 2>&1
+echo "$(date): [4/5] Venue event scrapers complete" >> "$LOG_FILE"
+
+# STEP 5: Deals
+echo "$(date): [5/5] Running deals scraper..." >> "$LOG_FILE"
 node scripts/scrape-deals.js >> "$LOG_FILE" 2>&1
-echo "$(date): [4/4] Deals scraper complete" >> "$LOG_FILE"
+echo "$(date): [5/5] Deals scraper complete" >> "$LOG_FILE"
 
 echo "================================================================" >> "$LOG_FILE"
-echo "$(date): FULL DAILY SCRAPE COMPLETED — ALL 4 SCRAPERS RAN" >> "$LOG_FILE"
+echo "$(date): FULL DAILY SCRAPE COMPLETED — ALL 5 SCRAPERS RAN" >> "$LOG_FILE"
 echo "================================================================" >> "$LOG_FILE"
