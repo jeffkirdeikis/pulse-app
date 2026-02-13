@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowUp, Bookmark, Calendar, Check, X, Plus, CheckCircle, Percent, Sparkles, LayoutList, MapPin, List } from 'lucide-react';
+import { ArrowUp, Bookmark, Calendar, Check, X, Plus, CheckCircle, Moon, Percent, Sparkles, Sun, Sunset, LayoutList, MapPin, List } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import { useUserData } from './hooks/useUserData';
 import { useCardAnimation } from './hooks/useCardAnimation';
@@ -1260,10 +1260,38 @@ export default function PulseApp() {
             <div className="date-divider-line"></div>
           </div>}
           
-          {groupedEvents[dateKey].map((event) => {
-            const currentIndex = globalEventIndex++;
-            return <EventCard key={event.id} event={event} index={currentIndex} ref={(el) => eventCardRefs.current[currentIndex] = el} venues={REAL_DATA.venues} isItemSavedLocal={isItemSavedLocal} toggleSave={toggleSave} getVenueName={getVenueName} onSelect={setSelectedEvent} onBookClick={handleBookClick} onPrefetch={prefetchEvent} addToCalendar={addToCalendar} isInMyCalendar={isInMyCalendar} showToast={showToast} searchQuery={searchQuery} compact={compactMode} />;
-          })}
+          {(() => {
+            const dayEvents = groupedEvents[dateKey];
+            // Add time-of-day sub-headers when 6+ events in a day
+            if (dayEvents.length >= 6) {
+              const periods = [
+                { key: 'morning', label: 'Morning', icon: <Sun size={14} />, test: h => h >= 5 && h < 12 },
+                { key: 'afternoon', label: 'Afternoon', icon: <Sunset size={14} />, test: h => h >= 12 && h < 17 },
+                { key: 'evening', label: 'Evening', icon: <Moon size={14} />, test: h => h >= 17 || h < 5 },
+              ];
+              return periods.map(period => {
+                const periodEvents = dayEvents.filter(e => period.test(e.start.getHours()));
+                if (periodEvents.length === 0) return null;
+                return (
+                  <React.Fragment key={period.key}>
+                    <div className="time-period-header">
+                      {period.icon}
+                      <span>{period.label}</span>
+                      <span className="time-period-count">{periodEvents.length}</span>
+                    </div>
+                    {periodEvents.map((event) => {
+                      const currentIndex = globalEventIndex++;
+                      return <EventCard key={event.id} event={event} index={currentIndex} ref={(el) => eventCardRefs.current[currentIndex] = el} venues={REAL_DATA.venues} isItemSavedLocal={isItemSavedLocal} toggleSave={toggleSave} getVenueName={getVenueName} onSelect={setSelectedEvent} onBookClick={handleBookClick} onPrefetch={prefetchEvent} addToCalendar={addToCalendar} isInMyCalendar={isInMyCalendar} showToast={showToast} searchQuery={searchQuery} compact={compactMode} />;
+                    })}
+                  </React.Fragment>
+                );
+              });
+            }
+            return dayEvents.map((event) => {
+              const currentIndex = globalEventIndex++;
+              return <EventCard key={event.id} event={event} index={currentIndex} ref={(el) => eventCardRefs.current[currentIndex] = el} venues={REAL_DATA.venues} isItemSavedLocal={isItemSavedLocal} toggleSave={toggleSave} getVenueName={getVenueName} onSelect={setSelectedEvent} onBookClick={handleBookClick} onPrefetch={prefetchEvent} addToCalendar={addToCalendar} isInMyCalendar={isInMyCalendar} showToast={showToast} searchQuery={searchQuery} compact={compactMode} />;
+            });
+          })()}
         </div>
       );
     });
