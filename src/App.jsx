@@ -1241,8 +1241,8 @@ export default function PulseApp() {
     const paginatedEvents = events.slice(0, visibleEventCount);
     const hasMore = events.length > visibleEventCount;
 
-    // Venue-grouped view for classes
-    if (groupByVenue && currentSection === 'classes') {
+    // Venue-grouped view for classes and events
+    if (groupByVenue && (currentSection === 'classes' || currentSection === 'events')) {
       const venueGroups = {};
       paginatedEvents.forEach(e => {
         const venue = getVenueName(e.venueId, e);
@@ -1638,7 +1638,7 @@ export default function PulseApp() {
                     {compactMode ? <LayoutList size={16} /> : <List size={16} />}
                   </button>
                 )}
-                {currentSection === 'classes' && (
+                {(currentSection === 'classes' || currentSection === 'events') && (
                   <button
                     className={`group-toggle-btn ${groupByVenue ? 'active' : ''}`}
                     onClick={() => setGroupByVenue(!groupByVenue)}
