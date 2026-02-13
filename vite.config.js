@@ -45,6 +45,8 @@ export default defineConfig({
         ]
       },
       workbox: {
+        // Import push notification handler into service worker
+        importScripts: ['/push-handler.js'],
         // Cache app shell and assets
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
         // Don't precache source maps

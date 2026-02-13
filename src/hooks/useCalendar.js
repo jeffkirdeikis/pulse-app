@@ -12,7 +12,7 @@ import { PACIFIC_TZ } from '../utils/timezoneHelpers';
  * @param {Function} options.getVenueName - (venueId, event) => string
  * @param {Function} options.showToast - Toast display callback
  */
-export function useCalendar({ myCalendar, isAuthenticated, registerForEvent, refreshUserData, getVenueName, showToast }) {
+export function useCalendar({ myCalendar, isAuthenticated, registerForEvent, refreshUserData, getVenueName, showToast, onCalendarAdd }) {
   // Generate Google Calendar URL
   const generateGoogleCalendarUrl = useCallback((event) => {
     const startDate = event.start.toISOString().replace(/-|:|\.\d+/g, '');
@@ -40,6 +40,7 @@ export function useCalendar({ myCalendar, isAuthenticated, registerForEvent, ref
         ...event
       });
       showToast(`"${event.title}" added to My Calendar!`);
+      if (onCalendarAdd) onCalendarAdd();
     } else if (isAlreadyInCalendar) {
       showToast(`"${event.title}" is already in your calendar`);
     } else {

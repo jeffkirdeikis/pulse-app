@@ -10,6 +10,7 @@ import { useBooking } from './hooks/useBooking';
 import { useCalendar } from './hooks/useCalendar';
 import { useAppData } from './hooks/useAppData';
 import { usePrefetch } from './hooks/usePrefetch';
+import { usePushNotifications } from './hooks/usePushNotifications';
 import ServicesGrid from './components/ServicesGrid';
 import DealsGrid from './components/DealsGrid';
 import FilterSection from './components/FilterSection';
@@ -143,6 +144,7 @@ export default function PulseApp() {
 
   // Route prefetching for instant detail navigation
   const { prefetchEvent, prefetchDeal, prefetchService } = usePrefetch();
+  const { subscribeToPush } = usePushNotifications(session?.user?.id);
 
   // Pull-to-refresh handler — force refresh current section's data
   const handlePullRefresh = useCallback(async () => {
@@ -540,6 +542,7 @@ export default function PulseApp() {
     refreshUserData,
     getVenueName,
     showToast,
+    onCalendarAdd: subscribeToPush,
   });
 
   // Booking (hook replaces 7 state variables + 5 functions)
