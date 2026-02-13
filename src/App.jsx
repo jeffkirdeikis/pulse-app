@@ -1857,6 +1857,10 @@ export default function PulseApp() {
           handleVerifyContent={handleVerifyContent}
           handleRemoveContent={handleRemoveContent}
           handleBulkVerifyContent={handleBulkVerifyContent}
+          setEditingEvent={setEditingEvent}
+          setEditEventForm={setEditEventForm}
+          setShowEditEventModal={setShowEditEventModal}
+          setSelectedEvent={setSelectedEvent}
         />
       )}
 

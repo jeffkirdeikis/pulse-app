@@ -1,8 +1,8 @@
 import React, { memo } from 'react';
 import {
   AlertCircle, Building, Calendar, Check, CheckCircle, ChevronLeft,
-  ChevronRight, DollarSign, Edit2, Eye, Heart, MessageCircle, Percent,
-  Plus, Send, Sparkles, Star, Ticket, Trash2, TrendingUp, Users, X, Zap
+  ChevronRight, DollarSign, Download, Edit2, Eye, Heart, MessageCircle, Percent,
+  Plus, Send, Share2, Sparkles, Star, Ticket, Trash2, TrendingUp, Users, X, Zap
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
@@ -232,6 +232,17 @@ const BusinessDashboard = memo(function BusinessDashboard({
 
           {/* Pulse Score Card */}
           <div className="biz-pulse-score-card">
+            <button className="pulse-share-btn" title="Share your Pulse Score" onClick={async () => {
+              const shareText = `${activeBusiness?.name} has a Pulse Score of ${pulseScore}/100 on Pulse Squamish! ${earnedBadgeCount} badges earned. Check them out!`;
+              if (navigator.share) {
+                try { await navigator.share({ title: `${activeBusiness?.name} - Pulse Score`, text: shareText, url: `https://pulse-app.ca/squamish#services` }); } catch {}
+              } else {
+                navigator.clipboard.writeText(shareText);
+                showToast('Copied to clipboard!', 'success');
+              }
+            }}>
+              <Share2 size={16} />
+            </button>
             <div className="pulse-score-left">
               <div className="pulse-score-ring">
                 <svg viewBox="0 0 120 120">
@@ -950,14 +961,50 @@ const BusinessDashboard = memo(function BusinessDashboard({
               <div className="qa-icon">📊</div>
               <h3>Download Report</h3>
               <p>Get detailed analytics for this month</p>
-              <button className="btn-outline" onClick={() => {
-                const data = `Pulse Business Report - ${activeBusiness?.name || 'Business'}\nGenerated: ${new Date().toLocaleDateString()}\n\nPulse Score: ${pulseScore}/100\nProfile Views: ${businessAnalytics?.totals?.profile_views || 0}\nClass Views: ${businessAnalytics?.totals?.class_views || 0}\nEvent Views: ${businessAnalytics?.totals?.event_views || 0}\nTotal Saves: ${businessAnalytics?.totals?.total_saves || 0}\nActive Listings: ${businessListingsAll.length}\nBadges Earned: ${earnedBadgeCount}/${badges.length}`;
-                const blob = new Blob([data], { type: 'text/plain' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a'); a.href = url; a.download = `pulse-report-${new Date().toISOString().slice(0,10)}.txt`; a.click();
-                URL.revokeObjectURL(url);
-                showToast('Report downloaded', 'success');
-              }}>Download Report</button>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button className="btn-outline" style={{ flex: 1 }} onClick={() => {
+                  const data = `Pulse Business Report - ${activeBusiness?.name || 'Business'}\nGenerated: ${new Date().toLocaleDateString()}\n\nPulse Score: ${pulseScore}/100\n  Profile: ${profileScore}%\n  Engagement: ${engagementScore}%\n  Response: ${responseScore > 0 ? responseScore + '%' : 'N/A'}\n  Quality: ${qualityScore}%\n\nAnalytics (${analyticsPeriod === 9999 ? 'All Time' : `Last ${analyticsPeriod} Days`})\n  Profile Views: ${businessAnalytics?.totals?.profile_views || 0}\n  Class Views: ${businessAnalytics?.totals?.class_views || 0}\n  Event Views: ${businessAnalytics?.totals?.event_views || 0}\n  Booking Clicks: ${businessAnalytics?.totals?.booking_clicks || 0}\n  Total Saves: ${businessAnalytics?.totals?.total_saves || 0}\n\nContent\n  Active Listings: ${businessListingsAll.length}\n  Badges Earned: ${earnedBadgeCount}/${badges.length}\n\nTop Performing\n${topItems.map((e, i) => `  ${i+1}. ${e.title} (${e.viewCount || 0} views)`).join('\n')}`;
+                  const blob = new Blob([data], { type: 'text/plain' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a'); a.href = url; a.download = `pulse-report-${new Date().toISOString().slice(0,10)}.txt`; a.click();
+                  URL.revokeObjectURL(url);
+                  showToast('Report downloaded', 'success');
+                }}>
+                  <Download size={14} style={{ marginRight: '4px' }} />
+                  TXT
+                </button>
+                <button className="btn-outline" style={{ flex: 1 }} onClick={() => {
+                  const rows = [
+                    ['Metric', 'Value'],
+                    ['Business', activeBusiness?.name || ''],
+                    ['Date', new Date().toLocaleDateString()],
+                    ['Pulse Score', pulseScore],
+                    ['Profile Score', profileScore + '%'],
+                    ['Engagement Score', engagementScore + '%'],
+                    ['Response Score', responseScore > 0 ? responseScore + '%' : 'N/A'],
+                    ['Quality Score', qualityScore + '%'],
+                    ['Profile Views', businessAnalytics?.totals?.profile_views || 0],
+                    ['Class Views', businessAnalytics?.totals?.class_views || 0],
+                    ['Event Views', businessAnalytics?.totals?.event_views || 0],
+                    ['Booking Clicks', businessAnalytics?.totals?.booking_clicks || 0],
+                    ['Total Saves', businessAnalytics?.totals?.total_saves || 0],
+                    ['Active Listings', businessListingsAll.length],
+                    ['Badges Earned', `${earnedBadgeCount}/${badges.length}`],
+                    [],
+                    ['Top Performing', 'Views'],
+                    ...topItems.map(e => [e.title, e.viewCount || 0]),
+                  ];
+                  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+                  const blob = new Blob([csv], { type: 'text/csv' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a'); a.href = url; a.download = `pulse-analytics-${new Date().toISOString().slice(0,10)}.csv`; a.click();
+                  URL.revokeObjectURL(url);
+                  showToast('CSV exported', 'success');
+                }}>
+                  <Download size={14} style={{ marginRight: '4px' }} />
+                  CSV
+                </button>
+              </div>
             </div>
             <div className="quick-action-card">
               <div className="qa-icon">✉️</div>

@@ -7,7 +7,7 @@ import { supabase } from '../lib/supabase';
 import { getPacificDateStr } from '../utils/timezoneHelpers';
 
 // Content Review sub-component for verifying events, classes & deals
-function ContentReviewSection({ unverifiedContent, handleVerifyContent, handleRemoveContent, handleBulkVerifyContent }) {
+function ContentReviewSection({ unverifiedContent, handleVerifyContent, handleRemoveContent, handleBulkVerifyContent, onEditEvent, onPreviewEvent }) {
   const [reviewTab, setReviewTab] = useState('events');
   const events = unverifiedContent?.events || [];
   const deals = unverifiedContent?.deals || [];
@@ -104,6 +104,30 @@ function ContentReviewSection({ unverifiedContent, handleVerifyContent, handleRe
                 )}
               </div>
               <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+                {activeType === 'event' && onPreviewEvent && (
+                  <button
+                    onClick={() => onPreviewEvent(item)}
+                    title="Preview"
+                    style={{
+                      width: '36px', height: '36px', borderRadius: '8px', border: '1px solid #e5e7eb', cursor: 'pointer',
+                      background: '#fff', color: '#6b7280', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}
+                  >
+                    <Eye size={16} />
+                  </button>
+                )}
+                {activeType === 'event' && onEditEvent && (
+                  <button
+                    onClick={() => onEditEvent(item)}
+                    title="Edit"
+                    style={{
+                      width: '36px', height: '36px', borderRadius: '8px', border: '1px solid #e5e7eb', cursor: 'pointer',
+                      background: '#fff', color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}
+                  >
+                    <Edit2 size={16} />
+                  </button>
+                )}
                 <button
                   onClick={() => handleVerifyContent(activeType, item.id)}
                   title="Verify"
@@ -165,6 +189,10 @@ const AdminDashboard = memo(function AdminDashboard({
   handleVerifyContent,
   handleRemoveContent,
   handleBulkVerifyContent,
+  setEditingEvent,
+  setEditEventForm,
+  setShowEditEventModal,
+  setSelectedEvent,
 }) {
   const venueCardRefs = useRef({});
   return (
@@ -373,6 +401,26 @@ const AdminDashboard = memo(function AdminDashboard({
         handleVerifyContent={handleVerifyContent}
         handleRemoveContent={handleRemoveContent}
         handleBulkVerifyContent={handleBulkVerifyContent}
+        onEditEvent={setEditingEvent && setEditEventForm && setShowEditEventModal ? (item) => {
+          setEditingEvent(item);
+          setEditEventForm({
+            title: item.title || '',
+            description: item.description || '',
+            start_date: item.start_date || '',
+            start_time: item.start_time ? String(item.start_time).slice(0, 5) : '',
+            end_time: item.end_time ? String(item.end_time).slice(0, 5) : '',
+            venue_name: item.venue_name || '',
+            category: item.category || '',
+            price: item.price || '',
+            age_group: item.age_group || '',
+          });
+          setShowEditEventModal(true);
+        } : undefined}
+        onPreviewEvent={setSelectedEvent ? (item) => {
+          // Convert DB item to the format expected by event detail modal
+          const evt = dbEvents.find(e => e.id === item.id);
+          if (evt) setSelectedEvent(evt);
+        } : undefined}
       />
 
       {/* Scraping System Status */}
