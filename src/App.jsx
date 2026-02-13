@@ -2102,7 +2102,29 @@ export default function PulseApp() {
 
       {view === 'consumer' && (
         <footer className="app-footer" role="contentinfo">
-          <p>&copy; {new Date().getFullYear()} Pulse Squamish</p>
+          <div className="footer-content">
+            <div className="footer-brand">
+              <div className="footer-logo">PULSE</div>
+              <p className="footer-tagline">Discover what's happening in Squamish</p>
+            </div>
+            <div className="footer-links">
+              <div className="footer-link-group">
+                <h4>Explore</h4>
+                <button onClick={() => { setCurrentSection('classes'); window.scrollTo(0, 0); }}>Classes</button>
+                <button onClick={() => { setCurrentSection('events'); window.scrollTo(0, 0); }}>Events</button>
+                <button onClick={() => { setCurrentSection('deals'); window.scrollTo(0, 0); }}>Deals</button>
+                <button onClick={() => { setCurrentSection('services'); window.scrollTo(0, 0); }}>Services</button>
+              </div>
+              <div className="footer-link-group">
+                <h4>For Business</h4>
+                <button onClick={() => setShowClaimBusinessModal(true)}>Claim Your Business</button>
+                <button onClick={() => setShowAddEventModal(true)}>Submit an Event</button>
+              </div>
+            </div>
+          </div>
+          <div className="footer-bottom">
+            <p>&copy; {new Date().getFullYear()} Pulse Squamish. Made with care in Squamish, BC.</p>
+          </div>
         </footer>
       )}
 
