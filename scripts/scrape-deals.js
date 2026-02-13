@@ -5,6 +5,8 @@
  *
  * Sources:
  *   1. ExploreSquamish Dining Deals (accordion HTML — restaurant deals + happy hours)
+ *   2. Chances Squamish (casino promos + Match Eatery deals — card grid + detail pages)
+ *   3. Sea to Sky Gondola (Family Fun Night + promotions — homepage HTML)
  *
  * Lessons applied (from venue event scraper, Feb 12 2026):
  *   - Parse structured HTML directly instead of Firecrawl AI extraction
@@ -23,6 +25,11 @@ import { SUPABASE_URL, SUPABASE_SERVICE_KEY } from './lib/env.js';
 const SUPABASE_KEY = SUPABASE_SERVICE_KEY();
 
 const DINING_DEALS_URL = 'https://www.exploresquamish.com/travel-deals-packages/squamish-dining-deals/';
+const CHANCES_PROMOS_URL = 'https://squamishchances.com/promotions/';
+const CHANCES_HAPPY_HOUR_URL = 'https://squamishchances.com/happy-hour-at-match-eatery-public-house/';
+const CHANCES_LOCALS_URL = 'https://squamishchances.com/locals-get-20-off/';
+const CHANCES_KIDS_URL = 'https://squamishchances.com/kids-eat-free/';
+const GONDOLA_URL = 'https://www.seatoskygondola.com/';
 
 // ── HTML helpers ──────────────────────────────────────────────
 
@@ -311,6 +318,259 @@ async function scrapeDiningDeals() {
   return deals;
 }
 
+// ── Chances Squamish parser ───────────────────────────────────
+
+async function scrapeChancesSquamish() {
+  console.log('\n--- Chances Squamish Promotions ---');
+  const deals = [];
+
+  // ── 1. Parse promotions listing page (card grid) ──
+  console.log(`Fetching: ${CHANCES_PROMOS_URL}`);
+  try {
+    const res = await fetch(CHANCES_PROMOS_URL);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const html = await res.text();
+
+    // Cards have: <h3 class="post-heading"><a href="URL"><span>TITLE</span></a></h3>
+    // followed by: <span class="meta-excerpt">DESCRIPTION</span>
+    const cardRegex = /<h3\s+class="post-heading">\s*<a\s+href="([^"]+)">\s*<span>([^<]+)<\/span>\s*<\/a>\s*<\/h3>\s*<div[^>]*>\s*<span\s+class="meta-excerpt">([^<]+)<\/span>/gi;
+    const cards = [...html.matchAll(cardRegex)];
+
+    console.log(`  Found ${cards.length} promotion cards`);
+
+    // Only take first half — page repeats promos in sidebar
+    const uniqueCards = cards.slice(0, Math.ceil(cards.length / 2));
+
+    for (const card of uniqueCards) {
+      const title = decodeHtmlEntities(card[2].trim());
+      const excerpt = decodeHtmlEntities(card[3].trim().replace(/&hellip;/g, '...'));
+
+      // Skip generic/non-deal items
+      if (/fundraiser|bingo$/i.test(title)) continue;
+
+      // Parse dates from excerpt (e.g., "February 9 - March 22")
+      let validUntil = null;
+      const dateRangeMatch = excerpt.match(/(\w+\s+\d{1,2})\s*[-–]\s*(\w+\s+\d{1,2})/);
+      if (dateRangeMatch) {
+        const endDateStr = dateRangeMatch[2] + ', 2026';
+        const parsed = new Date(endDateStr);
+        if (!isNaN(parsed.getTime())) {
+          validUntil = parsed.toISOString().split('T')[0];
+        }
+      }
+
+      const discount = parseDiscountFromText(title + ' ' + excerpt);
+
+      deals.push({
+        business_name: 'Chances Squamish',
+        title: title.length > 70 ? title.substring(0, 67) + '...' : title,
+        description: excerpt,
+        discount_type: discount.type,
+        discount_value: discount.value,
+        schedule: null,
+        days_of_week: parseDaysFromText(excerpt) || null,
+        valid_until: validUntil,
+        category: 'Entertainment',
+        status: 'active',
+        featured: false
+      });
+
+      console.log(`  [promo] ${title.substring(0, 50)}`);
+    }
+  } catch (err) {
+    console.error(`  Error fetching promotions: ${err.message}`);
+  }
+
+  // ── 2. Match Eatery Happy Hour (detail page) ──
+  console.log(`Fetching: ${CHANCES_HAPPY_HOUR_URL}`);
+  try {
+    const res = await fetch(CHANCES_HAPPY_HOUR_URL);
+    if (res.ok) {
+      const html = await res.text();
+      const bodyText = decodeHtmlEntities(
+        html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+            .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+            .replace(/<[^>]+>/g, '\n')
+      );
+
+      // Look for the deal details
+      const hhIdx = bodyText.indexOf('happy to an hour');
+      if (hhIdx > 0) {
+        const snippet = bodyText.substring(hhIdx, hhIdx + 300).trim();
+        const lines = snippet.split('\n').map(l => l.trim()).filter(Boolean);
+        const description = lines.join('\n');
+
+        deals.push({
+          business_name: 'Match Eatery & Public House',
+          title: '$6.50 food, 1/2 price wine, $2 off craft beer',
+          description: 'Happy Hour at Match Eatery: ' + description,
+          discount_type: 'percent',
+          discount_value: 50,
+          schedule: 'Daily 3PM-5:30PM and 9PM-Close',
+          days_of_week: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
+          valid_until: null,
+          category: 'Restaurants & Dining',
+          status: 'active',
+          featured: false
+        });
+
+        console.log(`  [happy hour] Match Eatery: $6.50 food, 1/2 price wine`);
+      }
+    }
+  } catch (err) {
+    console.error(`  Error fetching Match happy hour: ${err.message}`);
+  }
+
+  // ── 3. Match Eatery Kids Eat Free ──
+  console.log(`Fetching: ${CHANCES_KIDS_URL}`);
+  try {
+    const res = await fetch(CHANCES_KIDS_URL);
+    if (res.ok) {
+      const html = await res.text();
+      const bodyText = decodeHtmlEntities(
+        html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+            .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+            .replace(/<[^>]+>/g, '\n')
+      );
+
+      if (/kids\s*eat\s*free/i.test(bodyText)) {
+        // Extract relevant paragraph
+        const kefIdx = bodyText.toLowerCase().indexOf('kids eat free');
+        const snippet = bodyText.substring(kefIdx, kefIdx + 500);
+        const lines = snippet.split('\n').map(l => l.trim()).filter(l => l.length > 5);
+        const description = lines.slice(0, 5).join('\n');
+
+        deals.push({
+          business_name: 'Match Eatery & Public House',
+          title: 'Kids Eat Free Tuesdays (3PM-9PM)',
+          description,
+          discount_type: 'free_item',
+          discount_value: null,
+          schedule: 'Tuesdays 3PM-9PM',
+          days_of_week: ['tuesday'],
+          valid_until: null,
+          category: 'Restaurants & Dining',
+          status: 'active',
+          featured: false
+        });
+
+        console.log(`  [deal] Match Eatery: Kids Eat Free Tuesdays`);
+      }
+    }
+  } catch (err) {
+    console.error(`  Error fetching Kids Eat Free: ${err.message}`);
+  }
+
+  // ── 4. Locals Get 20% Off ──
+  console.log(`Fetching: ${CHANCES_LOCALS_URL}`);
+  try {
+    const res = await fetch(CHANCES_LOCALS_URL);
+    if (res.ok) {
+      const html = await res.text();
+      const bodyText = decodeHtmlEntities(
+        html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+            .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+            .replace(/<[^>]+>/g, '\n')
+      );
+
+      if (/20%/i.test(bodyText)) {
+        const locIdx = bodyText.indexOf('20%');
+        const snippet = bodyText.substring(Math.max(0, locIdx - 100), locIdx + 400);
+        const lines = snippet.split('\n').map(l => l.trim()).filter(l => l.length > 5);
+        const description = lines.slice(0, 5).join('\n');
+
+        deals.push({
+          business_name: 'Match Eatery & Public House',
+          title: 'Locals Get 20% Off (Mon & Tue)',
+          description,
+          discount_type: 'percent',
+          discount_value: 20,
+          schedule: 'Mondays & Tuesdays',
+          days_of_week: ['monday', 'tuesday'],
+          valid_until: null,
+          category: 'Restaurants & Dining',
+          status: 'active',
+          featured: false
+        });
+
+        console.log(`  [deal] Match Eatery: Locals Get 20% Off`);
+      }
+    }
+  } catch (err) {
+    console.error(`  Error fetching Locals deal: ${err.message}`);
+  }
+
+  return deals;
+}
+
+// ── Sea to Sky Gondola parser ─────────────────────────────────
+
+async function scrapeGondola() {
+  console.log('\n--- Sea to Sky Gondola ---');
+  console.log(`Fetching: ${GONDOLA_URL}`);
+  const deals = [];
+
+  try {
+    const res = await fetch(GONDOLA_URL);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const html = await res.text();
+
+    // Look for Family Fun Night deal
+    const ffnMatch = html.match(/<h2[^>]*>([^<]*Family Fun Night[^<]*)<\/h2>\s*<div[^>]*>([\s\S]*?)<\/div>/i);
+    if (ffnMatch) {
+      const title = decodeHtmlEntities(stripTags(ffnMatch[1]).trim());
+      const desc = decodeHtmlEntities(stripTags(ffnMatch[2]).trim());
+
+      deals.push({
+        business_name: 'Sea to Sky Gondola',
+        title,
+        description: desc,
+        discount_type: 'percent',
+        discount_value: 30,
+        schedule: 'Every Saturday evening, extended hours until 8PM',
+        days_of_week: ['saturday'],
+        valid_until: null,
+        category: 'Outdoor Adventures',
+        status: 'active',
+        featured: true
+      });
+
+      console.log(`  [deal] ${title}`);
+    }
+
+    // Check for other promo sections with "Save" or "% off"
+    const promoMatches = [...html.matchAll(/<h2[^>]*>([^<]*(?:\d+%|save|discount)[^<]*)<\/h2>/gi)];
+    for (const m of promoMatches) {
+      const promoTitle = decodeHtmlEntities(stripTags(m[1]).trim());
+      if (promoTitle.includes('Family Fun Night')) continue; // Already parsed
+
+      deals.push({
+        business_name: 'Sea to Sky Gondola',
+        title: promoTitle,
+        description: promoTitle,
+        discount_type: parseDiscountFromText(promoTitle).type,
+        discount_value: parseDiscountFromText(promoTitle).value,
+        schedule: null,
+        days_of_week: null,
+        valid_until: null,
+        category: 'Outdoor Adventures',
+        status: 'active',
+        featured: false
+      });
+
+      console.log(`  [deal] ${promoTitle}`);
+    }
+  } catch (err) {
+    console.error(`  Error fetching Gondola: ${err.message}`);
+  }
+
+  if (deals.length === 0) {
+    console.log('  No deals found on homepage');
+  }
+
+  return deals;
+}
+
 // ── Data quality validation ───────────────────────────────────
 
 function validateDeals(deals) {
@@ -344,8 +604,14 @@ async function main() {
   let skipped = 0;
   let failed = 0;
 
-  // Scrape all sources
-  const deals = await scrapeDiningDeals();
+  // Scrape all sources in parallel
+  const [diningDeals, chancesDeals, gondolaDeals] = await Promise.all([
+    scrapeDiningDeals(),
+    scrapeChancesSquamish(),
+    scrapeGondola()
+  ]);
+
+  const deals = [...diningDeals, ...chancesDeals, ...gondolaDeals];
 
   console.log(`\n--- Total deals found: ${deals.length} ---`);
 
