@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useEffect } from 'react';
-import { SlidersHorizontal, ChevronRight, Sparkles, Sun, Sunset, Moon, Baby, DollarSign, CalendarDays, Zap } from 'lucide-react';
+import { SlidersHorizontal, ChevronRight, Sparkles, Sun, Sunset, Moon, Baby, DollarSign, CalendarDays, CalendarRange, Zap } from 'lucide-react';
 
 /**
  * Generate array of next N days starting from today (Pacific time).
@@ -128,6 +128,7 @@ const FilterSection = React.memo(function FilterSection({
         {[
           { key: 'now', label: 'Now', icon: <Zap size={14} />, apply: { day: 'happeningNow' }, match: (f) => f.day === 'happeningNow' },
           { key: 'free', label: 'Free', icon: <DollarSign size={14} />, apply: { price: 'free' }, match: (f) => f.price === 'free' },
+          { key: 'thisweek', label: 'This Week', icon: <CalendarRange size={14} />, apply: { day: 'thisWeek' }, match: (f) => f.day === 'thisWeek' },
           { key: 'weekend', label: 'Weekend', icon: <CalendarDays size={14} />, apply: { day: 'thisWeekend' }, match: (f) => f.day === 'thisWeekend' },
           { key: 'morning', label: 'Morning', icon: <Sun size={14} />, apply: { time: 'morning' }, match: (f) => f.time === 'morning' },
           { key: 'afternoon', label: 'Afternoon', icon: <Sunset size={14} />, apply: { time: 'afternoon' }, match: (f) => f.time === 'afternoon' },

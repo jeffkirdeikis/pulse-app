@@ -68,6 +68,13 @@ export function filterEvents(allEvents, { currentSection, filters, searchQuery, 
     const monday = new Date(friday);
     monday.setDate(friday.getDate() + 3);
     filtered = filtered.filter(e => e.start >= friday && e.start < monday);
+  } else if (filters.day === 'thisWeek') {
+    // Current week: from now until end of Sunday
+    const dayOfWeek = now.getDay(); // 0=Sun
+    const sunday = new Date(now);
+    sunday.setDate(now.getDate() + (7 - dayOfWeek));
+    sunday.setHours(23, 59, 59, 999);
+    filtered = filtered.filter(e => e.start >= now && e.start <= sunday);
   } else if (filters.day === 'nextWeek') {
     const nextMonday = new Date(now);
     const daysUntilNextMonday = (8 - now.getDay()) % 7 || 7;
