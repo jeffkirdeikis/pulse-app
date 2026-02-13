@@ -6,6 +6,133 @@ import {
 import { supabase } from '../lib/supabase';
 import { getPacificDateStr } from '../utils/timezoneHelpers';
 
+// Content Review sub-component for verifying events, classes & deals
+function ContentReviewSection({ unverifiedContent, handleVerifyContent, handleRemoveContent, handleBulkVerifyContent }) {
+  const [reviewTab, setReviewTab] = useState('events');
+  const events = unverifiedContent?.events || [];
+  const deals = unverifiedContent?.deals || [];
+  const classes = events.filter(e => e.event_type === 'class');
+  const nonClassEvents = events.filter(e => e.event_type !== 'class');
+  const totalUnverified = events.length + deals.length;
+
+  if (totalUnverified === 0) return null;
+
+  const tabs = [
+    { key: 'classes', label: 'Classes', count: classes.length },
+    { key: 'events', label: 'Events', count: nonClassEvents.length },
+    { key: 'deals', label: 'Deals', count: deals.length },
+  ];
+  const activeItems = reviewTab === 'classes' ? classes : reviewTab === 'events' ? nonClassEvents : deals;
+  const activeType = reviewTab === 'deals' ? 'deal' : 'event';
+
+  return (
+    <div className="premium-section">
+      <div className="section-header-premium">
+        <div>
+          <h2>Content Review</h2>
+          <p className="section-subtitle">{totalUnverified} item{totalUnverified !== 1 ? 's' : ''} awaiting verification</p>
+        </div>
+        {activeItems.length > 0 && (
+          <div className="section-actions">
+            <button
+              className="btn-primary-gradient"
+              onClick={() => handleBulkVerifyContent(activeType, activeItems.map(i => i.id))}
+              style={{ fontSize: '13px', padding: '8px 16px' }}
+            >
+              <CheckCircle size={16} /> Verify All {tabs.find(t => t.key === reviewTab)?.label} ({activeItems.length})
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: '4px', marginBottom: '16px', background: '#f3f4f6', borderRadius: '10px', padding: '4px' }}>
+        {tabs.map(tab => (
+          <button
+            key={tab.key}
+            onClick={() => setReviewTab(tab.key)}
+            style={{
+              flex: 1, padding: '8px 12px', borderRadius: '8px', border: 'none', cursor: 'pointer',
+              fontWeight: 600, fontSize: '13px', transition: 'all 0.15s',
+              background: reviewTab === tab.key ? '#fff' : 'transparent',
+              color: reviewTab === tab.key ? '#111827' : '#6b7280',
+              boxShadow: reviewTab === tab.key ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+            }}
+          >
+            {tab.label} <span style={{
+              background: reviewTab === tab.key ? '#3b82f6' : '#d1d5db',
+              color: reviewTab === tab.key ? '#fff' : '#6b7280',
+              padding: '1px 7px', borderRadius: '10px', fontSize: '11px', marginLeft: '4px'
+            }}>{tab.count}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Items list */}
+      {activeItems.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '32px', color: '#9ca3af', fontSize: '14px' }}>
+          <CheckCircle size={32} style={{ margin: '0 auto 8px', display: 'block', opacity: 0.4 }} />
+          All {tabs.find(t => t.key === reviewTab)?.label.toLowerCase()} verified
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '500px', overflowY: 'auto' }}>
+          {activeItems.map(item => (
+            <div key={item.id} style={{
+              background: '#fff', borderRadius: '10px', border: '1px solid #e5e7eb',
+              padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px',
+            }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 600, fontSize: '14px', color: '#111827', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {item.title}
+                </div>
+                <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <span>{item.venue_name || item.business_name}</span>
+                  {item.start_date && <span>· {item.start_date}</span>}
+                  {item.start_time && <span>{String(item.start_time).slice(0, 5)}</span>}
+                  {item.schedule && <span>· {item.schedule}</span>}
+                </div>
+                {item.tags && item.tags.length > 0 && (
+                  <div style={{ display: 'flex', gap: '4px', marginTop: '4px', flexWrap: 'wrap' }}>
+                    {item.tags.slice(0, 3).map(tag => (
+                      <span key={tag} style={{
+                        fontSize: '10px', padding: '1px 6px', borderRadius: '4px',
+                        background: tag === 'auto-scraped' ? '#fef3c7' : tag.includes('verified') ? '#d1fae5' : '#f3f4f6',
+                        color: tag === 'auto-scraped' ? '#92400e' : tag.includes('verified') ? '#065f46' : '#6b7280',
+                      }}>{tag}</span>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+                <button
+                  onClick={() => handleVerifyContent(activeType, item.id)}
+                  title="Verify"
+                  style={{
+                    width: '36px', height: '36px', borderRadius: '8px', border: 'none', cursor: 'pointer',
+                    background: '#d1fae5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}
+                >
+                  <Check size={18} strokeWidth={2.5} />
+                </button>
+                <button
+                  onClick={() => handleRemoveContent(activeType, item.id, item.title)}
+                  title="Remove"
+                  style={{
+                    width: '36px', height: '36px', borderRadius: '8px', border: '1px solid #fecaca', cursor: 'pointer',
+                    background: '#fff', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 const AdminDashboard = memo(function AdminDashboard({
   user,
   services,
@@ -34,6 +161,10 @@ const AdminDashboard = memo(function AdminDashboard({
   setView,
   pendingClaims,
   handleClaimAction,
+  unverifiedContent,
+  handleVerifyContent,
+  handleRemoveContent,
+  handleBulkVerifyContent,
 }) {
   const venueCardRefs = useRef({});
   return (
@@ -235,6 +366,14 @@ const AdminDashboard = memo(function AdminDashboard({
         </div>
       </div>
       )}
+
+      {/* Content Review — Events, Classes & Deals */}
+      <ContentReviewSection
+        unverifiedContent={unverifiedContent}
+        handleVerifyContent={handleVerifyContent}
+        handleRemoveContent={handleRemoveContent}
+        handleBulkVerifyContent={handleBulkVerifyContent}
+      />
 
       {/* Scraping System Status */}
       <div className="premium-section">

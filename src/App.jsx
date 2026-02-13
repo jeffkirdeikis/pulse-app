@@ -115,6 +115,7 @@ export default function PulseApp() {
   const [adminClaimedCount, setAdminClaimedCount] = useState(0);
   const [adminVerifiedCount, setAdminVerifiedCount] = useState(0);
   const [pendingClaims, setPendingClaims] = useState([]);
+  const [unverifiedContent, setUnverifiedContent] = useState({ events: [], deals: [] });
   const activeBusiness = impersonatedBusiness || (selectedClaimedBusinessId ? userClaimedBusinesses.find(b => b.id === selectedClaimedBusinessId) : null) || (userClaimedBusinesses.length > 0 ? userClaimedBusinesses[0] : null);
   const isImpersonating = !!impersonatedBusiness;
 
@@ -164,10 +165,11 @@ export default function PulseApp() {
     }
   }, [currentSection, fetchServices, setDealsRefreshKey, setEventsRefreshKey]);
 
-  // Fetch admin stats (claimed/verified business counts) when admin panel is shown
+  // Fetch admin stats, pending claims, and unverified content
   const fetchAdminClaims = useCallback(async () => {
     if (!user?.isAdmin) return;
     try {
+      // Fetch claims
       const { data: claimsData, error: claimsError } = await supabase
         .from('business_claims')
         .select('*')
@@ -179,6 +181,23 @@ export default function PulseApp() {
         setAdminVerifiedCount(uniqueVerified.size);
         setPendingClaims(claimsData.filter(c => c.status === 'pending' || c.status === 'pending_verification'));
       }
+      // Fetch unverified events (most recent 50)
+      const { data: unvEvents } = await supabase
+        .from('events')
+        .select('id, title, venue_name, event_type, start_date, start_time, tags, status, confidence_score, created_at')
+        .is('verified_at', null)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(50);
+      // Fetch unverified deals
+      const { data: unvDeals } = await supabase
+        .from('deals')
+        .select('id, title, business_name, category, schedule, status, created_at, verified_at')
+        .is('verified_at', null)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(50);
+      setUnverifiedContent({ events: unvEvents || [], deals: unvDeals || [] });
     } catch (err) {
       console.error('Error fetching admin stats:', err);
     }
@@ -801,6 +820,56 @@ export default function PulseApp() {
       showToast('Failed to update claim', 'error');
     }
   }, [pendingClaims, session?.user?.id, showToast, fetchAdminClaims]);
+
+  // Admin: verify or remove events/deals
+  const handleVerifyContent = useCallback(async (type, id) => {
+    try {
+      const table = type === 'deal' ? 'deals' : 'events';
+      const { error } = await supabase
+        .from(table)
+        .update({ verified_at: new Date().toISOString() })
+        .eq('id', id);
+      if (error) throw error;
+      showToast(`${type === 'deal' ? 'Deal' : 'Event'} verified`, 'success');
+      fetchAdminClaims();
+    } catch (err) {
+      console.error('Verify error:', err);
+      showToast('Failed to verify', 'error');
+    }
+  }, [showToast, fetchAdminClaims]);
+
+  const handleRemoveContent = useCallback(async (type, id, title) => {
+    if (!confirm(`Remove "${title}"? This will deactivate it from the app.`)) return;
+    try {
+      const table = type === 'deal' ? 'deals' : 'events';
+      const { error } = await supabase
+        .from(table)
+        .update({ status: 'inactive' })
+        .eq('id', id);
+      if (error) throw error;
+      showToast(`"${title}" removed`, 'info');
+      fetchAdminClaims();
+    } catch (err) {
+      console.error('Remove error:', err);
+      showToast('Failed to remove', 'error');
+    }
+  }, [showToast, fetchAdminClaims]);
+
+  const handleBulkVerifyContent = useCallback(async (type, ids) => {
+    try {
+      const table = type === 'deal' ? 'deals' : 'events';
+      const { error } = await supabase
+        .from(table)
+        .update({ verified_at: new Date().toISOString() })
+        .in('id', ids);
+      if (error) throw error;
+      showToast(`${ids.length} ${type === 'deal' ? 'deals' : 'events'} verified`, 'success');
+      fetchAdminClaims();
+    } catch (err) {
+      console.error('Bulk verify error:', err);
+      showToast('Failed to verify', 'error');
+    }
+  }, [showToast, fetchAdminClaims]);
 
   // Memoized filter — only recomputes when inputs change (Bug #20: called twice per render)
   const filteredEvents = useMemo(() => {
@@ -1644,6 +1713,10 @@ export default function PulseApp() {
           setView={setView}
           pendingClaims={pendingClaims}
           handleClaimAction={handleClaimAction}
+          unverifiedContent={unverifiedContent}
+          handleVerifyContent={handleVerifyContent}
+          handleRemoveContent={handleRemoveContent}
+          handleBulkVerifyContent={handleBulkVerifyContent}
         />
       )}
 
