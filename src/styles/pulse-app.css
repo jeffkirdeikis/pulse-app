@@ -2562,6 +2562,23 @@
           flex: 1;
           min-width: 0;
         }
+        .venue-avatar {
+          width: 28px;
+          height: 28px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: #fff;
+          font-size: 13px;
+          font-weight: 700;
+          flex-shrink: 0;
+        }
+        .venue-chevron {
+          color: #9ca3af;
+          flex-shrink: 0;
+          margin-left: auto;
+        }
 
         .detail-icon {
           width: 32px;

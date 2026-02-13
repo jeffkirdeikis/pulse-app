@@ -136,10 +136,11 @@ const EventCard = React.forwardRef(({ event, venues, isItemSavedLocal, toggleSav
 
         <div className="event-detail-row">
           <div className="event-detail-item venue-item">
-            <div className="detail-icon">
-              <MapPin size={16} />
+            <div className="venue-avatar" style={{ background: categoryColor || '#6b7280' }}>
+              {getVenueName(event.venueId, event).charAt(0).toUpperCase()}
             </div>
             <span className="detail-text">{getVenueName(event.venueId, event)}</span>
+            <ChevronRight size={14} className="venue-chevron" />
           </div>
         </div>
 
