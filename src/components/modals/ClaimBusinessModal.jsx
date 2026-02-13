@@ -1,5 +1,9 @@
-import React, { memo } from 'react';
-import { AlertCircle, Building, CheckCircle, Mail, RefreshCw, X } from 'lucide-react';
+import React, { memo, useRef } from 'react';
+import { AlertCircle, Building, CheckCircle, FileText, Mail, RefreshCw, Upload, X } from 'lucide-react';
+
+const MAX_FILES = 3;
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const ACCEPTED_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
 
 const ClaimBusinessModal = memo(function ClaimBusinessModal({
   claimSearchQuery,
@@ -13,6 +17,10 @@ const ClaimBusinessModal = memo(function ClaimBusinessModal({
   claimVerificationCode,
   setClaimVerificationCode,
   claimVerifying,
+  claimVerificationMethod,
+  setClaimVerificationMethod,
+  claimDocuments,
+  setClaimDocuments,
   handleVerifyClaimCode,
   handleResendClaimCode,
   session,
@@ -21,9 +29,32 @@ const ClaimBusinessModal = memo(function ClaimBusinessModal({
   setShowAuthModal,
   handleClaimBusiness,
 }) {
+  const fileInputRef = useRef(null);
+
   const maskedEmail = claimFormData.email
     ? claimFormData.email.replace(/^(.)(.*)(@.*)$/, (_, first, middle, domain) => first + '*'.repeat(Math.min(middle.length, 5)) + domain)
     : '';
+
+  const handleFileSelect = (e) => {
+    const files = Array.from(e.target.files || []);
+    const valid = files.filter(f => {
+      if (!ACCEPTED_TYPES.includes(f.type)) return false;
+      if (f.size > MAX_FILE_SIZE) return false;
+      return true;
+    });
+    setClaimDocuments(prev => [...prev, ...valid].slice(0, MAX_FILES));
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const removeDocument = (index) => {
+    setClaimDocuments(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const formatFileSize = (bytes) => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  };
 
   return (
     <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Claim business" onClick={onClose}>
@@ -172,6 +203,100 @@ const ClaimBusinessModal = memo(function ClaimBusinessModal({
                 </div>
               </div>
 
+              {/* Verification Method Selector */}
+              <div style={{ margin: '16px 0', padding: '14px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                <label style={{ display: 'block', fontWeight: 600, marginBottom: '10px', color: '#374151', fontSize: '14px' }}>How would you like to verify ownership?</label>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setClaimVerificationMethod('email')}
+                    style={{
+                      flex: 1, padding: '12px', borderRadius: '8px', cursor: 'pointer',
+                      border: claimVerificationMethod === 'email' ? '2px solid #4f46e5' : '1px solid #d1d5db',
+                      background: claimVerificationMethod === 'email' ? '#eef2ff' : '#fff',
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px',
+                    }}
+                  >
+                    <Mail size={20} style={{ color: claimVerificationMethod === 'email' ? '#4f46e5' : '#6b7280' }} />
+                    <span style={{ fontSize: '13px', fontWeight: 600, color: claimVerificationMethod === 'email' ? '#4f46e5' : '#374151' }}>Email Code</span>
+                    <span style={{ fontSize: '11px', color: '#6b7280' }}>Instant verification</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setClaimVerificationMethod('document')}
+                    style={{
+                      flex: 1, padding: '12px', borderRadius: '8px', cursor: 'pointer',
+                      border: claimVerificationMethod === 'document' ? '2px solid #4f46e5' : '1px solid #d1d5db',
+                      background: claimVerificationMethod === 'document' ? '#eef2ff' : '#fff',
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px',
+                    }}
+                  >
+                    <FileText size={20} style={{ color: claimVerificationMethod === 'document' ? '#4f46e5' : '#6b7280' }} />
+                    <span style={{ fontSize: '13px', fontWeight: 600, color: claimVerificationMethod === 'document' ? '#4f46e5' : '#374151' }}>Upload Documents</span>
+                    <span style={{ fontSize: '11px', color: '#6b7280' }}>Business license, etc.</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Document Upload Area */}
+              {claimVerificationMethod === 'document' && (
+                <div style={{ margin: '0 0 16px 0' }}>
+                  <div
+                    onClick={() => claimDocuments.length < MAX_FILES && fileInputRef.current?.click()}
+                    style={{
+                      border: '2px dashed #d1d5db', borderRadius: '10px', padding: '24px',
+                      textAlign: 'center', cursor: claimDocuments.length < MAX_FILES ? 'pointer' : 'default',
+                      background: '#fafafa', transition: 'border-color 0.2s',
+                    }}
+                    onMouseEnter={(e) => { if (claimDocuments.length < MAX_FILES) e.currentTarget.style.borderColor = '#4f46e5'; }}
+                    onMouseLeave={(e) => e.currentTarget.style.borderColor = '#d1d5db'}
+                  >
+                    <Upload size={28} style={{ color: '#6b7280', marginBottom: '8px' }} />
+                    <p style={{ fontWeight: 600, color: '#374151', marginBottom: '4px', fontSize: '14px' }}>
+                      {claimDocuments.length < MAX_FILES ? 'Click to upload documents' : 'Maximum files reached'}
+                    </p>
+                    <p style={{ fontSize: '12px', color: '#9ca3af' }}>
+                      PDF, JPG, PNG — max 5MB each — up to {MAX_FILES} files
+                    </p>
+                    <p style={{ fontSize: '11px', color: '#9ca3af', marginTop: '4px' }}>
+                      Business license, utility bill, or other proof of ownership
+                    </p>
+                  </div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png,.webp"
+                    multiple
+                    onChange={handleFileSelect}
+                    style={{ display: 'none' }}
+                  />
+
+                  {/* Uploaded Files List */}
+                  {claimDocuments.length > 0 && (
+                    <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      {claimDocuments.map((file, i) => (
+                        <div key={i} style={{
+                          display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px',
+                          background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px',
+                        }}>
+                          <FileText size={16} style={{ color: '#16a34a', flexShrink: 0 }} />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: '13px', fontWeight: 500, color: '#166534', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file.name}</div>
+                            <div style={{ fontSize: '11px', color: '#6b7280' }}>{formatFileSize(file.size)}</div>
+                          </div>
+                          <button
+                            onClick={() => removeDocument(i)}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', padding: '4px' }}
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="claim-benefits">
                 <div className="claim-benefit">
                   <CheckCircle size={18} />
@@ -193,7 +318,9 @@ const ClaimBusinessModal = memo(function ClaimBusinessModal({
 
               <div className="claim-modal-actions">
                 <button className="claim-cancel-btn" onClick={onClose}>Cancel</button>
-                <button className="claim-submit-btn" onClick={handleClaimBusiness} disabled={claimSubmitting}>{claimSubmitting ? 'Submitting...' : 'Submit Claim'}</button>
+                <button className="claim-submit-btn" onClick={handleClaimBusiness} disabled={claimSubmitting}>
+                  {claimSubmitting ? 'Submitting...' : claimVerificationMethod === 'document' ? 'Submit with Documents' : 'Submit Claim'}
+                </button>
               </div>
             </>
           )}

@@ -67,6 +67,8 @@ export default function PulseApp() {
   const [claimVerificationCode, setClaimVerificationCode] = useState('');
   const [claimId, setClaimId] = useState(null);
   const [claimVerifying, setClaimVerifying] = useState(false);
+  const [claimVerificationMethod, setClaimVerificationMethod] = useState('email');
+  const [claimDocuments, setClaimDocuments] = useState([]);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showCalendarToast, setShowCalendarToast] = useState(false);
   const [calendarToastMessage, setCalendarToastMessage] = useState('');
@@ -629,6 +631,10 @@ export default function PulseApp() {
       setTimeout(() => setShowCalendarToast(false), 3000);
       return;
     }
+    if (claimVerificationMethod === 'document' && claimDocuments.length === 0) {
+      showToast('Please upload at least one document', 'error');
+      return;
+    }
     if (!session?.user?.id) {
       setShowClaimBusinessModal(false);
       setShowAuthModal(true);
@@ -637,7 +643,22 @@ export default function PulseApp() {
     setClaimSubmitting(true);
     try {
       const isAdmin = user.isAdmin;
-      const verificationCode = isAdmin ? null : Math.floor(100000 + Math.random() * 900000).toString();
+      const isDocumentVerification = claimVerificationMethod === 'document' && !isAdmin;
+      const verificationCode = (isAdmin || isDocumentVerification) ? null : Math.floor(100000 + Math.random() * 900000).toString();
+
+      // Upload documents if document verification
+      let documentUrls = null;
+      if (isDocumentVerification && claimDocuments.length > 0) {
+        const uploaded = [];
+        for (const file of claimDocuments) {
+          const filePath = `${session.user.id}/${Date.now()}-${file.name}`;
+          const { error: uploadError } = await supabase.storage.from('claim-documents').upload(filePath, file);
+          if (uploadError) throw uploadError;
+          uploaded.push({ name: file.name, path: filePath, type: file.type, size: file.size });
+        }
+        documentUrls = uploaded;
+      }
+
       const claimData = {
         user_id: session.user.id,
         business_name: claimSelectedBusiness?.name || claimFormData.businessName,
@@ -646,9 +667,10 @@ export default function PulseApp() {
         contact_email: claimFormData.email,
         contact_phone: claimFormData.phone || null,
         owner_role: claimFormData.role,
-        status: isAdmin ? 'verified' : 'pending_verification',
-        verification_method: isAdmin ? null : 'email',
+        status: isAdmin ? 'verified' : isDocumentVerification ? 'pending' : 'pending_verification',
+        verification_method: isAdmin ? null : claimVerificationMethod,
         verification_code: verificationCode,
+        documents: documentUrls,
       };
       if (claimSelectedBusiness?.id) {
         claimData.business_id = claimSelectedBusiness.id;
@@ -661,8 +683,20 @@ export default function PulseApp() {
         setClaimSelectedBusiness(null);
         setClaimSearchQuery('');
         setClaimVerificationStep('form');
+        setClaimDocuments([]);
+        setClaimVerificationMethod('email');
         showToast('Business claimed and verified!', 'success');
         if (typeof refreshUserData === 'function') refreshUserData();
+      } else if (isDocumentVerification) {
+        // Documents uploaded — goes to admin review directly
+        setShowClaimBusinessModal(false);
+        setClaimFormData({ businessName: '', ownerName: '', email: '', phone: '', role: 'owner', address: '' });
+        setClaimSelectedBusiness(null);
+        setClaimSearchQuery('');
+        setClaimVerificationStep('form');
+        setClaimDocuments([]);
+        setClaimVerificationMethod('email');
+        showToast('Claim submitted! Our team will review your documents.', 'success');
       } else {
         // Send verification email
         setClaimId(inserted.id);
@@ -1233,11 +1267,15 @@ export default function PulseApp() {
               claimVerificationCode={claimVerificationCode}
               setClaimVerificationCode={setClaimVerificationCode}
               claimVerifying={claimVerifying}
+              claimVerificationMethod={claimVerificationMethod}
+              setClaimVerificationMethod={setClaimVerificationMethod}
+              claimDocuments={claimDocuments}
+              setClaimDocuments={setClaimDocuments}
               handleVerifyClaimCode={handleVerifyClaimCode}
               handleResendClaimCode={handleResendClaimCode}
               session={session}
               services={services}
-              onClose={() => { setShowClaimBusinessModal(false); setClaimFormData({ businessName: '', ownerName: '', email: '', phone: '', role: 'owner', address: '' }); setClaimVerificationStep('form'); setClaimVerificationCode(''); }}
+              onClose={() => { setShowClaimBusinessModal(false); setClaimFormData({ businessName: '', ownerName: '', email: '', phone: '', role: 'owner', address: '' }); setClaimVerificationStep('form'); setClaimVerificationCode(''); setClaimDocuments([]); setClaimVerificationMethod('email'); }}
               setShowAuthModal={setShowAuthModal}
               handleClaimBusiness={handleClaimBusiness}
             />
