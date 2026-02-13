@@ -842,9 +842,10 @@ export default function PulseApp() {
     if (!confirm(`Remove "${title}"? This will deactivate it from the app.`)) return;
     try {
       const table = type === 'deal' ? 'deals' : 'events';
+      const removeStatus = type === 'deal' ? 'expired' : 'cancelled';
       const { error } = await supabase
         .from(table)
-        .update({ status: 'inactive' })
+        .update({ status: removeStatus })
         .eq('id', id);
       if (error) throw error;
       showToast(`"${title}" removed`, 'info');
