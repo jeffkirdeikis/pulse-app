@@ -57,6 +57,8 @@ export default function PulseApp() {
   const serviceCardRefs = useRef([]);
   const classCardRefs = useRef([]);
   const venueCardRefs = useRef([]);
+  const [installPromptEvent, setInstallPromptEvent] = useState(null);
+  const [showInstallBanner, setShowInstallBanner] = useState(false);
   const [showAddEventModal, setShowAddEventModal] = useState(false);
   const [showClaimBusinessModal, setShowClaimBusinessModal] = useState(false);
   const [claimFormData, setClaimFormData] = useState({ businessName: '', ownerName: '', email: '', phone: '', role: 'owner', address: '' });
@@ -78,6 +80,14 @@ export default function PulseApp() {
     setCalendarToastMessage(message);
     setShowCalendarToast(true);
     setTimeout(() => setShowCalendarToast(false), 3000);
+  }, []);
+
+  // Track view count on events/deals tables for business analytics
+  const trackView = useCallback(async (table, id) => {
+    if (!id) return;
+    try {
+      await supabase.rpc('increment_view_count', { p_table: table, p_id: id });
+    } catch (e) { /* silent */ }
   }, []);
 
   // User data from Supabase (replaces all hardcoded dummy data)
@@ -311,10 +321,12 @@ export default function PulseApp() {
   // Track detail modal views for business analytics
   useEffect(() => {
     if (selectedEvent?.businessId) trackAnalytics('event_view', selectedEvent.businessId, selectedEvent.id);
-  }, [selectedEvent?.id]);
+    if (selectedEvent?.id) trackView('events', selectedEvent.id);
+  }, [selectedEvent?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (selectedDeal?.businessId) trackAnalytics('deal_view', selectedDeal.businessId, selectedDeal.id);
-  }, [selectedDeal?.id]);
+    if (selectedDeal?.id) trackView('deals', selectedDeal.id);
+  }, [selectedDeal?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (selectedService?.businessId) trackAnalytics('profile_view', selectedService.businessId, selectedService.id);
   }, [selectedService?.id]);
@@ -451,6 +463,20 @@ export default function PulseApp() {
       window.removeEventListener('offline', goOffline);
       window.removeEventListener('online', goOnline);
     };
+  }, []);
+
+  // PWA install prompt
+  useEffect(() => {
+    const handler = (e) => {
+      e.preventDefault();
+      setInstallPromptEvent(e);
+      // Only show if user hasn't dismissed before
+      if (!localStorage.getItem('pulse_install_dismissed')) {
+        setShowInstallBanner(true);
+      }
+    };
+    window.addEventListener('beforeinstallprompt', handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
   }, []);
 
   // User authentication state
@@ -1795,6 +1821,39 @@ export default function PulseApp() {
         <footer className="app-footer" role="contentinfo">
           <p>&copy; {new Date().getFullYear()} Pulse Squamish</p>
         </footer>
+      )}
+
+      {showInstallBanner && (
+        <div style={{
+          position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 9999,
+          background: 'linear-gradient(135deg, #2563eb, #7c3aed)', color: '#fff',
+          padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px',
+          boxShadow: '0 -2px 10px rgba(0,0,0,0.15)',
+        }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 600, fontSize: '14px' }}>Install Pulse</div>
+            <div style={{ fontSize: '12px', opacity: 0.85 }}>Add to home screen for the best experience</div>
+          </div>
+          <button onClick={async () => {
+            if (installPromptEvent) {
+              installPromptEvent.prompt();
+              const result = await installPromptEvent.userChoice;
+              if (result.outcome === 'accepted') setShowInstallBanner(false);
+              setInstallPromptEvent(null);
+            }
+          }} style={{
+            background: '#fff', color: '#2563eb', border: 'none', borderRadius: '8px',
+            padding: '8px 16px', fontWeight: 600, fontSize: '13px', cursor: 'pointer',
+            whiteSpace: 'nowrap',
+          }}>Install</button>
+          <button onClick={() => {
+            setShowInstallBanner(false);
+            localStorage.setItem('pulse_install_dismissed', 'true');
+          }} style={{
+            background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer',
+            padding: '4px', opacity: 0.7,
+          }}>&#x2715;</button>
+        </div>
       )}
     </div>
   );
