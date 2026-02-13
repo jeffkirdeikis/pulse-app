@@ -160,6 +160,38 @@
           box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
         }
 
+        .event-calendar-btn {
+          position: absolute;
+          bottom: 16px;
+          right: 48px;
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          padding: 10px 14px;
+          min-height: 44px;
+          background: #ffffff;
+          color: #6d28d9;
+          font-size: 13px;
+          font-weight: 600;
+          border: 2px solid #c4b5fd;
+          border-radius: 8px;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .event-calendar-btn:hover {
+          background: #f5f3ff;
+          border-color: #8b5cf6;
+          transform: translateY(-1px);
+          box-shadow: 0 2px 8px rgba(109, 40, 217, 0.15);
+        }
+
+        .event-calendar-btn.in-calendar {
+          background: #f5f3ff;
+          border-color: #8b5cf6;
+          color: #7c3aed;
+        }
+
         /* Booking Bottom Sheet */
         .booking-sheet-overlay,
         .contact-sheet-overlay {

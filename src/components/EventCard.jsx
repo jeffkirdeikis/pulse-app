@@ -1,15 +1,21 @@
 import React, { useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Calendar, Check, ChevronRight, Clock, MapPin, Star } from 'lucide-react';
+import { Calendar, CalendarPlus, Check, ChevronRight, Clock, MapPin, Star } from 'lucide-react';
 import { PACIFIC_TZ } from '../utils/timezoneHelpers';
 
-const EventCard = React.forwardRef(({ event, venues, isItemSavedLocal, toggleSave, getVenueName, onSelect, onBookClick, onPrefetch, index = 0 }, ref) => {
+const EventCard = React.forwardRef(({ event, venues, isItemSavedLocal, toggleSave, getVenueName, onSelect, onBookClick, onPrefetch, addToCalendar, isInMyCalendar, index = 0 }, ref) => {
   const itemType = event.eventType === 'class' ? 'class' : 'event';
   const isSaved = isItemSavedLocal(itemType, event.id);
+  const inCalendar = isInMyCalendar?.(event.id);
 
   const handleSave = async (e) => {
     e.stopPropagation();
     await toggleSave(event.id, itemType, event.title, { venue: getVenueName(event.venueId, event), date: event.start ? event.start.toISOString() : event.date });
+  };
+
+  const handleAddToCalendar = (e) => {
+    e.stopPropagation();
+    if (addToCalendar) addToCalendar(event);
   };
 
   const handlePrefetch = useCallback(() => {
@@ -75,8 +81,8 @@ const EventCard = React.forwardRef(({ event, venues, isItemSavedLocal, toggleSav
         </div>
       </div>
 
-      {/* Book button for classes */}
-      {event.eventType === 'class' && (
+      {/* Book button for classes, Add to Calendar for events */}
+      {event.eventType === 'class' ? (
         <button
           className="event-book-btn"
           onClick={(e) => {
@@ -85,6 +91,18 @@ const EventCard = React.forwardRef(({ event, venues, isItemSavedLocal, toggleSav
           }}
         >
           Book
+        </button>
+      ) : (
+        <button
+          className={`event-calendar-btn ${inCalendar ? 'in-calendar' : ''}`}
+          onClick={handleAddToCalendar}
+          aria-label={inCalendar ? 'Added to calendar' : 'Add to calendar'}
+        >
+          {inCalendar ? (
+            <><Check size={14} /> Added</>
+          ) : (
+            <><CalendarPlus size={14} /> Save Date</>
+          )}
         </button>
       )}
 
