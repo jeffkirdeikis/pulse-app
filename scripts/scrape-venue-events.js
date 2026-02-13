@@ -12,6 +12,7 @@
  *   5. Sea to Sky Gondola — Firecrawl main page + detail page fetches
  *   6. Squamish Public Library — Communico /eeventcaldata API
  *   7. Squamish Arts Council — WordPress Tribe Events REST API
+ *   8. Tourism Squamish — Calendar HTML + detail page fetches
  *
  * Run: node scripts/scrape-venue-events.js
  */
@@ -73,6 +74,11 @@ const ARTS_COUNCIL = {
   apiBase: 'https://squamisharts.com/wp-json/tribe/events/v1/events'
 };
 
+const TOURISM_SQUAMISH = {
+  tag: 'tourism-squamish',
+  calendarBase: 'https://www.exploresquamish.com/festivals-events/event-calendar/'
+};
+
 // ============================================================
 // SHARED HELPERS
 // ============================================================
@@ -113,7 +119,7 @@ async function insertEvent(evt) {
     });
     if (!response.ok) {
       const errorBody = await response.text().catch(() => 'unknown');
-      console.warn(`   [insert-fail] ${evt.title} on ${evt.date}: HTTP ${response.status} - ${errorBody.substring(0, 100)}`);
+      console.warn(`   [insert-fail] ${evt.title} on ${evt.date}: HTTP ${response.status} - ${errorBody.substring(0, 200)}`);
     }
     return response.ok;
   } catch (error) {
@@ -1002,11 +1008,230 @@ async function scrapeArtsCouncil() {
 }
 
 // ============================================================
+// 8. TOURISM SQUAMISH — Calendar HTML + detail page fetches
+// ============================================================
+
+// Skip daily attractions/exhibits that appear 15+ days in our date range
+const TOURISM_DAILY_SKIP = 15;
+
+async function scrapeTourismSquamish() {
+  console.log(`\n--- Tourism Squamish (Calendar + detail pages) ---`);
+  const events = [];
+  const today = getTodayPacific();
+  const endDate = getEndDatePacific(30);
+
+  const todayDate = new Date(today + 'T00:00:00');
+  const endDateDate = new Date(endDate + 'T00:00:00');
+
+  // Determine which months to fetch (e.g. Feb and Mar 2026)
+  const months = new Set();
+  const cursor = new Date(todayDate);
+  while (cursor <= endDateDate) {
+    months.add(`${cursor.getFullYear()}-${cursor.getMonth() + 1}`);
+    cursor.setMonth(cursor.getMonth() + 1);
+    cursor.setDate(1);
+  }
+
+  // Step 1: Fetch calendar pages and build URL → dates mapping
+  const urlDates = {}; // eventUrl → Set of date strings
+
+  for (const ym of months) {
+    const [year, month] = ym.split('-').map(Number);
+    const calUrl = `${TOURISM_SQUAMISH.calendarBase}?year=${year}&month=${month}`;
+    console.log(`   Fetching calendar: ${calUrl}`);
+
+    try {
+      const response = await retryWithBackoff(
+        () => fetch(calUrl, { headers: { 'User-Agent': 'PulseApp-Scraper/1.0' } }),
+        { label: `Tourism Squamish calendar ${year}-${month}` }
+      );
+      if (!response.ok) {
+        console.warn(`   Calendar returned ${response.status}`);
+        continue;
+      }
+
+      const html = await response.text();
+      const cells = html.split(/<td\b/);
+
+      for (const cell of cells) {
+        const dayMatch = cell.match(/<span[^>]*>(\d{1,2})<\/span>/);
+        if (!dayMatch) continue;
+
+        const day = parseInt(dayMatch[1]);
+        const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        if (dateStr < today || dateStr > endDate) continue;
+
+        const linkRegex = /href="(\/(?:event|submitted-events)\/[^"]+)"/g;
+        let m;
+        while ((m = linkRegex.exec(cell)) !== null) {
+          const url = m[1];
+          if (!urlDates[url]) urlDates[url] = new Set();
+          urlDates[url].add(dateStr);
+        }
+      }
+    } catch (error) {
+      console.error(`   Error fetching calendar: ${error.message}`);
+    }
+  }
+
+  // Step 2: Filter out daily attractions (appear on 18+ days)
+  const eventUrls = Object.entries(urlDates)
+    .filter(([url, dates]) => {
+      if (dates.size >= TOURISM_DAILY_SKIP) {
+        const slug = url.split('/').filter(Boolean).pop();
+        console.log(`   [skip-daily] ${slug} (${dates.size} days — daily attraction)`);
+        return false;
+      }
+      return true;
+    });
+
+  console.log(`   ${eventUrls.length} unique events to fetch (${Object.keys(urlDates).length - eventUrls.length} daily attractions skipped)`);
+
+  // Step 3: Fetch detail pages (5 at a time for concurrency)
+  const BATCH_SIZE = 5;
+
+  for (let i = 0; i < eventUrls.length; i += BATCH_SIZE) {
+    const batch = eventUrls.slice(i, i + BATCH_SIZE);
+
+    const results = await Promise.allSettled(batch.map(async ([urlPath, dates]) => {
+      const fullUrl = `https://www.exploresquamish.com${urlPath}`;
+      try {
+        const response = await retryWithBackoff(
+          () => fetch(fullUrl, { headers: { 'User-Agent': 'PulseApp-Scraper/1.0' } }),
+          { label: `Tourism detail: ${urlPath}` }
+        );
+        if (!response.ok) return null;
+
+        const html = await response.text();
+
+        // Parse title from <title> tag
+        const titleMatch = html.match(/<title>([^<]+)<\/title>/i);
+        let title = titleMatch ? titleMatch[1].replace(/\s*\|.*$/, '').trim() : '';
+        title = decodeHtmlEntities(title);
+        if (!title) return null;
+
+        // Parse structured fields from the sidebar
+        const bodyText = html
+          .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+          .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+          .replace(/<[^>]+>/g, '\n')
+          .replace(/&amp;/g, '&')
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/&#039;/g, "'")
+          .replace(/&quot;/g, '"')
+          .replace(/&nbsp;/g, ' ');
+
+        // Extract Time — handles many formats:
+        //   "6pm - 8pm", "6:30-9:30pm", "5:00pm to 10:00pm", "6:00", "10:00am - 4:00pm"
+        const timeRaw = bodyText.match(/Time:\s*\n\s*\n\s*([^\n]+)/i);
+        let startTime = null;
+        let endTime = null;
+        if (timeRaw) {
+          const timeStr = timeRaw[1].trim();
+          // Pattern 1: "6pm - 8pm" or "10:00am - 4:00pm" or "6:30-9:30pm" or "5:00pm to 10:00pm"
+          const rangeMatch = timeStr.match(/(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)\s*[-–]|(?:\s+to\s+)\s*(\d{1,2}(?::\d{2})?\s*(?:am|pm))/i)
+            ? timeStr.match(/(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)\s*[-–to]+\s*(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)/i)
+            : null;
+          if (rangeMatch) {
+            let startRaw = rangeMatch[1].trim();
+            let endRaw = rangeMatch[2].trim();
+            // If start has no am/pm, inherit from end
+            if (!/am|pm/i.test(startRaw) && /am|pm/i.test(endRaw)) {
+              const endPeriod = endRaw.match(/(am|pm)/i)[1];
+              startRaw += endPeriod;
+            }
+            if (!/:\d{2}/.test(startRaw)) startRaw = startRaw.replace(/(\d+)/, '$1:00');
+            if (!/:\d{2}/.test(endRaw)) endRaw = endRaw.replace(/(\d+)/, '$1:00');
+            startTime = convertTo24h(startRaw);
+            endTime = convertTo24h(endRaw);
+          } else {
+            // Pattern 2: Single time like "6:00" or "7:30pm"
+            const singleMatch = timeStr.match(/(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)/i);
+            if (singleMatch) {
+              let raw = singleMatch[1].trim();
+              if (!/:\d{2}/.test(raw)) raw = raw.replace(/(\d+)/, '$1:00');
+              // If no am/pm, assume pm for evening events (after 5), am otherwise
+              if (!/am|pm/i.test(raw)) {
+                const hr = parseInt(raw);
+                raw += (hr >= 1 && hr <= 6) ? 'pm' : (hr >= 7 && hr <= 11) ? 'pm' : 'pm';
+              }
+              startTime = convertTo24h(raw);
+            }
+          }
+        }
+
+        // Extract Cost
+        const costMatch = bodyText.match(/Cost:\s*\n\s*\n\s*([^\n]+)/i);
+        const costInfo = costMatch ? parseCost(costMatch[1].trim()) : { price: 0, isFree: false, priceDescription: 'See venue for pricing' };
+
+        // Extract Venue
+        const venueSection = bodyText.match(/Venue\n\s*([^\n]+?)(?:\n\s*([^\n]+?))?(?:\n\s*(\w[\w\s]*,\s*BC))?/);
+        let venueName = venueSection ? venueSection[1].trim() : '';
+        let venueAddress = '';
+        if (venueSection) {
+          const parts = [venueSection[1], venueSection[2], venueSection[3]].filter(Boolean).map(s => s.trim());
+          if (parts.length > 1) {
+            venueName = parts[0];
+            venueAddress = parts.slice(1).join(', ');
+          }
+        }
+
+        // Extract Description
+        const descMatch = bodyText.match(/See All Events\s*\n([\s\S]{20,500}?)(?:\nDates\n|$)/);
+        let description = descMatch
+          ? descMatch[1].replace(/\n+/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 300)
+          : '';
+        description = description || `${title} in Squamish`;
+
+        // Skip events without a parseable time (ongoing festivals, exhibits)
+        if (!startTime) {
+          const slug = urlPath.split('/').filter(Boolean).pop();
+          console.log(`   [skip-no-time] ${slug} — no specific time found`);
+          return null;
+        }
+
+        return {
+          title, startTime, endTime, costInfo, venueName, venueAddress, description,
+          dates: [...dates]
+        };
+      } catch (error) {
+        console.warn(`   [error] ${urlPath}: ${error.message}`);
+        return null;
+      }
+    }));
+
+    for (const result of results) {
+      if (result.status !== 'fulfilled' || !result.value) continue;
+      const evt = result.value;
+
+      for (const date of evt.dates) {
+        events.push({
+          title: evt.title,
+          date,
+          time: evt.startTime,
+          endTime: evt.endTime,
+          description: evt.description,
+          category: categorizeEvent(evt.title, evt.description),
+          venueName: evt.venueName || 'Squamish',
+          address: evt.venueAddress || '',
+          tags: ['auto-scraped', 'tourism-squamish', TOURISM_SQUAMISH.tag],
+          ...evt.costInfo
+        });
+      }
+    }
+  }
+
+  console.log(`   Found ${events.length} events total`);
+  return events;
+}
+
+// ============================================================
 // MAIN
 // ============================================================
 
 async function main() {
-  console.log('=== Scraping Venue Events (7 venues) ===');
+  console.log('=== Scraping Venue Events (8 sources) ===');
   console.log(`   Date range: ${getTodayPacific()} to ${getEndDatePacific(30)}`);
 
   let inserted = 0;
@@ -1021,6 +1246,7 @@ async function main() {
   const gondolaEvents = await scrapeGondola();
   const libraryEvents = await scrapeLibrary();
   const artsCouncilEvents = await scrapeArtsCouncil();
+  const tourismEvents = await scrapeTourismSquamish();
 
   const allEvents = [
     ...tricksterEvents,
@@ -1029,7 +1255,8 @@ async function main() {
     ...arrowwoodEvents,
     ...gondolaEvents,
     ...libraryEvents,
-    ...artsCouncilEvents
+    ...artsCouncilEvents,
+    ...tourismEvents
   ];
 
   console.log(`\n--- Inserting ${allEvents.length} events ---`);
@@ -1059,6 +1286,7 @@ async function main() {
   console.log(`Gondola events found: ${gondolaEvents.length}`);
   console.log(`Library events found: ${libraryEvents.length}`);
   console.log(`Arts Council events found: ${artsCouncilEvents.length}`);
+  console.log(`Tourism Squamish events found: ${tourismEvents.length}`);
   console.log(`Inserted: ${inserted}`);
   console.log(`Skipped (duplicates): ${skipped}`);
   console.log(`Failed: ${failed}`);
