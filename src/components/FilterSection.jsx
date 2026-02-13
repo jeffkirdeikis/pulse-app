@@ -180,6 +180,38 @@ const FilterSection = React.memo(function FilterSection({
         </button>
       </div>
 
+      {/* Active Filter Pills - visible when filters applied but panel hidden */}
+      {!showFilters && activeFilterCount > 0 && (
+        <div className="active-filter-pills">
+          {filters.time !== 'all' && (() => {
+            const labels = { morning: 'Morning', afternoon: 'Afternoon', evening: 'Evening' };
+            let label = labels[filters.time];
+            if (!label) {
+              const [h, m] = filters.time.split(':').map(Number);
+              const hr = h === 0 ? 12 : h > 12 ? h - 12 : h;
+              const period = h >= 12 ? 'PM' : 'AM';
+              label = `${hr}${m ? ':' + String(m).padStart(2, '0') : ''} ${period}+`;
+            }
+            return <button className="filter-pill" onClick={() => setFilters({...filters, time: 'all'})}>{label} <span className="pill-x">&times;</span></button>;
+          })()}
+          {filters.age !== 'all' && (
+            <button className="filter-pill" onClick={() => { setFilters({...filters, age: 'all'}); setKidsAgeRange([0, 18]); }}>
+              {filters.age === 'kids' ? 'Kids' : filters.age === 'adults' ? 'Adults' : filters.age} <span className="pill-x">&times;</span>
+            </button>
+          )}
+          {filters.category !== 'all' && (
+            <button className="filter-pill" onClick={() => setFilters({...filters, category: 'all'})}>
+              {filters.category} <span className="pill-x">&times;</span>
+            </button>
+          )}
+          {filters.price !== 'all' && (
+            <button className="filter-pill" onClick={() => setFilters({...filters, price: 'all'})}>
+              {filters.price === 'free' ? 'Free' : 'Paid'} <span className="pill-x">&times;</span>
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Filters Section - Collapsible */}
       {showFilters && (
         <div className="filters-section">
