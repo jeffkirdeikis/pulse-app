@@ -48,22 +48,9 @@ const BookingSheet = memo(function BookingSheet({
         {bookingStep === 'iframe' && (() => {
           const business = getBusinessForEvent(bookingEvent);
           const bookingUrl = business?.booking_url;
-          const bookingType = business?.booking_type;
-          const systemName = bookingType === 'mindbody' ? 'Mindbody' :
-                            bookingType === 'wellnessliving' ? 'WellnessLiving' :
-                            bookingType === 'janeapp' ? 'JaneApp' : 'their website';
 
           return (
             <div className="external-booking-container">
-              <div className="booking-system-badge">
-                <ExternalLink size={18} />
-                <span>Book via {systemName}</span>
-              </div>
-
-              <p className="booking-instruction">
-                Click below to complete your booking on {getVenueName(bookingEvent.venueId, bookingEvent)}'s booking page.
-              </p>
-
               <a
                 href={bookingUrl}
                 target="_blank"
