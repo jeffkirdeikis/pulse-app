@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowUp, Bookmark, Calendar, Check, X, Plus, CheckCircle, Moon, Percent, Sparkles, Sun, Sunset, LayoutList, MapPin, List } from 'lucide-react';
+import { ArrowUp, ArrowUpDown, Bookmark, Calendar, Check, X, Plus, CheckCircle, Moon, Percent, Sparkles, Sun, Sunset, LayoutList, MapPin, List } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import { useUserData } from './hooks/useUserData';
 import { useCardAnimation } from './hooks/useCardAnimation';
@@ -589,6 +589,7 @@ export default function PulseApp() {
   const [groupByVenue, setGroupByVenue] = useState(false);
   const [compactMode, setCompactMode] = useState(false);
   const [showSavedOnly, setShowSavedOnly] = useState(false);
+  const [sortBy, setSortBy] = useState('soonest'); // soonest | price | duration
 
   // Filter states - all dropdowns (persisted to localStorage, excluding specific dates)
   const [filters, setFilters] = useState(() => {
@@ -1104,6 +1105,21 @@ export default function PulseApp() {
     if (showSavedOnly) {
       events = events.filter(e => isItemSavedLocal(e.eventType === 'class' ? 'class' : 'event', e.id));
     }
+    // Apply custom sort
+    if (sortBy === 'price') {
+      events = [...events].sort((a, b) => {
+        const priceA = a.price?.toLowerCase() === 'free' ? 0 : parseFloat(a.price?.replace(/[^0-9.]/g, '')) || 999;
+        const priceB = b.price?.toLowerCase() === 'free' ? 0 : parseFloat(b.price?.replace(/[^0-9.]/g, '')) || 999;
+        return priceA - priceB || a.start - b.start;
+      });
+    } else if (sortBy === 'duration') {
+      events = [...events].sort((a, b) => {
+        const durA = a.end && a.start ? (a.end - a.start) : Infinity;
+        const durB = b.end && b.start ? (b.end - b.start) : Infinity;
+        return durA - durB || a.start - b.start;
+      });
+    }
+    // 'soonest' is the default sort from filterEventsUtil
     if (events.length === 0) {
       // Special empty state for saved-only mode
       if (showSavedOnly) {
@@ -1549,6 +1565,17 @@ export default function PulseApp() {
                     title={showSavedOnly ? 'Show all' : 'Show saved only'}
                   >
                     <Bookmark size={16} fill={showSavedOnly ? 'currentColor' : 'none'} />
+                  </button>
+                )}
+                {(currentSection === 'classes' || currentSection === 'events') && (
+                  <button
+                    className={`group-toggle-btn sort-btn ${sortBy !== 'soonest' ? 'active' : ''}`}
+                    onClick={() => setSortBy(s => s === 'soonest' ? 'price' : s === 'price' ? 'duration' : 'soonest')}
+                    aria-label={`Sort: ${sortBy}`}
+                    title={`Sort: ${sortBy === 'soonest' ? 'Soonest first' : sortBy === 'price' ? 'Price: low to high' : 'Shortest first'}`}
+                  >
+                    <ArrowUpDown size={14} />
+                    <span>{sortBy === 'soonest' ? 'Soonest' : sortBy === 'price' ? 'Price' : 'Duration'}</span>
                   </button>
                 )}
                 {(currentSection === 'classes' || currentSection === 'events') && (
