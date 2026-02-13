@@ -143,6 +143,7 @@ function decodeHtmlEntities(str) {
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
     .replace(/&#039;/g, "'")
+    .replace(/&apos;/g, "'")
     .replace(/&nbsp;/g, ' ');
 }
 
@@ -1119,6 +1120,7 @@ async function scrapeTourismSquamish() {
           .replace(/&lt;/g, '<')
           .replace(/&gt;/g, '>')
           .replace(/&#039;/g, "'")
+          .replace(/&apos;/g, "'")
           .replace(/&quot;/g, '"')
           .replace(/&nbsp;/g, ' ');
 
