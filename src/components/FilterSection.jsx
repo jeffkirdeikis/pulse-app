@@ -9,19 +9,24 @@ function getDateStrip(count = 14) {
   // Get today in Pacific timezone
   const pacific = new Date(now.toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }));
   const days = [];
+  let prevMonth = -1;
   for (let i = 0; i < count; i++) {
     const d = new Date(pacific);
     d.setDate(pacific.getDate() + i);
     const yyyy = d.getFullYear();
     const mm = String(d.getMonth() + 1).padStart(2, '0');
     const dd = String(d.getDate()).padStart(2, '0');
+    const month = d.getMonth();
+    const isNewMonth = month !== prevMonth && i > 0;
+    prevMonth = month;
     days.push({
       dateStr: `${yyyy}-${mm}-${dd}`,
-      dayName: d.toLocaleDateString('en-US', { weekday: 'short' }), // Mon, Tue
+      dayName: d.toLocaleDateString('en-US', { weekday: 'short' }),
       dayNum: d.getDate(),
-      monthShort: d.toLocaleDateString('en-US', { month: 'short' }), // Feb, Mar
+      monthShort: d.toLocaleDateString('en-US', { month: 'short' }),
       isToday: i === 0,
       isWeekend: d.getDay() === 0 || d.getDay() === 6,
+      showMonth: isNewMonth,
     });
   }
   return days;
@@ -91,8 +96,13 @@ const FilterSection = React.memo(function FilterSection({
             const count = dateEventCounts[d.dateStr] || 0;
             const hasEvents = count > 0;
             return (
+              <React.Fragment key={d.dateStr}>
+              {d.showMonth && (
+                <div className="date-strip-month-label" aria-hidden="true">
+                  {d.monthShort}
+                </div>
+              )}
               <button
-                key={d.dateStr}
                 className={`date-chip ${isSelected ? 'date-chip-active' : ''} ${d.isWeekend ? 'date-chip-weekend' : ''} ${!hasEvents && !isSelected ? 'date-chip-empty' : ''}`}
                 onClick={() => setFilters({ ...filters, day: d.dateStr })}
                 ref={isSelected ? selectedRef : null}
@@ -107,6 +117,7 @@ const FilterSection = React.memo(function FilterSection({
                 )}
                 {d.isToday && !isSelected && !hasEvents && <span className="date-chip-dot" />}
               </button>
+              </React.Fragment>
             );
           })}
         </div>

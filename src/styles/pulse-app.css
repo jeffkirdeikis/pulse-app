@@ -1823,6 +1823,20 @@
           opacity: 0.45;
         }
 
+        .date-strip-month-label {
+          flex-shrink: 0;
+          display: flex;
+          align-items: center;
+          font-size: 10px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          color: #9ca3af;
+          padding: 0 2px;
+          writing-mode: vertical-rl;
+          text-orientation: mixed;
+        }
+
         .date-chip-count {
           font-size: 9px;
           font-weight: 700;
