@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowUp, Calendar, Check, X, Plus, CheckCircle, Percent, Sparkles, LayoutList, MapPin } from 'lucide-react';
+import { ArrowUp, Calendar, Check, X, Plus, CheckCircle, Percent, Sparkles, LayoutList, MapPin, List } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import { useUserData } from './hooks/useUserData';
 import { useCardAnimation } from './hooks/useCardAnimation';
@@ -587,6 +587,7 @@ export default function PulseApp() {
   const [visibleEventCount, setVisibleEventCount] = useState(50);
   // Group by venue toggle for classes
   const [groupByVenue, setGroupByVenue] = useState(false);
+  const [compactMode, setCompactMode] = useState(false);
 
   // Filter states - all dropdowns (persisted to localStorage, excluding specific dates)
   const [filters, setFilters] = useState(() => {
@@ -1189,7 +1190,7 @@ export default function PulseApp() {
               </div>
               {venueGroups[venue].map(event => {
                 const idx = venueGlobalIdx++;
-                return <EventCard key={event.id} event={event} index={idx} ref={(el) => eventCardRefs.current[idx] = el} venues={REAL_DATA.venues} isItemSavedLocal={isItemSavedLocal} toggleSave={toggleSave} getVenueName={getVenueName} onSelect={setSelectedEvent} onBookClick={handleBookClick} onPrefetch={prefetchEvent} addToCalendar={addToCalendar} isInMyCalendar={isInMyCalendar} showToast={showToast} searchQuery={searchQuery} />;
+                return <EventCard key={event.id} event={event} index={idx} ref={(el) => eventCardRefs.current[idx] = el} venues={REAL_DATA.venues} isItemSavedLocal={isItemSavedLocal} toggleSave={toggleSave} getVenueName={getVenueName} onSelect={setSelectedEvent} onBookClick={handleBookClick} onPrefetch={prefetchEvent} addToCalendar={addToCalendar} isInMyCalendar={isInMyCalendar} showToast={showToast} searchQuery={searchQuery} compact={compactMode} />;
               })}
             </div>
           ))}
@@ -1245,7 +1246,7 @@ export default function PulseApp() {
           
           {groupedEvents[dateKey].map((event) => {
             const currentIndex = globalEventIndex++;
-            return <EventCard key={event.id} event={event} index={currentIndex} ref={(el) => eventCardRefs.current[currentIndex] = el} venues={REAL_DATA.venues} isItemSavedLocal={isItemSavedLocal} toggleSave={toggleSave} getVenueName={getVenueName} onSelect={setSelectedEvent} onBookClick={handleBookClick} onPrefetch={prefetchEvent} addToCalendar={addToCalendar} isInMyCalendar={isInMyCalendar} showToast={showToast} searchQuery={searchQuery} />;
+            return <EventCard key={event.id} event={event} index={currentIndex} ref={(el) => eventCardRefs.current[currentIndex] = el} venues={REAL_DATA.venues} isItemSavedLocal={isItemSavedLocal} toggleSave={toggleSave} getVenueName={getVenueName} onSelect={setSelectedEvent} onBookClick={handleBookClick} onPrefetch={prefetchEvent} addToCalendar={addToCalendar} isInMyCalendar={isInMyCalendar} showToast={showToast} searchQuery={searchQuery} compact={compactMode} />;
           })}
         </div>
       );
@@ -1493,17 +1494,29 @@ export default function PulseApp() {
                 })()}
                 </AnimatePresence>
               </h2>
-              {currentSection === 'classes' && (
-                <button
-                  className={`group-toggle-btn ${groupByVenue ? 'active' : ''}`}
-                  onClick={() => setGroupByVenue(!groupByVenue)}
-                  aria-label={groupByVenue ? 'Sort by time' : 'Group by venue'}
-                  title={groupByVenue ? 'Sort by time' : 'Group by venue'}
-                >
-                  {groupByVenue ? <LayoutList size={16} /> : <MapPin size={16} />}
-                  <span>{groupByVenue ? 'By Time' : 'By Venue'}</span>
-                </button>
-              )}
+              <div className="results-bar-actions">
+                {(currentSection === 'classes' || currentSection === 'events') && (
+                  <button
+                    className={`group-toggle-btn ${compactMode ? 'active' : ''}`}
+                    onClick={() => setCompactMode(!compactMode)}
+                    aria-label={compactMode ? 'Card view' : 'Compact view'}
+                    title={compactMode ? 'Card view' : 'Compact view'}
+                  >
+                    {compactMode ? <LayoutList size={16} /> : <List size={16} />}
+                  </button>
+                )}
+                {currentSection === 'classes' && (
+                  <button
+                    className={`group-toggle-btn ${groupByVenue ? 'active' : ''}`}
+                    onClick={() => setGroupByVenue(!groupByVenue)}
+                    aria-label={groupByVenue ? 'Sort by time' : 'Group by venue'}
+                    title={groupByVenue ? 'Sort by time' : 'Group by venue'}
+                  >
+                    {groupByVenue ? <LayoutList size={16} /> : <MapPin size={16} />}
+                    <span>{groupByVenue ? 'By Time' : 'By Venue'}</span>
+                  </button>
+                )}
+              </div>
             </div>
             )}
 

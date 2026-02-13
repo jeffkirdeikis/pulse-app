@@ -34,7 +34,7 @@ function highlightMatch(text, query) {
   return <>{text.slice(0, idx)}<mark className="search-highlight">{text.slice(idx, idx + query.length)}</mark>{text.slice(idx + query.length)}</>;
 }
 
-const EventCard = React.forwardRef(({ event, venues, isItemSavedLocal, toggleSave, getVenueName, onSelect, onBookClick, onPrefetch, addToCalendar, isInMyCalendar, showToast, searchQuery, index = 0 }, ref) => {
+const EventCard = React.forwardRef(({ event, venues, isItemSavedLocal, toggleSave, getVenueName, onSelect, onBookClick, onPrefetch, addToCalendar, isInMyCalendar, showToast, searchQuery, compact, index = 0 }, ref) => {
   const itemType = event.eventType === 'class' ? 'class' : 'event';
   const isSaved = isItemSavedLocal(itemType, event.id);
   const inCalendar = isInMyCalendar?.(event.id);
@@ -92,6 +92,29 @@ const EventCard = React.forwardRef(({ event, venues, isItemSavedLocal, toggleSav
       } catch { /* silent */ }
     }
   }, [event, getVenueName, showToast]);
+
+  if (compact) {
+    const timeStr = event.start.toLocaleTimeString('en-US', { timeZone: PACIFIC_TZ, hour: 'numeric', minute: '2-digit' });
+    const venueName = getVenueName(event.venueId, event);
+    return (
+      <motion.div
+        ref={ref}
+        className={`compact-card${timeBadge ? ' compact-card-urgent' : ''}`}
+        style={categoryColor ? { borderLeftColor: categoryColor } : undefined}
+        onClick={() => onSelect(event)}
+        onMouseEnter={handlePrefetch}
+        whileTap={{ scale: 0.98 }}
+      >
+        <div className="compact-time">{timeStr}</div>
+        <div className="compact-info">
+          <span className="compact-title">{searchQuery ? highlightMatch(event.title, searchQuery) : event.title}</span>
+          <span className="compact-venue">{searchQuery ? highlightMatch(venueName, searchQuery) : venueName}</span>
+        </div>
+        {duration && <span className="compact-duration">{duration}</span>}
+        {timeBadge && <span className={`compact-badge ${timeBadge.className}`}>{timeBadge.label.split(' ')[0]}</span>}
+      </motion.div>
+    );
+  }
 
   return (
     <motion.div
