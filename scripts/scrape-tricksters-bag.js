@@ -27,7 +27,7 @@ const BAG = {
   venue: 'Brackendale Art Gallery',
   address: '41950 Government Rd, Brackendale, BC',
   tag: 'brackendale-art-gallery',
-  eventbriteUrl: 'https://www.eventbrite.ca/o/brackendale-art-gallery-59178760723'
+  pageUrl: 'https://brackendaleartgallery.com/whats-happening-at-the-bag/'
 };
 
 // ============================================================
@@ -223,19 +223,24 @@ async function scrapeTricksters() {
 }
 
 // ============================================================
-// BRACKENDALE ART GALLERY — Eventbrite via Firecrawl
+// BRACKENDALE ART GALLERY — Firecrawl on their actual events page
+// The Eventbrite widget renders with JS; Firecrawl's waitFor handles it.
+// The rendered markdown has a clean, consistent format:
+//   "February 12, 2026 @ 7:00 pm - 9:00 pm"
+//   "### Event Title"
+//   "41950 Government Road, Squamish, BC V0N 1H0"
+//   "Description text"
 // ============================================================
 
 async function scrapeBAG() {
-  console.log(`\n--- Brackendale Art Gallery (Eventbrite via Firecrawl) ---`);
+  console.log(`\n--- Brackendale Art Gallery (page via Firecrawl) ---`);
   const events = [];
   const today = getTodayPacific();
   const endDate = getEndDatePacific(30);
 
-  console.log(`   Fetching: ${BAG.eventbriteUrl}`);
+  console.log(`   Fetching: ${BAG.pageUrl}`);
 
   try {
-    // Use markdown mode — more reliable than extract for Eventbrite's heavy JS
     const response = await retryWithBackoff(
       () => fetch('https://api.firecrawl.dev/v1/scrape', {
         method: 'POST',
@@ -244,13 +249,13 @@ async function scrapeBAG() {
           'Authorization': `Bearer ${FIRECRAWL_API_KEY}`
         },
         body: JSON.stringify({
-          url: BAG.eventbriteUrl,
+          url: BAG.pageUrl,
           formats: ['markdown'],
           timeout: 60000,
-          waitFor: 8000
+          waitFor: 10000
         })
       }),
-      { label: 'Firecrawl BAG Eventbrite' }
+      { label: 'Firecrawl BAG page' }
     );
 
     const data = await response.json();
@@ -268,189 +273,113 @@ async function scrapeBAG() {
 
     console.log(`   Got ${markdown.length} chars of markdown`);
 
-    // Parse events from Eventbrite markdown
-    // Eventbrite org pages list events as blocks with title, date, time, price
-    const parsedEvents = parseEventbriteMarkdown(markdown, today, endDate);
-    console.log(`   Parsed ${parsedEvents.length} events from markdown`);
+    // Parse the rendered Eventbrite widget markdown.
+    // Format is consistent blocks of:
+    //   [DayAbbrev][DayNum]
+    //   [Month] [Day], [Year] @ [Time] - [OptEndDate @] [EndTime]
+    //   ### [Title]
+    //   [Address]
+    //   [Description]
+    //   [Buy tickets / Register / View details]
 
-    for (const evt of parsedEvents) {
-      const costInfo = parseCost(evt.price);
-      const category = categorizeEvent(evt.title, evt.description || '');
+    const lines = markdown.split('\n');
+    let i = 0;
 
-      // If it has recurrence info, expand dates
-      if (evt.isRecurring && evt.dayOfWeek !== undefined) {
-        const seriesEnd = evt.seriesEndDate || endDate;
-        const endDt = new Date(Math.min(new Date(seriesEnd + 'T23:59:59').getTime(), new Date(endDate + 'T23:59:59').getTime()));
-        const dates = expandRecurring(evt.dayOfWeek, today, endDt);
+    while (i < lines.length) {
+      const line = lines[i];
 
-        for (const date of dates) {
-          events.push({
-            title: evt.title,
-            date,
-            time: evt.startTime || '19:00',
-            endTime: evt.endTime || null,
-            description: evt.description || `${evt.title} at Brackendale Art Gallery`,
-            category,
-            venueName: BAG.venue,
-            address: BAG.address,
-            tags: ['auto-scraped', 'eventbrite-markdown', BAG.tag],
-            ...costInfo
-          });
+      // Look for date lines: "February 12, 2026 @ 7:00 pm - 9:00 pm"
+      const dateMatch = line.match(
+        /^(\w+)\s+(\d{1,2}),\s*(\d{4})\s*@\s*(\d{1,2}:\d{2}\s*[ap]m)\s*[-–]\s*(?:\w+\s+\d{1,2},\s*\d{4}\s*@\s*)?(\d{1,2}:\d{2}\s*[ap]m)/i
+      );
+
+      if (dateMatch) {
+        const monthStr = dateMatch[1];
+        const day = parseInt(dateMatch[2]);
+        const year = parseInt(dateMatch[3]);
+        const startTimeRaw = dateMatch[4];
+        const endTimeRaw = dateMatch[5];
+
+        const monthNum = parseMonth(monthStr);
+        if (monthNum === null) { i++; continue; }
+
+        const date = `${year}-${String(monthNum + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const startTime = convertTo24h(startTimeRaw);
+        const endTime = convertTo24h(endTimeRaw);
+
+        // Skip events outside our window
+        if (date < today || date > endDate) { i++; continue; }
+
+        // Look ahead for title (### heading)
+        let title = '';
+        let description = '';
+        let j = i + 1;
+
+        while (j < lines.length && j < i + 10) {
+          const nextLine = lines[j].trim();
+          const headingMatch = nextLine.match(/^#{1,3}\s+(.+)/);
+          if (headingMatch) {
+            title = headingMatch[1].trim();
+            // Grab description from lines after heading, skipping address and action buttons
+            for (let k = j + 1; k < Math.min(j + 6, lines.length); k++) {
+              const descLine = lines[k].trim();
+              if (!descLine) continue;
+              if (descLine.startsWith('41950')) continue; // address
+              if (descLine.startsWith('![')) continue; // image
+              if (/^(Buy tickets|Register|View details)$/i.test(descLine)) continue;
+              if (descLine.length > 10 && descLine.length < 300) {
+                description = descLine;
+                break;
+              }
+            }
+            break;
+          }
+          j++;
         }
-      } else if (evt.date) {
-        // One-time event within window
-        if (evt.date >= today && evt.date <= endDate) {
-          events.push({
-            title: evt.title,
-            date: evt.date,
-            time: evt.startTime || '19:00',
-            endTime: evt.endTime || null,
-            description: evt.description || `${evt.title} at Brackendale Art Gallery`,
-            category,
-            venueName: BAG.venue,
-            address: BAG.address,
-            tags: ['auto-scraped', 'eventbrite-markdown', BAG.tag],
-            ...costInfo
-          });
-        }
+
+        if (!title) { i++; continue; }
+
+        const category = categorizeEvent(title, description);
+        const costInfo = { price: 0, isFree: true, priceDescription: 'Free' };
+        // We don't have price in the rendered widget text, default to free
+        // (Eventbrite shows "Buy tickets" vs "Register" but not the price)
+
+        events.push({
+          title,
+          date,
+          time: startTime,
+          endTime,
+          description: description || `${title} at Brackendale Art Gallery`,
+          category,
+          venueName: BAG.venue,
+          address: BAG.address,
+          tags: ['auto-scraped', 'bag-website', BAG.tag],
+          ...costInfo
+        });
       }
+
+      i++;
     }
   } catch (error) {
     console.error(`   Error scraping BAG: ${error.message}`);
   }
 
-  console.log(`   Expanded to ${events.length} individual event dates`);
+  console.log(`   Found ${events.length} events`);
   return events;
 }
 
-/**
- * Parse Eventbrite organizer page markdown into event objects.
- * Eventbrite pages typically list events with titles, dates, and prices.
- */
-function parseEventbriteMarkdown(markdown, today, endDate) {
-  const events = [];
-  const lines = markdown.split('\n');
+const MONTH_MAP = {
+  january: 0, february: 1, march: 2, april: 3, may: 4, june: 5,
+  july: 6, august: 7, september: 8, october: 9, november: 10, december: 11
+};
 
-  // Day-of-week detection for recurring series
-  const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-  const monthNames = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
-
-  // Eventbrite markdown typically has event blocks like:
-  // ### Event Title
-  // Date info (e.g. "Every Monday", "Sat, Feb 15", "Feb 13 - Mar 20")
-  // Time info (e.g. "9:30 AM - 10:30 AM PST")
-  // Price (e.g. "$12.58", "Free")
-
-  let currentTitle = '';
-  let currentLines = [];
-
-  function processBlock(title, blockLines) {
-    if (!title) return;
-    const text = blockLines.join(' ').toLowerCase();
-    const rawText = blockLines.join(' ');
-
-    // Extract time — look for patterns like "9:30 AM", "7:00 PM - 9:00 PM"
-    let startTime = null;
-    let endTime = null;
-    const timeMatch = rawText.match(/(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm))\s*[-–]?\s*(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm))?/);
-    if (timeMatch) {
-      startTime = convertTo24h(timeMatch[1]);
-      if (timeMatch[2]) endTime = convertTo24h(timeMatch[2]);
-    }
-
-    // Extract price
-    let price = 'Free';
-    const priceMatch = rawText.match(/\$[\d.]+/);
-    if (priceMatch) price = priceMatch[0];
-    if (/free/i.test(rawText) && !priceMatch) price = 'Free';
-
-    // Check if recurring (look for "Every Monday", "Mondays", etc.)
-    let isRecurring = false;
-    let dayOfWeek = undefined;
-    let seriesEndDate = null;
-
-    for (let i = 0; i < dayNames.length; i++) {
-      const dayPattern = new RegExp(`every\\s+${dayNames[i]}|${dayNames[i]}s\\b`, 'i');
-      if (dayPattern.test(rawText)) {
-        isRecurring = true;
-        dayOfWeek = i;
-        break;
-      }
-    }
-
-    // Try to find series end date (e.g. "through Mar 23" or "- Mar 23, 2026")
-    const throughMatch = rawText.match(/(?:through|until|ending|thru|[-–]\s*)\s*(?:(\w{3})\w*\s+(\d{1,2})(?:\s*,?\s*(\d{4}))?)/i);
-    if (throughMatch && isRecurring) {
-      const mon = monthNames[throughMatch[1].toLowerCase().substring(0, 3)];
-      const day = parseInt(throughMatch[2]);
-      const year = throughMatch[3] ? parseInt(throughMatch[3]) : new Date().getFullYear();
-      if (mon !== undefined) {
-        seriesEndDate = `${year}-${String(mon + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      }
-    }
-
-    // Try to find specific date for non-recurring events
-    let date = null;
-    if (!isRecurring) {
-      // Match patterns like "Feb 15, 2026" or "February 15" or "2026-02-15"
-      const dateMatch = rawText.match(/(\w{3,9})\s+(\d{1,2})(?:\s*,?\s*(\d{4}))?/);
-      if (dateMatch) {
-        const mon = monthNames[dateMatch[1].toLowerCase().substring(0, 3)];
-        const day = parseInt(dateMatch[2]);
-        const year = dateMatch[3] ? parseInt(dateMatch[3]) : new Date().getFullYear();
-        if (mon !== undefined) {
-          date = `${year}-${String(mon + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-        }
-      }
-    }
-
-    // Extract a short description from the text (first non-title, non-date line)
-    let description = '';
-    for (const line of blockLines) {
-      const l = line.trim();
-      if (l && l !== title && !timeMatch?.[0]?.includes(l) && l.length > 10 && l.length < 200) {
-        description = l;
-        break;
-      }
-    }
-
-    events.push({
-      title: title.trim(),
-      date,
-      startTime,
-      endTime,
-      price,
-      description,
-      isRecurring,
-      dayOfWeek,
-      seriesEndDate
-    });
-  }
-
-  for (const line of lines) {
-    // Detect event title (markdown heading or bold text)
-    const headingMatch = line.match(/^#{1,3}\s+(.+)/) || line.match(/^\*\*(.+)\*\*/);
-    if (headingMatch) {
-      // Process previous block
-      processBlock(currentTitle, currentLines);
-      currentTitle = headingMatch[1].replace(/\*\*/g, '').trim();
-      currentLines = [];
-    } else {
-      currentLines.push(line);
-    }
-  }
-  // Process last block
-  processBlock(currentTitle, currentLines);
-
-  return events.filter(e => e.title && (e.date || e.isRecurring));
+function parseMonth(str) {
+  return MONTH_MAP[str.toLowerCase()] ?? null;
 }
 
-/**
- * Convert 12h time string to 24h format.
- */
 function convertTo24h(timeStr) {
   if (!timeStr) return null;
-  const match = timeStr.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM|am|pm)$/);
+  const match = timeStr.trim().match(/^(\d{1,2}):(\d{2})\s*(am|pm)$/i);
   if (!match) return timeStr;
   let hours = parseInt(match[1]);
   const minutes = match[2];
@@ -458,29 +387,6 @@ function convertTo24h(timeStr) {
   if (period === 'PM' && hours !== 12) hours += 12;
   if (period === 'AM' && hours === 12) hours = 0;
   return `${String(hours).padStart(2, '0')}:${minutes}`;
-}
-
-/**
- * Expand a recurring day-of-week into specific dates within a range.
- */
-function expandRecurring(dayOfWeek, startStr, endDate) {
-  const dates = [];
-  const start = new Date(startStr + 'T12:00:00');
-  const end = endDate instanceof Date ? endDate : new Date(endDate + 'T12:00:00');
-
-  let current = new Date(start);
-  while (current.getDay() !== dayOfWeek) {
-    current.setDate(current.getDate() + 1);
-  }
-
-  while (current <= end) {
-    const yyyy = current.getFullYear();
-    const mm = String(current.getMonth() + 1).padStart(2, '0');
-    const dd = String(current.getDate()).padStart(2, '0');
-    dates.push(`${yyyy}-${mm}-${dd}`);
-    current.setDate(current.getDate() + 7);
-  }
-  return dates;
 }
 
 // ============================================================
