@@ -376,69 +376,81 @@ const AdminDashboard = memo(function AdminDashboard({
       />
 
       {/* Scraping System Status */}
-      <div className="premium-section">
-        <div className="section-header-premium">
-          <div>
-            <h2>🤖 Web Scraping System</h2>
-            <p className="section-subtitle">Automated venue data collection</p>
-          </div>
-          <div className="section-actions">
-            <button className="btn-secondary" onClick={() => showToast('Scraping configuration is managed via CLI', 'info')}><SlidersHorizontal size={18} /> Configure</button>
-            <button className="btn-primary-gradient" onClick={() => showToast('Run scrapers via CLI: node scripts/scrape-orchestrator.js', 'info')}><Plus size={18} /> Run Scrape Now</button>
-          </div>
-        </div>
+      {(() => {
+        const scrapedEvents = dbEvents.filter(e => e.tags && e.tags.includes('auto-scraped'));
+        const scrapedClasses = scrapedEvents.filter(e => e.eventType === 'class');
+        const scrapedNonClass = scrapedEvents.filter(e => e.eventType !== 'class');
+        const uniqueVenues = new Set(scrapedEvents.map(e => e.venueName).filter(Boolean)).size;
+        // Cron schedule: events 6AM UTC daily, classes 6:30AM, businesses Monday 7AM
+        const now = new Date();
+        const nextRun = new Date(now);
+        nextRun.setUTCHours(6, 0, 0, 0);
+        if (nextRun <= now) nextRun.setDate(nextRun.getDate() + 1);
+        const hoursUntil = Math.round((nextRun - now) / (1000 * 60 * 60));
 
-        <div className="scraping-dashboard" style={{ position: 'relative', opacity: 0.6 }}>
-          <div style={{ background: '#fef3c7', border: '1px solid #fde68a', borderRadius: '8px', padding: '8px 12px', marginBottom: '12px', fontSize: '13px', color: '#92400e', fontWeight: 600 }}>
-            Sample Data — Connect scraping system to display real metrics
-          </div>
-          <div className="scrape-overview-cards">
-            <div className="scrape-card success-card">
-              <div className="scrape-card-header">
-                <Clock size={20} />
-                <span>Next Scheduled Run</span>
-              </div>
-              <div className="scrape-card-value">--</div>
-              <div className="scrape-card-footer">
-                <span>Not connected</span>
+        return (
+          <div className="premium-section">
+            <div className="section-header-premium">
+              <div>
+                <h2>🤖 Web Scraping System</h2>
+                <p className="section-subtitle">Automated data collection via pg_cron</p>
               </div>
             </div>
+            <div className="scraping-dashboard">
+              <div className="scrape-overview-cards">
+                <div className="scrape-card success-card">
+                  <div className="scrape-card-header">
+                    <Clock size={20} />
+                    <span>Next Scheduled Run</span>
+                  </div>
+                  <div className="scrape-card-value">{hoursUntil}h</div>
+                  <div className="scrape-card-footer">
+                    <span>Daily at 10 PM PST</span>
+                  </div>
+                </div>
 
-            <div className="scrape-card info-card">
-              <div className="scrape-card-header">
-                <Clock size={20} />
-                <span>Last Run Duration</span>
-              </div>
-              <div className="scrape-card-value">--</div>
-              <div className="scrape-card-footer">
-                <span>Not connected</span>
-              </div>
-            </div>
+                <div className="scrape-card info-card">
+                  <div className="scrape-card-header">
+                    <Calendar size={20} />
+                    <span>Scraped Classes</span>
+                  </div>
+                  <div className="scrape-card-value">{scrapedClasses.length.toLocaleString()}</div>
+                  <div className="scrape-card-footer">
+                    <span>Active in database</span>
+                  </div>
+                </div>
 
-            <div className="scrape-card success-card">
-              <div className="scrape-card-header">
-                <CheckCircle size={20} />
-                <span>Changes Detected</span>
-              </div>
-              <div className="scrape-card-value">--</div>
-              <div className="scrape-card-footer">
-                <span>Not connected</span>
-              </div>
-            </div>
+                <div className="scrape-card success-card">
+                  <div className="scrape-card-header">
+                    <CheckCircle size={20} />
+                    <span>Scraped Events</span>
+                  </div>
+                  <div className="scrape-card-value">{scrapedNonClass.length.toLocaleString()}</div>
+                  <div className="scrape-card-footer">
+                    <span>Active in database</span>
+                  </div>
+                </div>
 
-            <div className="scrape-card error-card">
-              <div className="scrape-card-header">
-                <XCircle size={20} />
-                <span>Failed Scrapes</span>
+                <div className="scrape-card info-card">
+                  <div className="scrape-card-header">
+                    <Eye size={20} />
+                    <span>Venues Covered</span>
+                  </div>
+                  <div className="scrape-card-value">{uniqueVenues}</div>
+                  <div className="scrape-card-footer">
+                    <span>Unique sources</span>
+                  </div>
+                </div>
               </div>
-              <div className="scrape-card-value">--</div>
-              <div className="scrape-card-footer">
-                <span>Not connected</span>
+              <div style={{ display: 'flex', gap: '8px', marginTop: '12px', fontSize: '12px', color: '#6b7280', flexWrap: 'wrap' }}>
+                <span style={{ background: '#f0fdf4', padding: '4px 8px', borderRadius: '6px', color: '#16a34a' }}>Events: daily 6 AM UTC</span>
+                <span style={{ background: '#eff6ff', padding: '4px 8px', borderRadius: '6px', color: '#2563eb' }}>Classes: daily 6:30 AM UTC</span>
+                <span style={{ background: '#fef3c7', padding: '4px 8px', borderRadius: '6px', color: '#d97706' }}>Businesses: Mon 7 AM UTC</span>
               </div>
             </div>
           </div>
-        </div>
-      </div>
+        );
+      })()}
 
       {/* Venue Management */}
       <div className="premium-section">

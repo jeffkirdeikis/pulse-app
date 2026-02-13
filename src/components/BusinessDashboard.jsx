@@ -49,6 +49,46 @@ const BusinessDashboard = memo(function BusinessDashboard({
   markConversationResolved,
   sendBusinessReply,
 }) {
+  // === Computed: Top Performing Content ===
+  const businessListingsAll = activeBusiness ? dbEvents.filter(e => e.venueId === activeBusiness.id || (e.venueName && activeBusiness.name && e.venueName.toLowerCase() === activeBusiness.name.toLowerCase())) : [];
+  const topPerforming = [...businessListingsAll].sort((a, b) => (b.viewCount || 0) - (a.viewCount || 0)).slice(0, 3).filter(e => e.viewCount > 0 || businessListingsAll.length > 0);
+  // If no views yet, just show top 3 listings as a starting point
+  const topItems = topPerforming.length > 0 ? topPerforming : businessListingsAll.slice(0, 3);
+
+  // === Computed: Pulse Score ===
+  const profileFields = activeBusiness ? [activeBusiness.name, activeBusiness.address, activeBusiness.phone, activeBusiness.website, activeBusiness.email, activeBusiness.category].filter(Boolean).length : 0;
+  const profileScore = Math.round((profileFields / 6) * 100);
+  const totalViews = (businessAnalytics?.totals?.profile_views || 0) + (businessAnalytics?.totals?.class_views || 0) + (businessAnalytics?.totals?.event_views || 0);
+  const engagementScore = Math.min(100, Math.round(totalViews / 10));
+  const resolvedConvos = businessConversations.filter(c => c.status === 'resolved').length;
+  const totalConvos = businessConversations.length;
+  const responseScore = totalConvos > 0 ? Math.round((resolvedConvos / totalConvos) * 100) : 0;
+  const qualityScore = Math.min(100, businessListingsAll.length * 10);
+  const pulseScore = Math.round((profileScore + engagementScore + responseScore + qualityScore) / 4);
+
+  // === Computed: Weekly Goals ===
+  const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
+  const eventsThisWeek = businessListingsAll.filter(e => e.createdAt && new Date(e.createdAt) >= weekAgo).length;
+  const goalPosted = eventsThisWeek > 0;
+  const goalViews = businessAnalytics?.totals?.profile_views || 0;
+  const goalViewsTarget = 500;
+  const goalViewsPct = Math.min(100, Math.round((goalViews / goalViewsTarget) * 100));
+
+  // === Computed: Badges ===
+  const badges = [
+    { icon: Check, name: 'Verified', earned: !!activeBusiness?.claimed_by },
+    { icon: Star, name: 'Top Rated', earned: totalViews >= 100 },
+    { icon: Zap, name: 'Quick Reply', earned: responseScore >= 80 },
+    { icon: TrendingUp, name: 'Rising Star', earned: totalViews >= 50 },
+    { icon: Heart, name: 'Community Fave', earned: (businessAnalytics?.totals?.total_saves || 0) >= 10 },
+    { icon: Calendar, name: 'Event Pro', earned: businessListingsAll.filter(e => e.eventType !== 'class').length >= 10 },
+    { icon: Percent, name: 'Deal Maker', earned: false },
+    { icon: Users, name: '1K Views', earned: totalViews >= 1000 },
+    { icon: Building, name: '5K Views', earned: totalViews >= 5000 },
+    { icon: Sparkles, name: 'Superhost', earned: pulseScore >= 80 },
+  ];
+  const earnedBadgeCount = badges.filter(b => b.earned).length;
+
   return (
     <div className="business-view-premium">
       {/* Check if user is authenticated first */}
@@ -196,8 +236,8 @@ const BusinessDashboard = memo(function BusinessDashboard({
               <div className="pulse-score-ring">
                 <svg viewBox="0 0 120 120">
                   <circle cx="60" cy="60" r="52" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="10" />
-                  <circle cx="60" cy="60" r="52" fill="none" stroke="url(#pulseGradient)" strokeWidth="10" 
-                    strokeDasharray={`${0 / 1000 * 327} 327`} 
+                  <circle cx="60" cy="60" r="52" fill="none" stroke="url(#pulseGradient)" strokeWidth="10"
+                    strokeDasharray={`${pulseScore / 100 * 327} 327`}
                     strokeLinecap="round"
                     transform="rotate(-90 60 60)" />
                   <defs>
@@ -208,37 +248,37 @@ const BusinessDashboard = memo(function BusinessDashboard({
                   </defs>
                 </svg>
                 <div className="pulse-score-center">
-                  <span className="pulse-score-num">--</span>
+                  <span className="pulse-score-num">{pulseScore}</span>
                   <span className="pulse-score-label">PULSE</span>
                 </div>
               </div>
             </div>
             <div className="pulse-score-right">
               <div className="pulse-score-title">
-                <h3>Build Your Score</h3>
+                <h3>{pulseScore >= 80 ? 'Great Score!' : pulseScore >= 50 ? 'Growing Nicely' : 'Build Your Score'}</h3>
               </div>
-              <p>Complete your profile and engage with customers to build your Pulse Score</p>
+              <p>{pulseScore >= 80 ? 'Your business is performing well on Pulse' : 'Complete your profile and engage with customers to build your Pulse Score'}</p>
             </div>
             <div className="pulse-score-breakdown">
               <div className="breakdown-item">
                 <span className="breakdown-label">Profile</span>
-                <div className="breakdown-bar"><div style={{width: '0%'}}></div></div>
-                <span className="breakdown-val">--</span>
+                <div className="breakdown-bar"><div style={{width: `${profileScore}%`}}></div></div>
+                <span className="breakdown-val">{profileScore}%</span>
               </div>
               <div className="breakdown-item">
                 <span className="breakdown-label">Engagement</span>
-                <div className="breakdown-bar"><div style={{width: '0%'}}></div></div>
-                <span className="breakdown-val">--</span>
+                <div className="breakdown-bar"><div style={{width: `${engagementScore}%`}}></div></div>
+                <span className="breakdown-val">{engagementScore}%</span>
               </div>
               <div className="breakdown-item">
                 <span className="breakdown-label">Response</span>
-                <div className="breakdown-bar"><div style={{width: '0%'}}></div></div>
-                <span className="breakdown-val">--</span>
+                <div className="breakdown-bar"><div style={{width: `${responseScore}%`}}></div></div>
+                <span className="breakdown-val">{responseScore > 0 ? `${responseScore}%` : 'N/A'}</span>
               </div>
               <div className="breakdown-item">
                 <span className="breakdown-label">Quality</span>
-                <div className="breakdown-bar"><div style={{width: '0%'}}></div></div>
-                <span className="breakdown-val">--</span>
+                <div className="breakdown-bar"><div style={{width: `${qualityScore}%`}}></div></div>
+                <span className="breakdown-val">{qualityScore}%</span>
               </div>
             </div>
           </div>
@@ -360,32 +400,33 @@ const BusinessDashboard = memo(function BusinessDashboard({
 
             <div className="goals-grid">
               <div className="goal-card">
-                <div className="goal-status empty"></div>
+                <div className={`goal-status ${goalPosted ? 'complete' : 'empty'}`}>{goalPosted && <Check size={14} />}</div>
                 <div className="goal-content">
                   <span className="goal-title">Post a new event or deal</span>
                   <span className="goal-xp">+100 XP</span>
                 </div>
               </div>
               <div className="goal-card">
-                <div className="goal-status empty"></div>
+                <div className={`goal-status ${resolvedConvos >= 5 ? 'complete' : 'empty'}`}>{resolvedConvos >= 5 && <Check size={14} />}</div>
                 <div className="goal-content">
-                  <span className="goal-title">Respond to 5 reviews</span>
-                  <span className="goal-xp">+75 XP</span>
+                  <span className="goal-title">Respond to 5 messages</span>
+                  <div className="goal-progress-bar"><div style={{width: `${Math.min(100, (resolvedConvos / 5) * 100)}%`}}></div></div>
                 </div>
+                <span className="goal-xp">+75 XP</span>
               </div>
               <div className="goal-card">
-                <div className="goal-status empty"></div>
+                <div className={`goal-status ${businessListingsAll.length >= 10 ? 'complete' : 'empty'}`}>{businessListingsAll.length >= 10 && <Check size={14} />}</div>
                 <div className="goal-content">
-                  <span className="goal-title">Get 5 new reviews</span>
-                  <div className="goal-progress-bar"><div style={{width: '0%'}}></div></div>
+                  <span className="goal-title">Have 10 active listings</span>
+                  <div className="goal-progress-bar"><div style={{width: `${Math.min(100, (businessListingsAll.length / 10) * 100)}%`}}></div></div>
                 </div>
                 <span className="goal-xp">+150 XP</span>
               </div>
               <div className="goal-card">
-                <div className="goal-status empty"></div>
+                <div className={`goal-status ${goalViews >= goalViewsTarget ? 'complete' : 'empty'}`}>{goalViews >= goalViewsTarget && <Check size={14} />}</div>
                 <div className="goal-content">
-                  <span className="goal-title">Reach 15,000 profile views</span>
-                  <div className="goal-progress-bar"><div style={{width: '0%'}}></div></div>
+                  <span className="goal-title">Reach {goalViewsTarget.toLocaleString()} profile views</span>
+                  <div className="goal-progress-bar"><div style={{width: `${goalViewsPct}%`}}></div></div>
                 </div>
                 <span className="goal-xp">+175 XP</span>
               </div>
@@ -396,50 +437,16 @@ const BusinessDashboard = memo(function BusinessDashboard({
           <div className="premium-section badges-section">
             <div className="section-header-premium">
               <h2>Business Badges</h2>
-              <span className="badge-progress">0 / 10 earned</span>
+              <span className="badge-progress">{earnedBadgeCount} / {badges.length} earned</span>
             </div>
 
             <div className="badges-showcase">
-              <div className="badge-item locked">
-                <div className="badge-icon"><Check size={18} /></div>
-                <span>Verified</span>
-              </div>
-              <div className="badge-item locked">
-                <div className="badge-icon"><Star size={18} /></div>
-                <span>Top Rated</span>
-              </div>
-              <div className="badge-item locked">
-                <div className="badge-icon"><Zap size={18} /></div>
-                <span>Quick Reply</span>
-              </div>
-              <div className="badge-item locked">
-                <div className="badge-icon"><TrendingUp size={18} /></div>
-                <span>Rising Star</span>
-              </div>
-              <div className="badge-item locked">
-                <div className="badge-icon"><Heart size={18} /></div>
-                <span>Community Fave</span>
-              </div>
-              <div className="badge-item locked">
-                <div className="badge-icon"><Calendar size={18} /></div>
-                <span>Event Pro</span>
-              </div>
-              <div className="badge-item locked">
-                <div className="badge-icon"><Percent size={18} /></div>
-                <span>Deal Maker</span>
-              </div>
-              <div className="badge-item locked">
-                <div className="badge-icon"><Users size={18} /></div>
-                <span>1K Followers</span>
-              </div>
-              <div className="badge-item locked">
-                <div className="badge-icon"><Building size={18} /></div>
-                <span>5K Followers</span>
-              </div>
-              <div className="badge-item locked">
-                <div className="badge-icon"><Sparkles size={18} /></div>
-                <span>Superhost</span>
-              </div>
+              {badges.map((badge, i) => (
+                <div key={i} className={`badge-item ${badge.earned ? 'earned' : 'locked'}`}>
+                  <div className="badge-icon"><badge.icon size={18} /></div>
+                  <span>{badge.name}</span>
+                </div>
+              ))}
             </div>
           </div>
 
@@ -616,19 +623,13 @@ const BusinessDashboard = memo(function BusinessDashboard({
             </div>
 
             <div className="top-classes-grid">
-              {[
-                { name: "No data yet", type: "Deal", views: 0, conversions: 0, revenue: "$0", growth: 0 },
-              ].map((item, i) => (
-                <div key={i} className="top-class-card">
+              {topItems.length > 0 ? topItems.map((item, i) => (
+                <div key={item.id || i} className="top-class-card">
                   <div className="class-card-header">
                     <div className="class-rank-badge">#{i + 1}</div>
                     <div className="class-title-section">
-                      <h3>{item.name}</h3>
-                      <span className="class-type-badge">{item.type}</span>
-                    </div>
-                    <div className="class-growth-badge">
-                      <TrendingUp size={14} />
-                      <span>+{item.growth}%</span>
+                      <h3>{item.title}</h3>
+                      <span className="class-type-badge">{item.eventType === 'class' ? 'Class' : 'Event'}</span>
                     </div>
                   </div>
                   <div className="class-card-stats">
@@ -637,33 +638,38 @@ const BusinessDashboard = memo(function BusinessDashboard({
                         <Eye size={16} />
                       </div>
                       <div className="stat-content">
-                        <div className="stat-value">{item.views.toLocaleString()}</div>
+                        <div className="stat-value">{(item.viewCount || 0).toLocaleString()}</div>
                         <div className="stat-label">Views</div>
                       </div>
                     </div>
                     <div className="class-stat-divider"></div>
                     <div className="class-stat-item">
                       <div className="stat-icon bookings-icon">
-                        <Users size={16} />
+                        <Heart size={16} />
                       </div>
                       <div className="stat-content">
-                        <div className="stat-value">{item.conversions}</div>
-                        <div className="stat-label">Conversions</div>
+                        <div className="stat-value">{item.saveCount || 0}</div>
+                        <div className="stat-label">Saves</div>
                       </div>
                     </div>
                     <div className="class-stat-divider"></div>
                     <div className="class-stat-item">
                       <div className="stat-icon revenue-icon">
-                        <DollarSign size={16} />
+                        <Calendar size={16} />
                       </div>
                       <div className="stat-content">
-                        <div className="stat-value">{item.revenue}</div>
-                        <div className="stat-label">Revenue</div>
+                        <div className="stat-value">{item.start ? new Date(item.start).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—'}</div>
+                        <div className="stat-label">Date</div>
                       </div>
                     </div>
                   </div>
                 </div>
-              ))}
+              )) : (
+                <div style={{ textAlign: 'center', padding: '24px', color: '#9ca3af', fontSize: '14px' }}>
+                  <Calendar size={28} style={{ marginBottom: '8px', opacity: 0.5 }} />
+                  <p style={{ margin: 0 }}>Add events or classes to see your top performers</p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -745,14 +751,24 @@ const BusinessDashboard = memo(function BusinessDashboard({
             })()}
           </div>
 
-          {/* Audience Insights - Coming Soon */}
-          <div className="premium-section audience-section" style={{ opacity: 0.6 }}>
+          {/* Audience Insights */}
+          <div className="premium-section audience-section">
             <div className="section-header-premium">
-              <h2>👥 Audience Insights</h2>
-              <span style={{ background: '#fef3c7', border: '1px solid #fde68a', borderRadius: '6px', padding: '4px 10px', fontSize: '12px', color: '#92400e', fontWeight: 600 }}>Coming Soon</span>
+              <h2>👥 Audience Overview</h2>
             </div>
-            <div style={{ padding: '24px', textAlign: 'center', color: '#6b7280', fontSize: '14px' }}>
-              <p>Audience insights will be available once analytics tracking is connected.</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', padding: '16px' }}>
+              <div style={{ textAlign: 'center', padding: '12px', background: '#f0fdf4', borderRadius: '10px' }}>
+                <div style={{ fontSize: '24px', fontWeight: 700, color: '#16a34a' }}>{totalViews.toLocaleString()}</div>
+                <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>Total Views</div>
+              </div>
+              <div style={{ textAlign: 'center', padding: '12px', background: '#eff6ff', borderRadius: '10px' }}>
+                <div style={{ fontSize: '24px', fontWeight: 700, color: '#2563eb' }}>{(businessAnalytics?.totals?.total_saves || 0).toLocaleString()}</div>
+                <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>Total Saves</div>
+              </div>
+              <div style={{ textAlign: 'center', padding: '12px', background: '#fef3c7', borderRadius: '10px' }}>
+                <div style={{ fontSize: '24px', fontWeight: 700, color: '#d97706' }}>{businessListingsAll.length}</div>
+                <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>Active Listings</div>
+              </div>
             </div>
           </div>
 
@@ -934,7 +950,14 @@ const BusinessDashboard = memo(function BusinessDashboard({
               <div className="qa-icon">📊</div>
               <h3>Download Report</h3>
               <p>Get detailed analytics for this month</p>
-              <button className="btn-outline" onClick={() => showToast('PDF reports coming in a future update', 'info')}>Download PDF</button>
+              <button className="btn-outline" onClick={() => {
+                const data = `Pulse Business Report - ${activeBusiness?.name || 'Business'}\nGenerated: ${new Date().toLocaleDateString()}\n\nPulse Score: ${pulseScore}/100\nProfile Views: ${businessAnalytics?.totals?.profile_views || 0}\nClass Views: ${businessAnalytics?.totals?.class_views || 0}\nEvent Views: ${businessAnalytics?.totals?.event_views || 0}\nTotal Saves: ${businessAnalytics?.totals?.total_saves || 0}\nActive Listings: ${businessListingsAll.length}\nBadges Earned: ${earnedBadgeCount}/${badges.length}`;
+                const blob = new Blob([data], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a'); a.href = url; a.download = `pulse-report-${new Date().toISOString().slice(0,10)}.txt`; a.click();
+                URL.revokeObjectURL(url);
+                showToast('Report downloaded', 'success');
+              }}>Download Report</button>
             </div>
             <div className="quick-action-card">
               <div className="qa-icon">✉️</div>
