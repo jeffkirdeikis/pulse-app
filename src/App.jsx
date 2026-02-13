@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Calendar, Check, X, Plus, CheckCircle, Percent, Sparkles } from 'lucide-react';
+import { ArrowUp, Calendar, Check, X, Plus, CheckCircle, Percent, Sparkles } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import { useUserData } from './hooks/useUserData';
 import { useCardAnimation } from './hooks/useCardAnimation';
@@ -60,6 +60,7 @@ export default function PulseApp() {
   const venueCardRefs = useRef([]);
   const [installPromptEvent, setInstallPromptEvent] = useState(null);
   const [showInstallBanner, setShowInstallBanner] = useState(false);
+  const [showBackToTop, setShowBackToTop] = useState(false);
   const [showAddEventModal, setShowAddEventModal] = useState(false);
   const [showClaimBusinessModal, setShowClaimBusinessModal] = useState(false);
   const [claimFormData, setClaimFormData] = useState({ businessName: '', ownerName: '', email: '', phone: '', role: 'owner', address: '' });
@@ -1241,6 +1242,26 @@ export default function PulseApp() {
   useCardAnimation(classCardRefs, 'class-card-visible', [currentSection]);
   useCardAnimation(venueCardRefs, 'venue-card-visible', [currentSection], { checkInitial: false });
 
+  // Back to top button - show after scrolling 600px
+  useEffect(() => {
+    let ticking = false;
+    const handleScroll = () => {
+      if (!ticking) {
+        requestAnimationFrame(() => {
+          setShowBackToTop(window.scrollY > 600);
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const scrollToTop = useCallback(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
+
   return (
     <div className="pulse-app">
       <a href="#main-content" className="skip-to-content" style={{position:'absolute',left:'-9999px',top:'auto',width:'1px',height:'1px',overflow:'hidden',zIndex:9999}} onFocus={(e)=>{e.target.style.position='fixed';e.target.style.left='50%';e.target.style.top='8px';e.target.style.transform='translateX(-50%)';e.target.style.width='auto';e.target.style.height='auto';e.target.style.overflow='visible';e.target.style.background='#1f2937';e.target.style.color='#fff';e.target.style.padding='8px 16px';e.target.style.borderRadius='8px';e.target.style.fontSize='14px';e.target.style.fontWeight='600';e.target.style.textDecoration='none';}} onBlur={(e)=>{e.target.style.position='absolute';e.target.style.left='-9999px';e.target.style.width='1px';e.target.style.height='1px';e.target.style.overflow='hidden';}}>Skip to content</a>
@@ -1992,6 +2013,23 @@ export default function PulseApp() {
         />
         </motion.div>
       )}
+      </AnimatePresence>
+
+      {/* Back to Top Button */}
+      <AnimatePresence>
+        {showBackToTop && (
+          <motion.button
+            className="back-to-top-btn"
+            onClick={scrollToTop}
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+            aria-label="Back to top"
+          >
+            <ArrowUp size={20} />
+          </motion.button>
+        )}
       </AnimatePresence>
 
       <FeedbackWidget />
