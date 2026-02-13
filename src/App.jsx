@@ -284,6 +284,17 @@ export default function PulseApp() {
     }
   };
 
+  // Track detail modal views for business analytics
+  useEffect(() => {
+    if (selectedEvent?.businessId) trackAnalytics('event_view', selectedEvent.businessId, selectedEvent.id);
+  }, [selectedEvent?.id]);
+  useEffect(() => {
+    if (selectedDeal?.businessId) trackAnalytics('deal_view', selectedDeal.businessId, selectedDeal.id);
+  }, [selectedDeal?.id]);
+  useEffect(() => {
+    if (selectedService?.businessId) trackAnalytics('profile_view', selectedService.businessId, selectedService.id);
+  }, [selectedService?.id]);
+
   const getVenueName = (venueId, event) => {
     if (event?.venueName) return event.venueName;
     if (venueId) {
