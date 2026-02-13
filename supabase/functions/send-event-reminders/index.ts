@@ -264,7 +264,7 @@ serve(async (_req) => {
       // Mark reminder as sent
       reminded.push(entry.id)
 
-      // Log notification
+      // Log notification (push delivery tracking)
       await supabase.from('notifications').insert({
         user_id: entry.user_id,
         type: 'push',
@@ -275,6 +275,16 @@ serve(async (_req) => {
         delivered_at: delivered ? new Date().toISOString() : null,
         delivery_failed: !delivered,
       }).catch((err) => console.error('Notification log error:', err))
+
+      // Also insert into user-facing notifications panel
+      await supabase.from('pulse_user_notifications').insert({
+        user_id: entry.user_id,
+        type: 'event_reminder',
+        title: payload.title,
+        body: payload.body,
+        data: { eventName: entry.event_name, venueName: entry.venue_name },
+        is_read: false,
+      }).catch((err) => console.error('User notification insert error:', err))
     }
 
     // Mark all entries as reminded

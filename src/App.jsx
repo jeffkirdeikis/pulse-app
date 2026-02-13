@@ -35,6 +35,7 @@ import FeedbackWidget from './components/FeedbackWidget';
 import ImageCropperModal from './components/modals/ImageCropperModal';
 import ContactSheet from './components/modals/ContactSheet';
 import EditEventModal from './components/modals/EditEventModal';
+import NotificationsPanel from './components/modals/NotificationsPanel';
 import EventCard from './components/EventCard';
 import SkeletonCards from './components/SkeletonCards';
 import PullToRefresh from './components/PullToRefresh';
@@ -74,6 +75,9 @@ export default function PulseApp() {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showCalendarToast, setShowCalendarToast] = useState(false);
   const [calendarToastMessage, setCalendarToastMessage] = useState('');
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
 
   // Helper function to show toast messages
   const showToast = useCallback((message, _type = 'info') => {
@@ -88,6 +92,26 @@ export default function PulseApp() {
     try {
       await supabase.rpc('increment_view_count', { p_table: table, p_id: id });
     } catch (e) { /* silent */ }
+  }, []);
+
+  const fetchNotifications = useCallback(async (userId) => {
+    if (!userId) return;
+    setNotificationsLoading(true);
+    try {
+      const { data } = await supabase
+        .from('pulse_user_notifications')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(50);
+      setNotifications(data || []);
+    } catch (e) { /* silent */ }
+    setNotificationsLoading(false);
+  }, []);
+
+  const markNotificationRead = useCallback(async (notifId) => {
+    setNotifications(prev => prev.map(n => n.id === notifId ? { ...n, is_read: true } : n));
+    await supabase.from('pulse_user_notifications').update({ is_read: true }).eq('id', notifId);
   }, []);
 
   // User data from Supabase (replaces all hardcoded dummy data)
@@ -159,6 +183,54 @@ export default function PulseApp() {
   // Route prefetching for instant detail navigation
   const { prefetchEvent, prefetchDeal, prefetchService } = usePrefetch();
   const { subscribeToPush } = usePushNotifications(session?.user?.id);
+
+  // Notification functions that need session
+  const markAllNotificationsRead = useCallback(async () => {
+    const userId = session?.user?.id;
+    if (!userId) return;
+    setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+    await supabase.from('pulse_user_notifications').update({ is_read: true }).eq('user_id', userId).eq('is_read', false);
+  }, [session]);
+
+  const clearAllNotifications = useCallback(async () => {
+    const userId = session?.user?.id;
+    if (!userId) return;
+    setNotifications([]);
+    await supabase.from('pulse_user_notifications').delete().eq('user_id', userId);
+  }, [session]);
+
+  const createNotification = useCallback(async (type, title, body, data = null) => {
+    const userId = session?.user?.id;
+    if (!userId) return;
+    const { data: inserted } = await supabase
+      .from('pulse_user_notifications')
+      .insert({ user_id: userId, type, title, body, data, is_read: false })
+      .select()
+      .single();
+    if (inserted) {
+      setNotifications(prev => [inserted, ...prev]);
+    }
+  }, [session]);
+
+  // Fetch notifications on login + subscribe to real-time updates
+  useEffect(() => {
+    if (!session?.user?.id) return;
+    fetchNotifications(session.user.id);
+
+    const channel = supabase
+      .channel('user-notifications')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'pulse_user_notifications',
+        filter: `user_id=eq.${session.user.id}`,
+      }, (payload) => {
+        setNotifications(prev => [payload.new, ...prev]);
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [session?.user?.id, fetchNotifications]);
 
   // Pull-to-refresh handler — force refresh current section's data
   const handlePullRefresh = useCallback(async () => {
@@ -590,7 +662,9 @@ export default function PulseApp() {
     refreshUserData,
     getVenueName,
     showToast,
-    onCalendarAdd: subscribeToPush,
+    onCalendarAdd: () => {
+      subscribeToPush();
+    },
   });
 
   // Booking (hook replaces 7 state variables + 5 functions)
@@ -1062,6 +1136,17 @@ export default function PulseApp() {
     }
   }, [isAuthenticated, toggleSaveItem, localSavedItems, showToast]);
 
+  // Create notification when user saves an event/deal (for reminders)
+  const createSaveNotification = useCallback((type, name, id) => {
+    if (!session?.user?.id) return;
+    createNotification(
+      'save_confirm',
+      `Saved: ${name}`,
+      `You saved this ${type}. We'll remind you before it starts.`,
+      { [`${type}Id`]: id }
+    );
+  }, [session, createNotification]);
+
   // Combined check for saved items (local + database)
   const isItemSavedLocal = useCallback((type, id) => {
     const itemKey = `${type}-${id}`;
@@ -1124,6 +1209,8 @@ export default function PulseApp() {
             setShowAuthModal={setShowAuthModal}
             openMessages={openMessages}
             showToast={showToast}
+            onOpenNotifications={() => setShowNotifications(true)}
+            unreadNotifCount={notifications.filter(n => !n.is_read).length}
           />
 
           {/* Premium Filter System - Clean 5-Filter Layout */}
@@ -1642,6 +1729,32 @@ export default function PulseApp() {
               onClose={() => { setShowMessagesModal(false); setCurrentConversation(null); }}
               fetchMessages={fetchMessages}
               sendMessage={sendMessage}
+            />
+            </motion.div>
+          )}
+          </AnimatePresence>
+
+          {/* Notifications Panel */}
+          <AnimatePresence>
+          {showNotifications && (
+            <motion.div key="notifications" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} style={{ position: 'fixed', inset: 0, zIndex: 1000 }}>
+            <NotificationsPanel
+              notifications={notifications}
+              loading={notificationsLoading}
+              onClose={() => setShowNotifications(false)}
+              onMarkRead={markNotificationRead}
+              onMarkAllRead={markAllNotificationsRead}
+              onClearAll={clearAllNotifications}
+              onNotificationClick={(notif) => {
+                setShowNotifications(false);
+                if (notif.data?.eventId) {
+                  const evt = dbEvents.find(e => e.id === notif.data.eventId);
+                  if (evt) setSelectedEvent(evt);
+                } else if (notif.data?.dealId) {
+                  const deal = dbDeals.find(d => d.id === notif.data.dealId);
+                  if (deal) setSelectedDeal(deal);
+                }
+              }}
             />
             </motion.div>
           )}
