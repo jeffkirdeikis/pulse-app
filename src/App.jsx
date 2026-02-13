@@ -1026,15 +1026,32 @@ export default function PulseApp() {
 
     const events = filteredEvents;
     if (events.length === 0) {
+      // Contextual empty message based on active filter
+      const isSpecificDate = /^\d{4}-\d{2}-\d{2}$/.test(filters.day);
+      let emptyMessage = `No ${currentSection} found matching your filters.`;
+      if (isSpecificDate) {
+        const [y, m, d] = filters.day.split('-').map(Number);
+        const dateObj = new Date(y, m - 1, d);
+        const dateLabel = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+        emptyMessage = `No ${currentSection} on ${dateLabel}.`;
+      } else if (searchQuery?.trim()) {
+        emptyMessage = `No ${currentSection} match "${searchQuery.trim()}".`;
+      }
       return (
         <div className="empty-state">
-          <p>No {currentSection} found matching your filters.</p>
-          <button onClick={() => {
+          <div className="empty-state-icon">
+            {currentSection === 'classes' ? '🧘' : '📅'}
+          </div>
+          <p className="empty-state-message">{emptyMessage}</p>
+          {isSpecificDate && (
+            <p className="empty-state-hint">Try checking nearby days or switch to "All Upcoming".</p>
+          )}
+          <button className="empty-state-btn" onClick={() => {
             setFilters({ day: 'today', age: 'all', category: 'all', time: 'all', price: 'all', location: 'all' });
             setKidsAgeRange([0, 18]);
             setSearchQuery('');
           }}>
-            Clear Filters
+            Show All Upcoming
           </button>
         </div>
       );

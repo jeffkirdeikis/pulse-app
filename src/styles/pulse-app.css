@@ -976,6 +976,43 @@
           font-size: 14px;
         }
 
+        .empty-state-icon {
+          font-size: 40px;
+          margin-bottom: 12px;
+        }
+
+        .empty-state-message {
+          font-size: 16px;
+          font-weight: 500;
+          color: #374151;
+          margin-bottom: 6px;
+        }
+
+        .empty-state-hint {
+          font-size: 13px;
+          color: #9ca3af;
+          margin-bottom: 16px;
+        }
+
+        .empty-state-btn {
+          background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+          color: #ffffff;
+          border: none;
+          padding: 12px 24px;
+          border-radius: 10px;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s;
+          box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+          margin-top: 8px;
+        }
+
+        .empty-state-btn:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+        }
+
         .empty-chat {
           flex: 1;
           display: flex;
