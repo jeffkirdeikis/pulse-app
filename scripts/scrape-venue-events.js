@@ -11,6 +11,7 @@
  *   4. Arrow Wood Games — Firecrawl on Tockify pinboard
  *   5. Sea to Sky Gondola — Firecrawl main page + detail page fetches
  *   6. Squamish Public Library — Communico /eeventcaldata API
+ *   7. Squamish Arts Council — WordPress Tribe Events REST API
  *
  * Run: node scripts/scrape-venue-events.js
  */
@@ -65,6 +66,11 @@ const LIBRARY = {
   address: '37907 2nd Ave, Squamish, BC V8B 0A6',
   tag: 'squamish-library',
   apiBase: 'https://events.squamishlibrary.ca/eeventcaldata'
+};
+
+const ARTS_COUNCIL = {
+  tag: 'squamish-arts',
+  apiBase: 'https://squamisharts.com/wp-json/tribe/events/v1/events'
 };
 
 // ============================================================
@@ -912,11 +918,95 @@ async function scrapeLibrary() {
 }
 
 // ============================================================
+// 7. SQUAMISH ARTS COUNCIL — WordPress Tribe Events REST API
+// ============================================================
+
+async function scrapeArtsCouncil() {
+  console.log(`\n--- Squamish Arts Council (WordPress REST API) ---`);
+  const events = [];
+  const today = getTodayPacific();
+  const endDate = getEndDatePacific(30);
+
+  let page = 1;
+  let hasMore = true;
+
+  while (hasMore) {
+    const url = `${ARTS_COUNCIL.apiBase}?start_date=${today}&end_date=${endDate}&per_page=50&page=${page}`;
+    console.log(`   Fetching page ${page}: ${url}`);
+
+    try {
+      const response = await retryWithBackoff(
+        () => fetch(url, { headers: { 'User-Agent': 'PulseApp-Scraper/1.0' } }),
+        { label: `Arts Council API page ${page}` }
+      );
+
+      if (!response.ok) {
+        console.warn(`   API returned ${response.status} on page ${page}`);
+        break;
+      }
+
+      const data = await response.json();
+      const apiEvents = data.events || [];
+
+      if (apiEvents.length === 0) { hasMore = false; break; }
+
+      for (const evt of apiEvents) {
+        const title = decodeHtmlEntities(evt.title || '');
+        if (!title) continue;
+
+        const description = decodeHtmlEntities(
+          (evt.description || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 500)
+        );
+        const date = parseDate(evt.start_date || evt.utc_start_date);
+        const startTime = parseTime24(evt.start_date || evt.utc_start_date);
+        const endTime = parseTime24(evt.end_date || evt.utc_end_date);
+        const costInfo = parseCost(evt.cost || '');
+
+        if (!date || !startTime) {
+          console.warn(`   [skip] Missing data for "${title}" - date:${date} time:${startTime}`);
+          continue;
+        }
+
+        // Use venue from API when available, otherwise fall back
+        let venueName = 'Squamish Arts Council';
+        let venueAddress = '';
+        if (evt.venue) {
+          const v = evt.venue;
+          if (v.venue) venueName = decodeHtmlEntities(v.venue);
+          if (v.address) venueAddress = [v.address, v.city, v.province, v.zip].filter(Boolean).join(', ');
+        }
+
+        events.push({
+          title, date, time: startTime, endTime,
+          description: description || `${title} — Squamish Arts Council event`,
+          category: categorizeEvent(title, description),
+          venueName,
+          venueAddress: venueAddress || undefined,
+          address: venueAddress || '',
+          tags: ['auto-scraped', 'wp-tribe-api', ARTS_COUNCIL.tag],
+          ...costInfo
+        });
+      }
+
+      const totalPages = data.total_pages || 1;
+      hasMore = page < totalPages;
+      page++;
+    } catch (error) {
+      console.error(`   Error fetching Arts Council API page ${page}: ${error.message}`);
+      break;
+    }
+  }
+
+  console.log(`   Found ${events.length} events from API`);
+  return events;
+}
+
+// ============================================================
 // MAIN
 // ============================================================
 
 async function main() {
-  console.log('=== Scraping Venue Events (6 venues) ===');
+  console.log('=== Scraping Venue Events (7 venues) ===');
   console.log(`   Date range: ${getTodayPacific()} to ${getEndDatePacific(30)}`);
 
   let inserted = 0;
@@ -930,6 +1020,7 @@ async function main() {
   const arrowwoodEvents = await scrapeArrowWood();
   const gondolaEvents = await scrapeGondola();
   const libraryEvents = await scrapeLibrary();
+  const artsCouncilEvents = await scrapeArtsCouncil();
 
   const allEvents = [
     ...tricksterEvents,
@@ -937,7 +1028,8 @@ async function main() {
     ...aframeEvents,
     ...arrowwoodEvents,
     ...gondolaEvents,
-    ...libraryEvents
+    ...libraryEvents,
+    ...artsCouncilEvents
   ];
 
   console.log(`\n--- Inserting ${allEvents.length} events ---`);
@@ -966,6 +1058,7 @@ async function main() {
   console.log(`Arrow Wood events found: ${arrowwoodEvents.length}`);
   console.log(`Gondola events found: ${gondolaEvents.length}`);
   console.log(`Library events found: ${libraryEvents.length}`);
+  console.log(`Arts Council events found: ${artsCouncilEvents.length}`);
   console.log(`Inserted: ${inserted}`);
   console.log(`Skipped (duplicates): ${skipped}`);
   console.log(`Failed: ${failed}`);
