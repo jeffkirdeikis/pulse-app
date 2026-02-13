@@ -50,6 +50,7 @@ const FilterSection = React.memo(function FilterSection({
   searchQuery,
   setSearchQuery,
   dateEventCounts = {},
+  happeningNowCount = 0,
 }) {
   const dateStrip = useMemo(() => getDateStrip(14), []);
   const stripRef = useRef(null);
@@ -126,7 +127,7 @@ const FilterSection = React.memo(function FilterSection({
       {/* Quick Filter Chips */}
       <div className="quick-filter-chips">
         {[
-          { key: 'now', label: 'Now', icon: <Zap size={14} />, apply: { day: 'happeningNow' }, match: (f) => f.day === 'happeningNow' },
+          { key: 'now', label: happeningNowCount > 0 ? `Now · ${happeningNowCount}` : 'Now', icon: <Zap size={14} />, apply: { day: 'happeningNow' }, match: (f) => f.day === 'happeningNow' },
           { key: 'free', label: 'Free', icon: <DollarSign size={14} />, apply: { price: 'free' }, match: (f) => f.price === 'free' },
           { key: 'thisweek', label: 'This Week', icon: <CalendarRange size={14} />, apply: { day: 'thisWeek' }, match: (f) => f.day === 'thisWeek' },
           { key: 'weekend', label: 'Weekend', icon: <CalendarDays size={14} />, apply: { day: 'thisWeekend' }, match: (f) => f.day === 'thisWeekend' },

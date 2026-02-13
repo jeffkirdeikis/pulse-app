@@ -1078,6 +1078,16 @@ export default function PulseApp() {
     return counts;
   }, [dbEvents, currentSection]);
 
+  // Count events happening right now (started within last 2 hours)
+  const happeningNowCount = useMemo(() => {
+    const now = getPacificNow();
+    const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000);
+    return dbEvents.filter(e =>
+      (currentSection === 'classes' ? e.eventType === 'class' : currentSection === 'events' ? e.eventType === 'event' : true) &&
+      e.start >= twoHoursAgo && e.start <= now
+    ).length;
+  }, [dbEvents, currentSection]);
+
   // Group events by date for infinite scroll with dividers
   const groupEventsByDate = (events) => {
     const grouped = {};
@@ -1513,6 +1523,7 @@ export default function PulseApp() {
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}
               dateEventCounts={dateEventCounts}
+              happeningNowCount={happeningNowCount}
             />
           )}
 
