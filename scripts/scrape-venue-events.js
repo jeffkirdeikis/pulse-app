@@ -10,6 +10,7 @@
  *   3. A-Frame Brewing — Squarespace JSON API
  *   4. Arrow Wood Games — Firecrawl on Tockify pinboard
  *   5. Sea to Sky Gondola — Firecrawl main page + detail page fetches
+ *   6. Squamish Public Library — Communico /eeventcaldata API
  *
  * Run: node scripts/scrape-venue-events.js
  */
@@ -57,6 +58,13 @@ const GONDOLA = {
   address: '36800 BC-99, Squamish, BC V8B 0N7',
   tag: 'sea-to-sky-gondola',
   pageUrl: 'https://seatoskygondola.com/events/'
+};
+
+const LIBRARY = {
+  venue: 'Squamish Public Library',
+  address: '37907 2nd Ave, Squamish, BC V8B 0A6',
+  tag: 'squamish-library',
+  apiBase: 'https://events.squamishlibrary.ca/eeventcaldata'
 };
 
 // ============================================================
@@ -810,11 +818,105 @@ async function scrapeGondola() {
 }
 
 // ============================================================
+// 6. SQUAMISH PUBLIC LIBRARY — Communico /eeventcaldata API
+// ============================================================
+
+// Skip closure notices (not real events)
+const LIBRARY_SKIP_PATTERNS = ['library closed'];
+
+async function scrapeLibrary() {
+  console.log(`\n--- Squamish Public Library (Communico API) ---`);
+  const events = [];
+  const today = getTodayPacific();
+  const endDate = getEndDatePacific(30);
+
+  // Calculate days between today and endDate
+  const todayDate = new Date(today + 'T00:00:00');
+  const endDateDate = new Date(endDate + 'T00:00:00');
+  const days = Math.ceil((endDateDate - todayDate) / (1000 * 60 * 60 * 24));
+
+  const options = {
+    date: today,
+    days,
+    view: 'list',
+    private: false,
+    search: '',
+    locations: [],
+    ages: [],
+    types: []
+  };
+
+  const url = `${LIBRARY.apiBase}?event_type=0&req=${encodeURIComponent(JSON.stringify(options))}`;
+  console.log(`   Fetching: ${LIBRARY.apiBase} (${days} days)`);
+
+  try {
+    const response = await retryWithBackoff(
+      () => fetch(url, { headers: { 'User-Agent': 'PulseApp-Scraper/1.0' } }),
+      { label: 'Communico Library API' }
+    );
+
+    if (!response.ok) {
+      console.error(`   Communico API returned ${response.status}`);
+      return events;
+    }
+
+    const data = await response.json();
+    console.log(`   Got ${data.length} events from API`);
+
+    for (const evt of data) {
+      const title = (evt.title || '').trim();
+      if (!title) continue;
+
+      // Skip closure notices
+      if (LIBRARY_SKIP_PATTERNS.some(p => title.toLowerCase().includes(p))) continue;
+
+      // Parse date and time from raw_start_time / raw_end_time
+      // Format: "2026-02-12 14:00:00"
+      const startParts = (evt.raw_start_time || '').split(' ');
+      const endParts = (evt.raw_end_time || '').split(' ');
+      const date = startParts[0]; // "2026-02-12"
+      const startTime = startParts[1] ? startParts[1].substring(0, 5) : null; // "14:00"
+      const endTime = endParts[1] ? endParts[1].substring(0, 5) : null; // "17:00"
+
+      if (!date || date < today || date > endDate) continue;
+
+      // Skip midnight events (likely all-day markers like closures)
+      if (startTime === '00:00' && endTime === '00:00') continue;
+
+      // Extract description
+      let description = (evt.description || '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+      description = description.substring(0, 300) || `${title} at Squamish Public Library`;
+
+      // Price info
+      const cost = evt.registration_cost;
+      const isFree = (!cost || cost === '0' || cost === '0.00');
+      const costInfo = isFree
+        ? { price: 0, isFree: true, priceDescription: 'Free' }
+        : { price: parseFloat(cost), isFree: false, priceDescription: `$${cost}` };
+
+      events.push({
+        title, date, time: startTime, endTime, description,
+        category: categorizeEvent(title, description),
+        venueName: LIBRARY.venue,
+        address: LIBRARY.address,
+        tags: ['auto-scraped', 'communico-api', LIBRARY.tag],
+        ...costInfo
+      });
+    }
+  } catch (error) {
+    console.error(`   Error scraping Library: ${error.message}`);
+  }
+
+  console.log(`   Found ${events.length} events`);
+  return events;
+}
+
+// ============================================================
 // MAIN
 // ============================================================
 
 async function main() {
-  console.log('=== Scraping Venue Events (5 venues) ===');
+  console.log('=== Scraping Venue Events (6 venues) ===');
   console.log(`   Date range: ${getTodayPacific()} to ${getEndDatePacific(30)}`);
 
   let inserted = 0;
@@ -827,13 +929,15 @@ async function main() {
   const aframeEvents = await scrapeAFrame();
   const arrowwoodEvents = await scrapeArrowWood();
   const gondolaEvents = await scrapeGondola();
+  const libraryEvents = await scrapeLibrary();
 
   const allEvents = [
     ...tricksterEvents,
     ...bagEvents,
     ...aframeEvents,
     ...arrowwoodEvents,
-    ...gondolaEvents
+    ...gondolaEvents,
+    ...libraryEvents
   ];
 
   console.log(`\n--- Inserting ${allEvents.length} events ---`);
@@ -861,6 +965,7 @@ async function main() {
   console.log(`A-Frame events found: ${aframeEvents.length}`);
   console.log(`Arrow Wood events found: ${arrowwoodEvents.length}`);
   console.log(`Gondola events found: ${gondolaEvents.length}`);
+  console.log(`Library events found: ${libraryEvents.length}`);
   console.log(`Inserted: ${inserted}`);
   console.log(`Skipped (duplicates): ${skipped}`);
   console.log(`Failed: ${failed}`);
