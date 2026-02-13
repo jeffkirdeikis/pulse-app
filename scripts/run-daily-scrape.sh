@@ -43,11 +43,12 @@ echo "$(date): [3/5] Running community events scraper..." >> "$LOG_FILE"
 node scripts/scrape-events.js >> "$LOG_FILE" 2>&1
 echo "$(date): [3/5] Community events complete" >> "$LOG_FILE"
 
-# STEP 4: Venue-specific event scrapers (Trickster's Hideout, Brackendale Art Gallery)
-# These venues use JS-rendered event pages (WP Tribe Events API, Eventbrite widget)
-# that generic AI extraction can't reach — they need dedicated scrapers.
-echo "$(date): [4/5] Running venue event scrapers (Trickster's, BAG)..." >> "$LOG_FILE"
-node scripts/scrape-tricksters-bag.js >> "$LOG_FILE" 2>&1
+# STEP 4: Venue-specific event scrapers (5 venues)
+# Trickster's (WP API), BAG (Eventbrite widget), A-Frame (Squarespace API),
+# Arrow Wood Games (Tockify), Sea to Sky Gondola — all use JS-rendered or
+# API-based event pages that generic AI extraction can't reach.
+echo "$(date): [4/5] Running venue event scrapers (5 venues)..." >> "$LOG_FILE"
+node scripts/scrape-venue-events.js >> "$LOG_FILE" 2>&1
 echo "$(date): [4/5] Venue event scrapers complete" >> "$LOG_FILE"
 
 # STEP 5: Deals
