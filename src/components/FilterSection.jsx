@@ -51,6 +51,8 @@ const FilterSection = React.memo(function FilterSection({
   setSearchQuery,
   dateEventCounts = {},
   happeningNowCount = 0,
+  freeCount = 0,
+  weekendCount = 0,
 }) {
   const dateStrip = useMemo(() => getDateStrip(14), []);
   const stripRef = useRef(null);
@@ -128,9 +130,9 @@ const FilterSection = React.memo(function FilterSection({
       <div className="quick-filter-chips">
         {[
           { key: 'now', label: happeningNowCount > 0 ? `Now · ${happeningNowCount}` : 'Now', icon: <Zap size={14} />, apply: { day: 'happeningNow' }, match: (f) => f.day === 'happeningNow' },
-          { key: 'free', label: 'Free', icon: <DollarSign size={14} />, apply: { price: 'free' }, match: (f) => f.price === 'free' },
+          { key: 'free', label: freeCount > 0 ? `Free · ${freeCount}` : 'Free', icon: <DollarSign size={14} />, apply: { price: 'free' }, match: (f) => f.price === 'free' },
           { key: 'thisweek', label: 'This Week', icon: <CalendarRange size={14} />, apply: { day: 'thisWeek' }, match: (f) => f.day === 'thisWeek' },
-          { key: 'weekend', label: 'Weekend', icon: <CalendarDays size={14} />, apply: { day: 'thisWeekend' }, match: (f) => f.day === 'thisWeekend' },
+          { key: 'weekend', label: weekendCount > 0 ? `Weekend · ${weekendCount}` : 'Weekend', icon: <CalendarDays size={14} />, apply: { day: 'thisWeekend' }, match: (f) => f.day === 'thisWeekend' },
           { key: 'morning', label: 'Morning', icon: <Sun size={14} />, apply: { time: 'morning' }, match: (f) => f.time === 'morning' },
           { key: 'afternoon', label: 'Afternoon', icon: <Sunset size={14} />, apply: { time: 'afternoon' }, match: (f) => f.time === 'afternoon' },
           { key: 'evening', label: 'Evening', icon: <Moon size={14} />, apply: { time: 'evening' }, match: (f) => f.time === 'evening' },

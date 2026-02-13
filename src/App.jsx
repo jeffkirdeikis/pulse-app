@@ -1088,6 +1088,35 @@ export default function PulseApp() {
     ).length;
   }, [dbEvents, currentSection]);
 
+  // Count free events (upcoming)
+  const freeCount = useMemo(() => {
+    const now = getPacificNow();
+    return dbEvents.filter(e =>
+      (currentSection === 'classes' ? e.eventType === 'class' : currentSection === 'events' ? e.eventType === 'event' : true) &&
+      e.start >= now && e.price?.toLowerCase() === 'free'
+    ).length;
+  }, [dbEvents, currentSection]);
+
+  // Count weekend events
+  const weekendCount = useMemo(() => {
+    const now = getPacificNow();
+    const dayOfWeek = now.getDay();
+    const friday = new Date(now);
+    if (dayOfWeek === 5 || dayOfWeek === 6 || dayOfWeek === 0) {
+      const daysBackToFriday = dayOfWeek === 0 ? 2 : dayOfWeek - 5;
+      friday.setDate(now.getDate() - daysBackToFriday);
+    } else {
+      friday.setDate(now.getDate() + (5 - dayOfWeek));
+    }
+    friday.setHours(0, 0, 0, 0);
+    const monday = new Date(friday);
+    monday.setDate(friday.getDate() + 3);
+    return dbEvents.filter(e =>
+      (currentSection === 'classes' ? e.eventType === 'class' : currentSection === 'events' ? e.eventType === 'event' : true) &&
+      e.start >= friday && e.start < monday
+    ).length;
+  }, [dbEvents, currentSection]);
+
   // Group events by date for infinite scroll with dividers
   const groupEventsByDate = (events) => {
     const grouped = {};
@@ -1524,6 +1553,8 @@ export default function PulseApp() {
               setSearchQuery={setSearchQuery}
               dateEventCounts={dateEventCounts}
               happeningNowCount={happeningNowCount}
+              freeCount={freeCount}
+              weekendCount={weekendCount}
             />
           )}
 
