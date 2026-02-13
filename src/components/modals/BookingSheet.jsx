@@ -56,13 +56,7 @@ const BookingSheet = memo(function BookingSheet({
           return (
             <div className="external-booking-container">
               <div className="booking-system-badge">
-                {bookingType === 'mindbody' && (
-                  <img src="https://www.mindbodyonline.com/sites/default/files/public/favicon.ico" alt="" />
-                )}
-                {bookingType === 'wellnessliving' && (
-                  <img src="https://www.wellnessliving.com/favicon.ico" alt="" />
-                )}
-                {!bookingType && <ExternalLink size={20} />}
+                <ExternalLink size={18} />
                 <span>Book via {systemName}</span>
               </div>
 
