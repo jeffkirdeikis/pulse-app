@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import React, { memo, useRef } from 'react';
 import {
   AlertCircle, Calendar, Check, CheckCircle, Clock, DollarSign,
   Edit2, Eye, Plus, Search, SlidersHorizontal, Trash2, XCircle
@@ -33,6 +33,7 @@ const AdminDashboard = memo(function AdminDashboard({
   fetchServices,
   setView,
 }) {
+  const venueCardRefs = useRef({});
   return (
     <div className="admin-view-premium">
       {/* Check if user is authenticated and admin */}
