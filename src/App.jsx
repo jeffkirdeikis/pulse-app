@@ -559,18 +559,41 @@ export default function PulseApp() {
   // Pagination — render events incrementally to avoid 981+ DOM nodes
   const [visibleEventCount, setVisibleEventCount] = useState(50);
 
-  // Filter states - all dropdowns
-  const [filters, setFilters] = useState({
-    day: 'today', // today, tomorrow, thisWeekend, nextWeek, anytime
-    time: 'all', // all, or specific times like '6:00', '6:30', '7:00', etc
-    age: 'all', // all, kids, adults
-    category: 'all', // all, music, fitness, arts, etc
-    price: 'all' // all, free, paid
+  // Filter states - all dropdowns (persisted to localStorage, excluding specific dates)
+  const [filters, setFilters] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('pulse-filters') || '{}');
+      return {
+        day: 'today', // never restore specific dates — they go stale
+        time: saved.time || 'all',
+        age: saved.age || 'all',
+        category: 'all', // categories vary by section, don't restore
+        price: saved.price || 'all',
+      };
+    } catch { return { day: 'today', time: 'all', age: 'all', category: 'all', price: 'all' }; }
   });
   const [showFilters, setShowFilters] = useState(false);
 
+  // Persist filter preferences (time, age, price) to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('pulse-filters', JSON.stringify({ time: filters.time, age: filters.age, price: filters.price }));
+    } catch { /* quota exceeded */ }
+  }, [filters.time, filters.age, filters.price]);
+
   // Kids age range filter state
-  const [kidsAgeRange, setKidsAgeRange] = useState([0, 18]);
+  const [kidsAgeRange, setKidsAgeRange] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('pulse-kids-age') || 'null');
+      return saved && Array.isArray(saved) ? saved : [0, 18];
+    } catch { return [0, 18]; }
+  });
+
+  // Persist kids age range
+  useEffect(() => {
+    try { localStorage.setItem('pulse-kids-age', JSON.stringify(kidsAgeRange)); } catch {}
+  }, [kidsAgeRange]);
+
   const ageRangeOptions = [
     { label: 'Prenatal', min: -1, max: 0 },
     { label: '0-1', min: 0, max: 1 },
@@ -1212,12 +1235,16 @@ export default function PulseApp() {
   }, [localSavedItems, isItemSaved]);
 
   // Reset search AND filters when switching tabs to prevent cross-tab confusion
+  const prevSectionRef = useRef(currentSection);
   useEffect(() => {
+    const prevSection = prevSectionRef.current;
+    prevSectionRef.current = currentSection;
+    // On first render (or same section), don't reset persisted filters
+    if (prevSection === currentSection) return;
     setSearchQuery('');
     setDebouncedSearch('');
-    // Reset all filters to defaults when switching sections (Bug #6: filter state leaks)
-    setFilters({ day: 'today', time: 'all', age: 'all', category: 'all', price: 'all' });
-    setKidsAgeRange([0, 18]);
+    // Reset day/category but preserve persisted preferences (time, age, price)
+    setFilters(f => ({ ...f, day: 'today', category: 'all' }));
     // Reset pagination when switching sections
     setVisibleEventCount(50);
     // Scroll to top when switching sections (Bug #9)
