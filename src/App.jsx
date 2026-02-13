@@ -1151,6 +1151,17 @@ export default function PulseApp() {
     { searchQuery, filters, getVenueName }
   ), [dbDeals, searchQuery, filters]);
 
+  // Create notification when user saves an event/deal (for reminders)
+  const createSaveNotification = useCallback((type, name, id) => {
+    if (!session?.user?.id) return;
+    createNotification(
+      'save_confirm',
+      `Saved: ${name}`,
+      `You saved this ${type}. We'll remind you before it starts.`,
+      { [`${type}Id`]: id }
+    );
+  }, [session, createNotification]);
+
   const toggleSave = useCallback(async (id, type, name = '', data = {}) => {
     const itemKey = `${type}-${id}`;
 
@@ -1185,24 +1196,16 @@ export default function PulseApp() {
         // Revert optimistic update on error
         setLocalSavedItems(prev => wasIncluded ? [...prev, itemKey] : prev.filter(k => k !== itemKey));
         showToast('Failed to save. Please try again.', 'error');
+      } else if (!wasIncluded && name) {
+        // Create a confirmation notification when saving (not unsaving)
+        createSaveNotification(type, name, id);
       }
     } catch {
       // Revert optimistic update on error
       setLocalSavedItems(prev => wasIncluded ? [...prev, itemKey] : prev.filter(k => k !== itemKey));
       showToast('Failed to save. Please try again.', 'error');
     }
-  }, [isAuthenticated, toggleSaveItem, localSavedItems, showToast]);
-
-  // Create notification when user saves an event/deal (for reminders)
-  const createSaveNotification = useCallback((type, name, id) => {
-    if (!session?.user?.id) return;
-    createNotification(
-      'save_confirm',
-      `Saved: ${name}`,
-      `You saved this ${type}. We'll remind you before it starts.`,
-      { [`${type}Id`]: id }
-    );
-  }, [session, createNotification]);
+  }, [isAuthenticated, toggleSaveItem, localSavedItems, showToast, createSaveNotification]);
 
   // Combined check for saved items (local + database)
   const isItemSavedLocal = useCallback((type, id) => {
