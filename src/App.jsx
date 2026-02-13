@@ -114,6 +114,7 @@ export default function PulseApp() {
   // Admin stats: claimed businesses count
   const [adminClaimedCount, setAdminClaimedCount] = useState(0);
   const [adminVerifiedCount, setAdminVerifiedCount] = useState(0);
+  const [pendingClaims, setPendingClaims] = useState([]);
   const activeBusiness = impersonatedBusiness || (selectedClaimedBusinessId ? userClaimedBusinesses.find(b => b.id === selectedClaimedBusinessId) : null) || (userClaimedBusinesses.length > 0 ? userClaimedBusinesses[0] : null);
   const isImpersonating = !!impersonatedBusiness;
 
@@ -164,28 +165,28 @@ export default function PulseApp() {
   }, [currentSection, fetchServices, setDealsRefreshKey, setEventsRefreshKey]);
 
   // Fetch admin stats (claimed/verified business counts) when admin panel is shown
-  useEffect(() => {
+  const fetchAdminClaims = useCallback(async () => {
     if (!user?.isAdmin) return;
-    const fetchAdminStats = async () => {
-      try {
-        // Count all claims (each unique business_id with a claim)
-        const { data: claimsData, error: claimsError } = await supabase
-          .from('business_claims')
-          .select('business_id, status');
-        if (!claimsError && claimsData) {
-          // Count unique claimed business IDs
-          const uniqueClaimed = new Set(claimsData.map(c => c.business_id).filter(Boolean));
-          setAdminClaimedCount(uniqueClaimed.size);
-          // Count verified claims
-          const uniqueVerified = new Set(claimsData.filter(c => c.status === 'verified').map(c => c.business_id).filter(Boolean));
-          setAdminVerifiedCount(uniqueVerified.size);
-        }
-      } catch (err) {
-        console.error('Error fetching admin stats:', err);
+    try {
+      const { data: claimsData, error: claimsError } = await supabase
+        .from('business_claims')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (!claimsError && claimsData) {
+        const uniqueClaimed = new Set(claimsData.map(c => c.business_id).filter(Boolean));
+        setAdminClaimedCount(uniqueClaimed.size);
+        const uniqueVerified = new Set(claimsData.filter(c => c.status === 'verified').map(c => c.business_id).filter(Boolean));
+        setAdminVerifiedCount(uniqueVerified.size);
+        setPendingClaims(claimsData.filter(c => c.status === 'pending' || c.status === 'pending_verification'));
       }
-    };
-    fetchAdminStats();
+    } catch (err) {
+      console.error('Error fetching admin stats:', err);
+    }
   }, [user?.isAdmin]);
+
+  useEffect(() => {
+    fetchAdminClaims();
+  }, [fetchAdminClaims]);
 
   // Handle /admin path route — auto-switch to admin view for admin users
   useEffect(() => {
@@ -766,6 +767,40 @@ export default function PulseApp() {
       showToast('Error resending code. Please try again.', 'error');
     }
   };
+
+  // Admin: approve or reject a business claim
+  const handleClaimAction = useCallback(async (claimId, action, rejectedReason) => {
+    try {
+      if (action === 'approve') {
+        const claim = pendingClaims.find(c => c.id === claimId);
+        // Update claim status to verified
+        const { error: claimError } = await supabase
+          .from('business_claims')
+          .update({ status: 'verified', verified_at: new Date().toISOString(), verified_by: session?.user?.id })
+          .eq('id', claimId);
+        if (claimError) throw claimError;
+        // Link the user to the business via claimed_business_id in profiles
+        if (claim?.business_id && claim?.user_id) {
+          await supabase
+            .from('profiles')
+            .update({ claimed_business_id: claim.business_id })
+            .eq('id', claim.user_id);
+        }
+        showToast('Claim approved — business owner granted access', 'success');
+      } else {
+        const { error } = await supabase
+          .from('business_claims')
+          .update({ status: 'rejected', rejected_reason: rejectedReason || 'Rejected by admin' })
+          .eq('id', claimId);
+        if (error) throw error;
+        showToast('Claim rejected', 'info');
+      }
+      fetchAdminClaims();
+    } catch (err) {
+      console.error('Claim action error:', err);
+      showToast('Failed to update claim', 'error');
+    }
+  }, [pendingClaims, session?.user?.id, showToast, fetchAdminClaims]);
 
   // Memoized filter — only recomputes when inputs change (Bug #20: called twice per render)
   const filteredEvents = useMemo(() => {
@@ -1607,6 +1642,8 @@ export default function PulseApp() {
           showToast={showToast}
           fetchServices={fetchServices}
           setView={setView}
+          pendingClaims={pendingClaims}
+          handleClaimAction={handleClaimAction}
         />
       )}
 

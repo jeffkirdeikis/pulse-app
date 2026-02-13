@@ -1,7 +1,7 @@
-import React, { memo, useRef } from 'react';
+import React, { memo, useRef, useState } from 'react';
 import {
   AlertCircle, Calendar, Check, CheckCircle, Clock, DollarSign,
-  Edit2, Eye, Plus, Search, SlidersHorizontal, Trash2, XCircle
+  Edit2, Eye, FileText, Plus, Search, ShieldCheck, SlidersHorizontal, Trash2, User, XCircle
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { getPacificDateStr } from '../utils/timezoneHelpers';
@@ -32,6 +32,8 @@ const AdminDashboard = memo(function AdminDashboard({
   showToast,
   fetchServices,
   setView,
+  pendingClaims,
+  handleClaimAction,
 }) {
   const venueCardRefs = useRef({});
   return (
@@ -143,6 +145,96 @@ const AdminDashboard = memo(function AdminDashboard({
           </div>
         </div>
       </div>
+
+      {/* Pending Business Claims */}
+      {pendingClaims && pendingClaims.length > 0 && (
+      <div className="premium-section">
+        <div className="section-header-premium">
+          <div>
+            <h2>Pending Business Claims</h2>
+            <p className="section-subtitle">{pendingClaims.length} claim{pendingClaims.length !== 1 ? 's' : ''} awaiting review</p>
+          </div>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {pendingClaims.map(claim => {
+            const matchedBiz = services.find(s => s.id === claim.business_id);
+            return (
+              <div key={claim.id} style={{
+                background: '#fff', borderRadius: '12px', border: '1px solid #e5e7eb',
+                padding: '16px', display: 'flex', alignItems: 'center', gap: '16px',
+                flexWrap: 'wrap'
+              }}>
+                <div style={{
+                  width: '44px', height: '44px', borderRadius: '10px',
+                  background: 'linear-gradient(135deg, #3b82f6, #6366f1)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: '#fff', fontWeight: 700, fontSize: '18px', flexShrink: 0
+                }}>
+                  {(claim.owner_name || '?').charAt(0).toUpperCase()}
+                </div>
+                <div style={{ flex: 1, minWidth: '200px' }}>
+                  <div style={{ fontWeight: 600, fontSize: '15px', color: '#111827' }}>
+                    {matchedBiz?.name || claim.business_name || 'Unknown Business'}
+                  </div>
+                  <div style={{ fontSize: '13px', color: '#6b7280', marginTop: '2px' }}>
+                    <span style={{ fontWeight: 500 }}>{claim.owner_name || 'No name'}</span>
+                    {claim.contact_email && <span> · {claim.contact_email}</span>}
+                    {claim.owner_role && <span> · {claim.owner_role}</span>}
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#9ca3af', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    <span>{new Date(claim.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                    {claim.verification_method && (
+                      <span style={{ background: '#f3f4f6', padding: '1px 6px', borderRadius: '4px', fontSize: '11px' }}>
+                        {claim.verification_method === 'document' ? '📎 Documents' : '✉️ Email verified'}
+                      </span>
+                    )}
+                    {claim.documents && claim.documents.length > 0 && (
+                      <span style={{ background: '#eff6ff', color: '#3b82f6', padding: '1px 6px', borderRadius: '4px', fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                        <FileText size={10} /> {claim.documents.length} file{claim.documents.length !== 1 ? 's' : ''}
+                      </span>
+                    )}
+                    <span style={{
+                      background: claim.status === 'pending' ? '#fef3c7' : '#fce7f3',
+                      color: claim.status === 'pending' ? '#92400e' : '#9d174d',
+                      padding: '1px 6px', borderRadius: '4px', fontSize: '11px', fontWeight: 500
+                    }}>
+                      {claim.status === 'pending_verification' ? 'Awaiting verification' : 'Pending review'}
+                    </span>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+                  <button
+                    onClick={() => handleClaimAction(claim.id, 'approve')}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: '6px',
+                      padding: '8px 16px', borderRadius: '8px', border: 'none', cursor: 'pointer',
+                      background: 'linear-gradient(135deg, #10b981, #059669)', color: '#fff',
+                      fontWeight: 600, fontSize: '13px'
+                    }}
+                  >
+                    <ShieldCheck size={15} /> Approve
+                  </button>
+                  <button
+                    onClick={() => {
+                      const reason = prompt('Rejection reason (optional):');
+                      if (reason !== null) handleClaimAction(claim.id, 'reject', reason);
+                    }}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: '6px',
+                      padding: '8px 16px', borderRadius: '8px', border: '1px solid #e5e7eb',
+                      cursor: 'pointer', background: '#fff', color: '#ef4444',
+                      fontWeight: 600, fontSize: '13px'
+                    }}
+                  >
+                    <XCircle size={15} /> Reject
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      )}
 
       {/* Scraping System Status */}
       <div className="premium-section">
