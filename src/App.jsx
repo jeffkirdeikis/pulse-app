@@ -1455,12 +1455,13 @@ export default function PulseApp() {
             {currentSection !== 'wellness' && (
             <div className="results-bar">
               <h2 className="results-count" aria-live="polite" aria-atomic="true">
+                <AnimatePresence mode="wait">
                 {(() => {
                   const sectionLabels = { classes: 'class', events: 'event', deals: 'deal', services: 'business' };
                   const label = sectionLabels[currentSection] || 'result';
                   let count;
                   if (currentSection === 'deals') {
-                    if (dealsLoading) return 'Loading...';
+                    if (dealsLoading) return <motion.span key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>Loading...</motion.span>;
                     count = filteredDeals.filter(d => dealCategoryFilter === 'All' || normalizeDealCategory(d.category) === dealCategoryFilter).length;
                   } else if (currentSection === 'services') {
                     count = services.filter(s => {
@@ -1474,11 +1475,23 @@ export default function PulseApp() {
                       return s.category === serviceCategoryFilter;
                     }).length;
                   } else {
-                    if (eventsLoading) return 'Loading...';
+                    if (eventsLoading) return <motion.span key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>Loading...</motion.span>;
                     count = filteredEvents.length;
                   }
-                  return `${count} ${count === 1 ? label : label + (label === 'class' ? 'es' : label === 'business' ? 'es' : 's')}`;
+                  const text = `${count} ${count === 1 ? label : label + (label === 'class' ? 'es' : label === 'business' ? 'es' : 's')}`;
+                  return (
+                    <motion.span
+                      key={text}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -8 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      {text}
+                    </motion.span>
+                  );
                 })()}
+                </AnimatePresence>
               </h2>
               {currentSection === 'classes' && (
                 <button
