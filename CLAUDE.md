@@ -570,6 +570,75 @@ SELECT COUNT(*) FROM events WHERE venue_id IS NULL;
 
 ---
 
+## 🏢 VENUE EVENT SCRAPER ARCHITECTURE
+
+**File**: `scripts/scrape-venue-events.js` — 8 venue-specific event sources
+**Runner**: `scripts/run-daily-scrape.sh` — Step 4 of the 5-step daily pipeline
+**~268 events/run** across 15+ venues from 8 data sources
+
+### 5-Step Daily Scrape Pipeline (run-daily-scrape.sh)
+
+| Step | Script | What It Covers | Method |
+|------|--------|----------------|--------|
+| 1 | `scrape-reliable-sources.js` | 10 venues with booking systems | WellnessLiving, Brandedweb, SendMoreGetBeta APIs |
+| 2 | `scrape-orchestrator.js --verified` | ~500 businesses with websites | AI extraction with 5-layer source verification |
+| 3 | `scrape-events.js` | Aggregator sites (Together Nest, Eventbrite, Meetup) | Firecrawl + schema extraction |
+| 4 | `scrape-venue-events.js` | 8 venue-specific sources (see below) | APIs, HTML parsing, calendar scraping |
+| 5 | `scrape-deals.js` | Deal aggregators + business promotions | Firecrawl + AI extraction |
+
+### 8 Venue Event Sources (scrape-venue-events.js)
+
+| # | Venue | Data Source | Method |
+|---|-------|------------|--------|
+| 1 | Trickster's Hideout | WordPress REST API | `wp-json/tribe/events/v1/events` — paginated JSON |
+| 2 | Brackendale Art Gallery (BAG) | Eventbrite widget | Fetch events page HTML, parse `data-widget-id`, call Eventbrite API |
+| 3 | A-Frame Brewing | Squarespace API | `/api/open/GetItemsByMonth` — returns JSON events |
+| 4 | Arrow Wood Games | Tockify widget | `tockify.com/api/ngevent` — JSON feed |
+| 5 | Sea to Sky Gondola | Website HTML | Fetch events listing page, parse structured event cards |
+| 6 | Squamish Public Library | Communico API | `events.squamishlibrary.ca/api` — paginated JSON |
+| 7 | Squamish Arts Council | WordPress Tribe Events API | `squamisharts.com/wp-json/tribe/events/v1/events` — paginated JSON with venue data |
+| 8 | Tourism Squamish | Calendar HTML + detail pages | 3-step: calendar grid → event URLs per day → detail page metadata |
+
+### Tourism Squamish Scraper (Most Complex — #8)
+
+This is the most valuable source (~91 events, 15+ venues) but uses server-rendered HTML:
+
+1. **Fetch calendar pages** for each month in date range from `exploresquamish.com/festivals-events/event-calendar/`
+2. **Parse day→event URL mappings** from HTML `<td>` table cells — calendar grid already resolves recurrence patterns
+3. **Fetch detail pages** (5 at a time concurrency) to extract: title, time, venue, cost, description
+
+**Key design decisions:**
+- Calendar grid approach avoids parsing "Every Wednesday until..." recurrence text
+- `TOURISM_DAILY_SKIP = 15` — events appearing on 15+ days are daily attractions, not events
+- Events without parseable time are SKIPPED (not inserted with fake times)
+- Venue extraction has two fallback parsers: "Venue" section primary, "Contact & Details" fallback
+
+### Venue Event Scraper Rules (Lessons from Feb 12, 2026)
+
+| # | Rule | Why |
+|---|------|-----|
+| 1 | **Greedy regex `[^\n]+` for field extraction** | Lazy `[^\n]+?` with optional groups matches 1 char — corrupted 108 venue names |
+| 2 | **Verify data in DATABASE, not console** | "Inserted: 86, Failed: 0" looked perfect but venues were single characters |
+| 3 | **Skip events with no parseable time** | NOT NULL violations are better than fake "09:00" times — missing > wrong |
+| 4 | **Handle ALL HTML entities** | `&#039;`, `&apos;`, `&amp;`, `&#38;` — different pages use different encodings |
+| 5 | **Prefer aggregator sites** | Tourism Squamish covers 15+ venues in 1 scraper vs 15 brittle individual scrapers |
+| 6 | **Calendar grid for dates, detail pages for metadata** | Don't re-parse recurrence when calendar already resolved to specific days |
+| 7 | **Always add fallback parsers** | Same site uses "Venue" on some pages, "Contact & Details" on others |
+| 8 | **Time formats are wildly inconsistent** | Handle: "6pm-8pm", "6:30-9:30pm" (shared am/pm), "5pm to 10pm", bare "6:00" |
+
+### Adding a New Venue Source
+
+1. **Check for structured API first** — WordPress Tribe (`/wp-json/tribe/events/v1/events`), Squarespace, Tockify, Communico, Eventbrite APIs are all reliable
+2. **If no API, check for calendar HTML** — table-based calendars can be parsed reliably
+3. **If neither, use Firecrawl** — only as last resort, and verify output against live page
+4. **Add config object** at top of `scrape-venue-events.js` with `tag` and source-specific fields
+5. **Create `scrapeVenueName()` function** following existing patterns
+6. **Add to `main()` function's** parallel execution and summary logging
+7. **Run and verify**: check DB for correct venue names, times, and no duplicates
+8. **Update `run-daily-scrape.sh`** comment with new source count
+
+---
+
 ## 🔍 USEFUL COMMANDS
 
 ```bash
