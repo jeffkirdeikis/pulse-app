@@ -33,6 +33,15 @@ const EventCard = React.forwardRef(({ event, venues, isItemSavedLocal, toggleSav
   const inCalendar = isInMyCalendar?.(event.id);
   const timeBadge = useMemo(() => getTimeBadge(event.start), [event.start]);
   const relativeTime = useMemo(() => getRelativeTime(event.start), [event.start]);
+  const duration = useMemo(() => {
+    if (!event.end || !event.start) return null;
+    const mins = Math.round((event.end - event.start) / 60000);
+    if (mins <= 0 || mins > 480) return null; // skip invalid
+    if (mins < 60) return `${mins} min`;
+    const hrs = Math.floor(mins / 60);
+    const rem = mins % 60;
+    return rem > 0 ? `${hrs} hr ${rem} min` : `${hrs} hr`;
+  }, [event.start, event.end]);
   const categoryColor = useMemo(() => {
     const cat = (event.category || '').toLowerCase();
     if (cat.includes('fitness') || cat.includes('gym') || cat.includes('yoga') || cat.includes('pilates')) return '#3b82f6';
@@ -129,6 +138,7 @@ const EventCard = React.forwardRef(({ event, venues, isItemSavedLocal, toggleSav
             </div>
             <span className="detail-text">
               {event.start.toLocaleTimeString('en-US', { timeZone: PACIFIC_TZ, hour: 'numeric', minute: '2-digit' })}
+              {duration && <span className="duration-text"> · {duration}</span>}
               {relativeTime && <span className="relative-time"> · {relativeTime}</span>}
             </span>
           </div>
