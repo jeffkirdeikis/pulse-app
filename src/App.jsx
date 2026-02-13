@@ -62,6 +62,10 @@ export default function PulseApp() {
   const [claimSubmitting, setClaimSubmitting] = useState(false);
   const [claimSearchQuery, setClaimSearchQuery] = useState('');
   const [claimSelectedBusiness, setClaimSelectedBusiness] = useState(null);
+  const [claimVerificationStep, setClaimVerificationStep] = useState('form');
+  const [claimVerificationCode, setClaimVerificationCode] = useState('');
+  const [claimId, setClaimId] = useState(null);
+  const [claimVerifying, setClaimVerifying] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showCalendarToast, setShowCalendarToast] = useState(false);
   const [calendarToastMessage, setCalendarToastMessage] = useState('');
@@ -612,13 +616,14 @@ export default function PulseApp() {
       return;
     }
     if (!session?.user?.id) {
-      // This shouldn't happen since we show sign-in prompt, but just in case
       setShowClaimBusinessModal(false);
       setShowAuthModal(true);
       return;
     }
     setClaimSubmitting(true);
     try {
+      const isAdmin = user.isAdmin;
+      const verificationCode = isAdmin ? null : Math.floor(100000 + Math.random() * 900000).toString();
       const claimData = {
         user_id: session.user.id,
         business_name: claimSelectedBusiness?.name || claimFormData.businessName,
@@ -627,24 +632,31 @@ export default function PulseApp() {
         contact_email: claimFormData.email,
         contact_phone: claimFormData.phone || null,
         owner_role: claimFormData.role,
-        status: user.isAdmin ? 'verified' : 'pending'
+        status: isAdmin ? 'verified' : 'pending_verification',
+        verification_method: isAdmin ? null : 'email',
+        verification_code: verificationCode,
       };
-      // Add business_id if selecting from directory
       if (claimSelectedBusiness?.id) {
         claimData.business_id = claimSelectedBusiness.id;
       }
-      const { error } = await supabase.from('business_claims').insert(claimData);
+      const { data: inserted, error } = await supabase.from('business_claims').insert(claimData).select('id').single();
       if (error) throw error;
-      setShowClaimBusinessModal(false);
-      setClaimFormData({ businessName: '', ownerName: '', email: '', phone: '', role: 'owner', address: '' });
-      setClaimSelectedBusiness(null);
-      setClaimSearchQuery('');
-      if (user.isAdmin) {
+      if (isAdmin) {
+        setShowClaimBusinessModal(false);
+        setClaimFormData({ businessName: '', ownerName: '', email: '', phone: '', role: 'owner', address: '' });
+        setClaimSelectedBusiness(null);
+        setClaimSearchQuery('');
+        setClaimVerificationStep('form');
         showToast('Business claimed and verified!', 'success');
-        // Refresh user data to pick up the new claim
         if (typeof refreshUserData === 'function') refreshUserData();
       } else {
-        showToast('Claim submitted! We\'ll review it shortly.', 'success');
+        // Send verification email
+        setClaimId(inserted.id);
+        supabase.functions.invoke('verify-claim-email', {
+          body: { email: claimFormData.email, businessName: claimData.business_name, ownerName: claimFormData.ownerName, verificationCode },
+        }).catch((err) => console.error('Email send error:', err));
+        setClaimVerificationStep('verify');
+        showToast('Verification code sent to your email!', 'success');
       }
     } catch (error) {
       console.error('Error submitting claim:', error);
@@ -653,6 +665,57 @@ export default function PulseApp() {
       setTimeout(() => setShowCalendarToast(false), 3000);
     } finally {
       setClaimSubmitting(false);
+    }
+  };
+
+  const handleVerifyClaimCode = async () => {
+    if (!claimVerificationCode || claimVerificationCode.length !== 6) {
+      showToast('Please enter the 6-digit code', 'error');
+      return;
+    }
+    setClaimVerifying(true);
+    try {
+      const { data: claim, error: fetchErr } = await supabase
+        .from('business_claims').select('verification_code, verification_attempts').eq('id', claimId).single();
+      if (fetchErr) throw fetchErr;
+      if (claim.verification_attempts >= 5) {
+        showToast('Too many attempts. Please resend the code.', 'error');
+        setClaimVerifying(false);
+        return;
+      }
+      if (claimVerificationCode === claim.verification_code) {
+        await supabase.from('business_claims').update({ status: 'pending', verified_at: new Date().toISOString() }).eq('id', claimId);
+        setShowClaimBusinessModal(false);
+        setClaimFormData({ businessName: '', ownerName: '', email: '', phone: '', role: 'owner', address: '' });
+        setClaimSelectedBusiness(null);
+        setClaimSearchQuery('');
+        setClaimVerificationStep('form');
+        setClaimVerificationCode('');
+        setClaimId(null);
+        showToast('Email verified! Your claim is under review.', 'success');
+      } else {
+        await supabase.from('business_claims').update({ verification_attempts: (claim.verification_attempts || 0) + 1 }).eq('id', claimId);
+        showToast('Incorrect code. Please try again.', 'error');
+      }
+    } catch (error) {
+      console.error('Verification error:', error);
+      showToast('Error verifying code. Please try again.', 'error');
+    } finally {
+      setClaimVerifying(false);
+    }
+  };
+
+  const handleResendClaimCode = async () => {
+    try {
+      const newCode = Math.floor(100000 + Math.random() * 900000).toString();
+      await supabase.from('business_claims').update({ verification_code: newCode, verification_attempts: 0 }).eq('id', claimId);
+      supabase.functions.invoke('verify-claim-email', {
+        body: { email: claimFormData.email, businessName: claimFormData.businessName, ownerName: claimFormData.ownerName, verificationCode: newCode },
+      }).catch((err) => console.error('Email send error:', err));
+      showToast('New code sent to your email!', 'success');
+    } catch (error) {
+      console.error('Resend error:', error);
+      showToast('Error resending code. Please try again.', 'error');
     }
   };
 
@@ -1152,9 +1215,15 @@ export default function PulseApp() {
               claimFormData={claimFormData}
               setClaimFormData={setClaimFormData}
               claimSubmitting={claimSubmitting}
+              claimVerificationStep={claimVerificationStep}
+              claimVerificationCode={claimVerificationCode}
+              setClaimVerificationCode={setClaimVerificationCode}
+              claimVerifying={claimVerifying}
+              handleVerifyClaimCode={handleVerifyClaimCode}
+              handleResendClaimCode={handleResendClaimCode}
               session={session}
               services={services}
-              onClose={() => { setShowClaimBusinessModal(false); setClaimFormData({ businessName: '', ownerName: '', email: '', phone: '', role: 'owner', address: '' }); }}
+              onClose={() => { setShowClaimBusinessModal(false); setClaimFormData({ businessName: '', ownerName: '', email: '', phone: '', role: 'owner', address: '' }); setClaimVerificationStep('form'); setClaimVerificationCode(''); }}
               setShowAuthModal={setShowAuthModal}
               handleClaimBusiness={handleClaimBusiness}
             />

@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { AlertCircle, Building, CheckCircle, X } from 'lucide-react';
+import { AlertCircle, Building, CheckCircle, Mail, RefreshCw, X } from 'lucide-react';
 
 const ClaimBusinessModal = memo(function ClaimBusinessModal({
   claimSearchQuery,
@@ -9,24 +9,37 @@ const ClaimBusinessModal = memo(function ClaimBusinessModal({
   claimFormData,
   setClaimFormData,
   claimSubmitting,
+  claimVerificationStep,
+  claimVerificationCode,
+  setClaimVerificationCode,
+  claimVerifying,
+  handleVerifyClaimCode,
+  handleResendClaimCode,
   session,
   services,
   onClose,
   setShowAuthModal,
   handleClaimBusiness,
 }) {
+  const maskedEmail = claimFormData.email
+    ? claimFormData.email.replace(/^(.)(.*)(@.*)$/, (_, first, middle, domain) => first + '*'.repeat(Math.min(middle.length, 5)) + domain)
+    : '';
+
   return (
-    <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Claim business" onClick={() => { onClose(); setClaimFormData({ businessName: '', ownerName: '', email: '', phone: '', role: 'owner', address: '' }); }}>
+    <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Claim business" onClick={onClose}>
       <div className="claim-modal-premium" onClick={(e) => e.stopPropagation()}>
-        <button className="claim-modal-close" onClick={() => { onClose(); setClaimFormData({ businessName: '', ownerName: '', email: '', phone: '', role: 'owner', address: '' }); }}><X size={24} /></button>
+        <button className="claim-modal-close" onClick={onClose}><X size={24} /></button>
 
         {/* Purple Gradient Header */}
         <div className="claim-modal-header">
           <div className="claim-modal-icon">
-            <Building size={32} />
+            {claimVerificationStep === 'verify' ? <Mail size={32} /> : <Building size={32} />}
           </div>
-          <h2>Claim Your Business</h2>
-          <p>Get access to analytics, manage your listings, and connect with customers</p>
+          <h2>{claimVerificationStep === 'verify' ? 'Check Your Email' : 'Claim Your Business'}</h2>
+          <p>{claimVerificationStep === 'verify'
+            ? `We sent a 6-digit code to ${maskedEmail}`
+            : 'Get access to analytics, manage your listings, and connect with customers'
+          }</p>
         </div>
 
         {/* Form Body */}
@@ -40,6 +53,47 @@ const ClaimBusinessModal = memo(function ClaimBusinessModal({
               <button className="claim-signin-btn" onClick={() => { onClose(); setShowAuthModal(true); }}>
                 Sign In to Continue
               </button>
+            </div>
+          ) : claimVerificationStep === 'verify' ? (
+            /* Verification Code Entry */
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px', padding: '8px 0' }}>
+              <input
+                type="text"
+                inputMode="numeric"
+                maxLength={6}
+                placeholder="000000"
+                value={claimVerificationCode}
+                onChange={(e) => setClaimVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                style={{
+                  width: '200px', textAlign: 'center', fontSize: '28px', fontWeight: 700,
+                  letterSpacing: '8px', padding: '14px 16px', border: '2px solid #d1d5db',
+                  borderRadius: '12px', fontFamily: 'monospace', color: '#111827',
+                }}
+                autoFocus
+              />
+              <button
+                className="claim-submit-btn"
+                onClick={handleVerifyClaimCode}
+                disabled={claimVerifying || claimVerificationCode.length !== 6}
+                style={{ width: '100%' }}
+              >
+                {claimVerifying ? 'Verifying...' : 'Verify Email'}
+              </button>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                <button
+                  onClick={handleResendClaimCode}
+                  style={{ background: 'none', border: 'none', color: '#4f46e5', cursor: 'pointer', fontSize: '14px', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <RefreshCw size={14} />
+                  Resend Code
+                </button>
+                <button
+                  onClick={() => { setClaimVerificationCode(''); }}
+                  style={{ background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer', fontSize: '13px' }}
+                >
+                  Wrong email? Go back
+                </button>
+              </div>
             </div>
           ) : (
             <>
@@ -138,7 +192,7 @@ const ClaimBusinessModal = memo(function ClaimBusinessModal({
               </div>
 
               <div className="claim-modal-actions">
-                <button className="claim-cancel-btn" onClick={() => { onClose(); setClaimFormData({ businessName: '', ownerName: '', email: '', phone: '', role: 'owner', address: '' }); }}>Cancel</button>
+                <button className="claim-cancel-btn" onClick={onClose}>Cancel</button>
                 <button className="claim-submit-btn" onClick={handleClaimBusiness} disabled={claimSubmitting}>{claimSubmitting ? 'Submitting...' : 'Submit Claim'}</button>
               </div>
             </>
