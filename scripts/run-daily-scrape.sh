@@ -10,7 +10,7 @@
 # 2. Full orchestrator (ALL businesses with AI-verified extraction)
 # 3. Community events (aggregator sites: Together Nest, Eventbrite, Meetup, etc.)
 # 4. Venue-specific event scrapers (Trickster's Hideout, Brackendale Art Gallery)
-# 5. Deals (deal aggregators and business promotions)
+# 5. Deals (ExploreSquamish dining deals + happy hours — HTML parsing, no AI)
 #
 # UPDATED Feb 10, 2026: Restored full scraping coverage. Previously only ran
 # scrape-reliable-sources.js (10 venues). Now runs ALL scrapers to cover

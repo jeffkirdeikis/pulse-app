@@ -639,6 +639,43 @@ This is the most valuable source (~91 events, 15+ venues) but uses server-render
 
 ---
 
+## 💰 DEALS SCRAPER
+
+**File**: `scripts/scrape-deals.js` — HTML parsing, NO unverified AI extraction
+**Runner**: `scripts/run-daily-scrape.sh` — Step 5 of the 5-step daily pipeline
+**~18 deals/run** across 15+ venues from 1 structured source
+
+### Why It Was Rebuilt (Feb 12, 2026)
+
+The original deals scraper used Firecrawl AI extraction on 8 sources — the same unverified AI approach that hallucinated 1,471 fake events. Investigation found:
+- **312 deals in DB**, most hallucinated: beer names as "deals", menu items, services, business names used as titles
+- **4 of 8 sources were dead** (404s, redirects, plain directories)
+- **National chain flyer items** (Canadian Tire, Staples, Home Depot) scraped as "Squamish deals"
+- All 312 deals were deleted and the scraper was rewritten with HTML parsing
+
+### Source: ExploreSquamish Dining Deals
+
+**URL**: `exploresquamish.com/travel-deals-packages/squamish-dining-deals/`
+**Method**: Direct HTML fetch + accordion section parsing (no AI, no Firecrawl)
+
+Parse structure:
+- `<h3 class=accordion__heading><button>` = business names
+- `<div class="accordion__content-text">` = deal content
+- `<p>` tags = individual deal groups
+- `<strong>` = day labels within deals
+- `<ul><li>` after "HAPPY HOURS" = happy hour venues with schedules
+
+### Deals Scraper Rules
+
+Same lessons as venue events apply:
+- **Parse HTML directly** — never use unverified AI extraction for deals
+- **Aggregator > individual** — one page covers 10+ restaurants
+- **Reject title = business_name** — classic hallucination pattern
+- **Verify in database** — query DB after every scraper run
+- **Handle HTML entities** — `&amp;`, `&#039;`, `&apos;` etc.
+
+---
+
 ## 🔍 USEFUL COMMANDS
 
 ```bash
