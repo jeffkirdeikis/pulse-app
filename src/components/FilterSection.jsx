@@ -334,20 +334,30 @@ const FilterSection = React.memo(function FilterSection({
             </div>
           )}
 
-          <div className="filters-row-bottom">
-            {/* Category Filter */}
-            <div className="filter-group">
-              <select
-                value={filters.category}
-                onChange={(e) => setFilters({...filters, category: e.target.value})}
-                className="filter-dropdown"
-                aria-label="Filter by category"
-              >
-                <option value="all">All Categories</option>
-                {categories.slice(1).map(cat => <option key={cat} value={cat}>{cat}</option>)}
-              </select>
+          {/* Category Pills */}
+          {categories.length > 1 && (
+            <div className="category-pills-section">
+              <div className="category-pills" role="group" aria-label="Filter by category">
+                <button
+                  className={`filter-cat-pill ${filters.category === 'all' ? 'filter-cat-pill-active' : ''}`}
+                  onClick={() => setFilters({...filters, category: 'all'})}
+                >
+                  All
+                </button>
+                {categories.slice(1).map(cat => (
+                  <button
+                    key={cat}
+                    className={`filter-cat-pill ${filters.category === cat ? 'filter-cat-pill-active' : ''}`}
+                    onClick={() => setFilters({...filters, category: filters.category === cat ? 'all' : cat})}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
             </div>
+          )}
 
+          <div className="filters-row-bottom">
             {/* Price Filter */}
             <div className="filter-group">
               <select
