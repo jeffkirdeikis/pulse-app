@@ -1490,6 +1490,11 @@ export default function PulseApp() {
             onOpenNotifications={() => setShowNotifications(true)}
             unreadNotifCount={notifications.filter(n => !n.is_read).length}
             searchSuggestions={searchSuggestions}
+            tabCounts={{
+              classes: dbEvents.filter(e => e.eventType === 'class').length,
+              events: dbEvents.filter(e => e.eventType === 'event').length,
+              deals: filteredDeals.length,
+            }}
           />
 
           {/* Premium Filter System - Clean 5-Filter Layout */}

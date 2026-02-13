@@ -1576,6 +1576,21 @@
         .banner-tab span {
           white-space: nowrap;
         }
+        .tab-count {
+          font-size: 10px;
+          font-weight: 600;
+          color: #9ca3af;
+          background: #f3f4f6;
+          border-radius: 8px;
+          padding: 1px 5px;
+          min-width: 18px;
+          text-align: center;
+          line-height: 1.4;
+        }
+        .banner-tab.active .tab-count {
+          color: #2563eb;
+          background: #dbeafe;
+        }
         
         /* ========== PREMIUM SEARCH BAR ========== */
         .search-section-premium {

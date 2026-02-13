@@ -45,6 +45,7 @@ const ConsumerHeader = React.memo(function ConsumerHeader({
   onOpenNotifications,
   unreadNotifCount,
   searchSuggestions = [],
+  tabCounts = {},
 }) {
   const row1Tabs = ['classes', 'events', 'deals'];
   const row2Tabs = ['services', 'wellness'];
@@ -208,6 +209,7 @@ const ConsumerHeader = React.memo(function ConsumerHeader({
             >
               <Calendar size={18} />
               <span>Classes</span>
+              {tabCounts.classes > 0 && <span className="tab-count">{tabCounts.classes}</span>}
             </button>
             <button
               ref={el => tabRefs.current.events = el}
@@ -218,6 +220,7 @@ const ConsumerHeader = React.memo(function ConsumerHeader({
             >
               <Star size={18} />
               <span>Events</span>
+              {tabCounts.events > 0 && <span className="tab-count">{tabCounts.events}</span>}
             </button>
             <button
               ref={el => tabRefs.current.deals = el}
@@ -228,6 +231,7 @@ const ConsumerHeader = React.memo(function ConsumerHeader({
             >
               <DollarSign size={18} />
               <span>Deals</span>
+              {tabCounts.deals > 0 && <span className="tab-count">{tabCounts.deals}</span>}
             </button>
             {indicator1.w > 0 && (
               <div className="tab-indicator" style={{ transform: `translateX(${indicator1.x}px)`, width: `${indicator1.w}px` }} />
