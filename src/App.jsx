@@ -341,9 +341,13 @@ export default function PulseApp() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  // ESC key handler to close modals
+  // Global keyboard shortcuts
   useEffect(() => {
-    const handleEsc = (e) => {
+    const handleKeydown = (e) => {
+      // Skip if user is typing in an input/textarea/select
+      const tag = e.target.tagName;
+      const isTyping = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.target.isContentEditable;
+
       if (e.key === 'Escape') {
         // Close any open modal
         setSelectedEvent(null);
@@ -360,11 +364,34 @@ export default function PulseApp() {
         setShowMyCalendarModal(false);
         setShowBookingSheet(false);
         setShowContactSheet(false);
+        setShowProfileMenu(false);
+        setShowNotifications(false);
+        return;
+      }
+
+      if (isTyping) return;
+
+      // "/" to focus search
+      if (e.key === '/') {
+        e.preventDefault();
+        const searchInput = document.querySelector('.search-bar-premium input');
+        if (searchInput) searchInput.focus();
+        return;
+      }
+
+      // 1-5 for tab switching (only in consumer view)
+      if (view === 'consumer') {
+        const tabs = ['classes', 'events', 'deals', 'services', 'wellness'];
+        const num = parseInt(e.key);
+        if (num >= 1 && num <= 5) {
+          setCurrentSection(tabs[num - 1]);
+          window.history.pushState({ section: tabs[num - 1] }, '', `#${tabs[num - 1]}`);
+        }
       }
     };
-    window.addEventListener('keydown', handleEsc);
-    return () => window.removeEventListener('keydown', handleEsc);
-  }, []);
+    window.addEventListener('keydown', handleKeydown);
+    return () => window.removeEventListener('keydown', handleKeydown);
+  }, [view]);
 
   // ESC to exit impersonation mode (separate effect with proper deps)
   useEffect(() => {
