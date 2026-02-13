@@ -33,6 +33,19 @@ const EventCard = React.forwardRef(({ event, venues, isItemSavedLocal, toggleSav
   const inCalendar = isInMyCalendar?.(event.id);
   const timeBadge = useMemo(() => getTimeBadge(event.start), [event.start]);
   const relativeTime = useMemo(() => getRelativeTime(event.start), [event.start]);
+  const categoryColor = useMemo(() => {
+    const cat = (event.category || '').toLowerCase();
+    if (cat.includes('fitness') || cat.includes('gym') || cat.includes('yoga') || cat.includes('pilates')) return '#3b82f6';
+    if (cat.includes('martial') || cat.includes('boxing') || cat.includes('combat')) return '#ef4444';
+    if (cat.includes('outdoor') || cat.includes('hike') || cat.includes('climb') || cat.includes('nature')) return '#22c55e';
+    if (cat.includes('art') || cat.includes('music') || cat.includes('dance') || cat.includes('creative')) return '#a855f7';
+    if (cat.includes('kids') || cat.includes('child') || cat.includes('family') || cat.includes('youth')) return '#f59e0b';
+    if (cat.includes('swim') || cat.includes('aqua') || cat.includes('water') || cat.includes('pool')) return '#06b6d4';
+    if (cat.includes('wellness') || cat.includes('meditation') || cat.includes('mindful')) return '#14b8a6';
+    if (cat.includes('sport') || cat.includes('ball') || cat.includes('bowl') || cat.includes('recreation')) return '#f97316';
+    if (cat.includes('community') || cat.includes('social') || cat.includes('workshop')) return '#8b5cf6';
+    return null;
+  }, [event.category]);
 
   const handleSave = async (e) => {
     e.stopPropagation();
@@ -69,7 +82,10 @@ const EventCard = React.forwardRef(({ event, venues, isItemSavedLocal, toggleSav
       ref={ref}
       className={`event-card card-enter${timeBadge ? ' event-card-urgent' : ''}`}
       layout
-      style={index < 10 ? { animationDelay: `${index * 50}ms` } : undefined}
+      style={{
+        ...(index < 10 ? { animationDelay: `${index * 50}ms` } : undefined),
+        ...(categoryColor ? { borderLeftColor: categoryColor } : undefined),
+      }}
       onClick={() => onSelect(event)}
       onMouseEnter={handlePrefetch}
       onTouchStart={handlePrefetch}
