@@ -14379,6 +14379,18 @@ h2.results-count {
   border-color: #3b82f6;
   color: #2563eb;
 }
+.group-toggle-btn.saved-toggle.active {
+  background: #fffbeb;
+  border-color: #f59e0b;
+  color: #d97706;
+}
+.group-toggle-btn.saved-toggle:hover { border-color: #f59e0b; color: #d97706; }
+
+.empty-state-sub {
+  color: #9ca3af;
+  font-size: 13px;
+  margin: -4px 0 8px;
+}
 
 /* Compact card mode */
 .compact-card {

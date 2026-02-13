@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowUp, Calendar, Check, X, Plus, CheckCircle, Percent, Sparkles, LayoutList, MapPin, List } from 'lucide-react';
+import { ArrowUp, Bookmark, Calendar, Check, X, Plus, CheckCircle, Percent, Sparkles, LayoutList, MapPin, List } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import { useUserData } from './hooks/useUserData';
 import { useCardAnimation } from './hooks/useCardAnimation';
@@ -588,6 +588,7 @@ export default function PulseApp() {
   // Group by venue toggle for classes
   const [groupByVenue, setGroupByVenue] = useState(false);
   const [compactMode, setCompactMode] = useState(false);
+  const [showSavedOnly, setShowSavedOnly] = useState(false);
 
   // Filter states - all dropdowns (persisted to localStorage, excluding specific dates)
   const [filters, setFilters] = useState(() => {
@@ -1098,8 +1099,23 @@ export default function PulseApp() {
       return <SkeletonCards count={6} />;
     }
 
-    const events = filteredEvents;
+    let events = filteredEvents;
+    // Apply saved-only filter when active
+    if (showSavedOnly) {
+      events = events.filter(e => isItemSavedLocal(e.eventType === 'class' ? 'class' : 'event', e.id));
+    }
     if (events.length === 0) {
+      // Special empty state for saved-only mode
+      if (showSavedOnly) {
+        return (
+          <div className="empty-state">
+            <div className="empty-state-icon"><Bookmark size={40} stroke="#9ca3af" /></div>
+            <p className="empty-state-message">No saved {currentSection} yet.</p>
+            <p className="empty-state-sub">Tap the star on any {currentSection === 'classes' ? 'class' : 'event'} to save it here.</p>
+            <button className="empty-state-btn" onClick={() => setShowSavedOnly(false)}>Show All {currentSection === 'classes' ? 'Classes' : 'Events'}</button>
+          </div>
+        );
+      }
       // Contextual empty message based on active filter
       const isSpecificDate = /^\d{4}-\d{2}-\d{2}$/.test(filters.day);
       let emptyMessage = `No ${currentSection} found matching your filters.`;
@@ -1477,7 +1493,9 @@ export default function PulseApp() {
                     }).length;
                   } else {
                     if (eventsLoading) return <motion.span key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>Loading...</motion.span>;
-                    count = filteredEvents.length;
+                    count = showSavedOnly
+                      ? filteredEvents.filter(e => isItemSavedLocal(e.eventType === 'class' ? 'class' : 'event', e.id)).length
+                      : filteredEvents.length;
                   }
                   const text = `${count} ${count === 1 ? label : label + (label === 'class' ? 'es' : label === 'business' ? 'es' : 's')}`;
                   return (
@@ -1495,6 +1513,16 @@ export default function PulseApp() {
                 </AnimatePresence>
               </h2>
               <div className="results-bar-actions">
+                {(currentSection === 'classes' || currentSection === 'events') && (
+                  <button
+                    className={`group-toggle-btn saved-toggle ${showSavedOnly ? 'active' : ''}`}
+                    onClick={() => setShowSavedOnly(!showSavedOnly)}
+                    aria-label={showSavedOnly ? 'Show all' : 'Show saved only'}
+                    title={showSavedOnly ? 'Show all' : 'Show saved only'}
+                  >
+                    <Bookmark size={16} fill={showSavedOnly ? 'currentColor' : 'none'} />
+                  </button>
+                )}
                 {(currentSection === 'classes' || currentSection === 'events') && (
                   <button
                     className={`group-toggle-btn ${compactMode ? 'active' : ''}`}
