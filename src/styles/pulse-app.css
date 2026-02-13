@@ -2357,6 +2357,38 @@
           transition: transform 0.1s ease;
         }
 
+        .event-card-urgent {
+          border-color: #f59e0b;
+          box-shadow: 0 1px 3px rgba(245, 158, 11, 0.15);
+        }
+
+        .event-card-urgent::before {
+          background: linear-gradient(90deg, #f59e0b 0%, #d97706 50%, #f59e0b 100%);
+        }
+
+        .time-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          font-size: 11px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          padding: 4px 10px;
+          border-radius: 6px;
+          width: fit-content;
+        }
+
+        .time-badge-now {
+          background: #fef3c7;
+          color: #92400e;
+        }
+
+        .time-badge-soon {
+          background: #fff7ed;
+          color: #c2410c;
+        }
+
         @media (hover: none) {
           .event-card:hover {
             transform: none;

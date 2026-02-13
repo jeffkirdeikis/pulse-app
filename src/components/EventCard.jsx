@@ -1,12 +1,22 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Calendar, CalendarPlus, Check, ChevronRight, Clock, MapPin, Star } from 'lucide-react';
+import { Calendar, CalendarPlus, Check, ChevronRight, Clock, MapPin, Star, Zap } from 'lucide-react';
 import { PACIFIC_TZ } from '../utils/timezoneHelpers';
+
+function getTimeBadge(start) {
+  const now = new Date();
+  const diffMs = start - now;
+  const diffMin = diffMs / 60000;
+  if (diffMin < 0 && diffMin > -120) return { label: 'Happening Now', className: 'time-badge-now' };
+  if (diffMin >= 0 && diffMin <= 30) return { label: 'Starting Soon', className: 'time-badge-soon' };
+  return null;
+}
 
 const EventCard = React.forwardRef(({ event, venues, isItemSavedLocal, toggleSave, getVenueName, onSelect, onBookClick, onPrefetch, addToCalendar, isInMyCalendar, index = 0 }, ref) => {
   const itemType = event.eventType === 'class' ? 'class' : 'event';
   const isSaved = isItemSavedLocal(itemType, event.id);
   const inCalendar = isInMyCalendar?.(event.id);
+  const timeBadge = useMemo(() => getTimeBadge(event.start), [event.start]);
 
   const handleSave = async (e) => {
     e.stopPropagation();
@@ -25,7 +35,7 @@ const EventCard = React.forwardRef(({ event, venues, isItemSavedLocal, toggleSav
   return (
     <motion.div
       ref={ref}
-      className="event-card card-enter"
+      className={`event-card card-enter${timeBadge ? ' event-card-urgent' : ''}`}
       layout
       style={index < 10 ? { animationDelay: `${index * 50}ms` } : undefined}
       onClick={() => onSelect(event)}
@@ -34,6 +44,14 @@ const EventCard = React.forwardRef(({ event, venues, isItemSavedLocal, toggleSav
       whileTap={{ scale: 0.97 }}
       transition={{ type: 'spring', stiffness: 400, damping: 30 }}
     >
+      {/* Time urgency badge */}
+      {timeBadge && (
+        <div className={`time-badge ${timeBadge.className}`}>
+          <Zap size={12} />
+          {timeBadge.label}
+        </div>
+      )}
+
       <div className="event-card-header">
         <div className="event-title-section">
           <h3>{event.title}</h3>
