@@ -14139,12 +14139,21 @@ h1.logo-text-premium {
   margin: 0;
 }
 
-/* H2 results count — reset to match existing div styling */
+/* H2 results count — sticky bar */
 h2.results-count {
-  font-size: inherit;
-  font-weight: inherit;
-  line-height: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: #6b7280;
+  line-height: 1;
   margin: 0;
+  padding: 10px 20px;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: rgba(249, 250, 251, 0.92);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-bottom: 1px solid #f3f4f6;
 }
 
 /* Back to Top Button — positioned above the Feedback FAB */

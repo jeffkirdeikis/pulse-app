@@ -1329,6 +1329,8 @@ export default function PulseApp() {
             {currentSection !== 'wellness' && (
             <h2 className="results-count" aria-live="polite" aria-atomic="true">
               {(() => {
+                const sectionLabels = { classes: 'class', events: 'event', deals: 'deal', services: 'business' };
+                const label = sectionLabels[currentSection] || 'result';
                 let count;
                 if (currentSection === 'deals') {
                   if (dealsLoading) return 'Loading...';
@@ -1348,7 +1350,7 @@ export default function PulseApp() {
                   if (eventsLoading) return 'Loading...';
                   count = filteredEvents.length;
                 }
-                return `${count} ${count === 1 ? 'result' : 'results'}`;
+                return `${count} ${count === 1 ? label : label + (label === 'class' ? 'es' : label === 'business' ? 'es' : 's')}`;
               })()}
             </h2>
             )}
