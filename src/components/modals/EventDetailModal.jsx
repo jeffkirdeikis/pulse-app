@@ -1,4 +1,5 @@
-import React, { memo } from 'react';
+import React, { memo, useRef } from 'react';
+import { motion, useMotionValue, useTransform } from 'framer-motion';
 import {
   Calendar, CalendarPlus, Check, Clock, DollarSign, ExternalLink,
   MapPin, Navigation, Repeat, Share2, Sparkles, Star, Ticket,
@@ -40,9 +41,41 @@ const EventDetailModal = memo(function EventDetailModal({
     }
   };
 
+  const dragY = useMotionValue(0);
+  const modalOpacity = useTransform(dragY, [0, 300], [1, 0.2]);
+  const modalScale = useTransform(dragY, [0, 300], [1, 0.92]);
+  const modalRef = useRef(null);
+
+  const handleDragEnd = (_, info) => {
+    if (info.offset.y > 120 || info.velocity.y > 500) {
+      onClose();
+    }
+  };
+
+  // Only allow drag when scrolled to top
+  const handleDragStart = (_, info) => {
+    if (modalRef.current && modalRef.current.scrollTop > 10) {
+      // Cancel drag if scrolled down — user is scrolling content, not dismissing
+      return false;
+    }
+  };
+
   return (
     <div className="modal-overlay event-modal-overlay" role="dialog" aria-modal="true" aria-label="Event details" onClick={onClose}>
-      <div className="event-detail-modal" onClick={(e) => e.stopPropagation()}>
+      <motion.div
+        className="event-detail-modal"
+        onClick={(e) => e.stopPropagation()}
+        ref={modalRef}
+        drag="y"
+        dragConstraints={{ top: 0, bottom: 0 }}
+        dragElastic={{ top: 0, bottom: 0.6 }}
+        onDragEnd={handleDragEnd}
+        style={{ y: dragY, opacity: modalOpacity, scale: modalScale }}
+      >
+        {/* Drag Handle */}
+        <div className="modal-drag-handle" aria-hidden="true">
+          <div className="drag-handle-bar" />
+        </div>
         <button className="close-btn event-close" onClick={onClose}>
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
             <path d="M1 1L13 13M1 13L13 1" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
@@ -228,7 +261,7 @@ const EventDetailModal = memo(function EventDetailModal({
         <div className="event-modal-footer">
           <p>Event information may change. Please verify with organizer.</p>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 });

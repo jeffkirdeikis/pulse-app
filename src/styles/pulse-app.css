@@ -7145,6 +7145,24 @@
           }
         }
 
+        /* ========== MODAL DRAG HANDLE ========== */
+        .modal-drag-handle {
+          display: flex;
+          justify-content: center;
+          padding: 10px 0 4px;
+          cursor: grab;
+          touch-action: none;
+        }
+        .modal-drag-handle:active { cursor: grabbing; }
+        .drag-handle-bar {
+          width: 36px;
+          height: 4px;
+          border-radius: 2px;
+          background: #d1d5db;
+          transition: background 0.2s;
+        }
+        .modal-drag-handle:hover .drag-handle-bar { background: #9ca3af; }
+
         /* ========== PREMIUM EVENT/CLASS DETAIL MODAL ========== */
         .event-detail-modal {
           background: #ffffff;
