@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowUp, Calendar, Check, X, Plus, CheckCircle, Percent, Sparkles } from 'lucide-react';
+import { ArrowUp, Calendar, Check, X, Plus, CheckCircle, Percent, Sparkles, LayoutList, MapPin } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import { useUserData } from './hooks/useUserData';
 import { useCardAnimation } from './hooks/useCardAnimation';
@@ -585,6 +585,8 @@ export default function PulseApp() {
 
   // Pagination — render events incrementally to avoid 981+ DOM nodes
   const [visibleEventCount, setVisibleEventCount] = useState(50);
+  // Group by venue toggle for classes
+  const [groupByVenue, setGroupByVenue] = useState(false);
 
   // Filter states - all dropdowns (persisted to localStorage, excluding specific dates)
   const [filters, setFilters] = useState(() => {
@@ -1132,6 +1134,41 @@ export default function PulseApp() {
     const paginatedEvents = events.slice(0, visibleEventCount);
     const hasMore = events.length > visibleEventCount;
 
+    // Venue-grouped view for classes
+    if (groupByVenue && currentSection === 'classes') {
+      const venueGroups = {};
+      paginatedEvents.forEach(e => {
+        const venue = getVenueName(e.venueId, e);
+        if (!venueGroups[venue]) venueGroups[venue] = [];
+        venueGroups[venue].push(e);
+      });
+      const sortedVenues = Object.keys(venueGroups).sort((a, b) => venueGroups[b].length - venueGroups[a].length);
+      let venueGlobalIdx = 0;
+      return (
+        <>
+          {sortedVenues.map(venue => (
+            <div key={venue} className="venue-group">
+              <div className="venue-group-header">
+                <span className="venue-group-name">{venue}</span>
+                <span className="venue-group-count">{venueGroups[venue].length}</span>
+              </div>
+              {venueGroups[venue].map(event => {
+                const idx = venueGlobalIdx++;
+                return <EventCard key={event.id} event={event} index={idx} ref={(el) => eventCardRefs.current[idx] = el} venues={REAL_DATA.venues} isItemSavedLocal={isItemSavedLocal} toggleSave={toggleSave} getVenueName={getVenueName} onSelect={setSelectedEvent} onBookClick={handleBookClick} onPrefetch={prefetchEvent} addToCalendar={addToCalendar} isInMyCalendar={isInMyCalendar} showToast={showToast} />;
+              })}
+            </div>
+          ))}
+          {hasMore && (
+            <div ref={loadMoreRef} style={{ textAlign: 'center', padding: '24px 0', minHeight: '1px' }}>
+              <div className="infinite-scroll-loader">
+                <div className="loader-dot" /><div className="loader-dot" /><div className="loader-dot" />
+              </div>
+            </div>
+          )}
+        </>
+      );
+    }
+
     const groupedEvents = groupEventsByDate(paginatedEvents);
     const dateKeys = Object.keys(groupedEvents).sort((a, b) => new Date(a) - new Date(b));
     const now = getPacificNow();
@@ -1381,32 +1418,45 @@ export default function PulseApp() {
           <PullToRefresh onRefresh={handlePullRefresh}>
           <main className="content" id="main-content">
             {currentSection !== 'wellness' && (
-            <h2 className="results-count" aria-live="polite" aria-atomic="true">
-              {(() => {
-                const sectionLabels = { classes: 'class', events: 'event', deals: 'deal', services: 'business' };
-                const label = sectionLabels[currentSection] || 'result';
-                let count;
-                if (currentSection === 'deals') {
-                  if (dealsLoading) return 'Loading...';
-                  count = filteredDeals.filter(d => dealCategoryFilter === 'All' || normalizeDealCategory(d.category) === dealCategoryFilter).length;
-                } else if (currentSection === 'services') {
-                  count = services.filter(s => {
-                    if (debouncedSearch) {
-                      const query = debouncedSearch.toLowerCase().trim();
-                      if (!s.name.toLowerCase().includes(query) && !s.category.toLowerCase().includes(query) && !s.address?.toLowerCase().includes(query)) return false;
-                    }
-                    if (serviceCategoryFilter === 'All') return true;
-                    const mainCategories = ['Restaurants & Dining', 'Retail & Shopping', 'Cafes & Bakeries', 'Outdoor Adventures', 'Auto Services', 'Real Estate', 'Fitness & Gyms', 'Recreation & Sports', 'Health & Wellness', 'Construction & Building', 'Outdoor Gear & Shops', 'Community Services', 'Hotels & Lodging', 'Web & Marketing', 'Financial Services', 'Medical Clinics', 'Photography', 'Attractions', 'Churches & Religious', 'Salons & Spas', 'Arts & Culture'];
-                    if (serviceCategoryFilter === 'Other') return !mainCategories.includes(s.category);
-                    return s.category === serviceCategoryFilter;
-                  }).length;
-                } else {
-                  if (eventsLoading) return 'Loading...';
-                  count = filteredEvents.length;
-                }
-                return `${count} ${count === 1 ? label : label + (label === 'class' ? 'es' : label === 'business' ? 'es' : 's')}`;
-              })()}
-            </h2>
+            <div className="results-bar">
+              <h2 className="results-count" aria-live="polite" aria-atomic="true">
+                {(() => {
+                  const sectionLabels = { classes: 'class', events: 'event', deals: 'deal', services: 'business' };
+                  const label = sectionLabels[currentSection] || 'result';
+                  let count;
+                  if (currentSection === 'deals') {
+                    if (dealsLoading) return 'Loading...';
+                    count = filteredDeals.filter(d => dealCategoryFilter === 'All' || normalizeDealCategory(d.category) === dealCategoryFilter).length;
+                  } else if (currentSection === 'services') {
+                    count = services.filter(s => {
+                      if (debouncedSearch) {
+                        const query = debouncedSearch.toLowerCase().trim();
+                        if (!s.name.toLowerCase().includes(query) && !s.category.toLowerCase().includes(query) && !s.address?.toLowerCase().includes(query)) return false;
+                      }
+                      if (serviceCategoryFilter === 'All') return true;
+                      const mainCategories = ['Restaurants & Dining', 'Retail & Shopping', 'Cafes & Bakeries', 'Outdoor Adventures', 'Auto Services', 'Real Estate', 'Fitness & Gyms', 'Recreation & Sports', 'Health & Wellness', 'Construction & Building', 'Outdoor Gear & Shops', 'Community Services', 'Hotels & Lodging', 'Web & Marketing', 'Financial Services', 'Medical Clinics', 'Photography', 'Attractions', 'Churches & Religious', 'Salons & Spas', 'Arts & Culture'];
+                      if (serviceCategoryFilter === 'Other') return !mainCategories.includes(s.category);
+                      return s.category === serviceCategoryFilter;
+                    }).length;
+                  } else {
+                    if (eventsLoading) return 'Loading...';
+                    count = filteredEvents.length;
+                  }
+                  return `${count} ${count === 1 ? label : label + (label === 'class' ? 'es' : label === 'business' ? 'es' : 's')}`;
+                })()}
+              </h2>
+              {currentSection === 'classes' && (
+                <button
+                  className={`group-toggle-btn ${groupByVenue ? 'active' : ''}`}
+                  onClick={() => setGroupByVenue(!groupByVenue)}
+                  aria-label={groupByVenue ? 'Sort by time' : 'Group by venue'}
+                  title={groupByVenue ? 'Sort by time' : 'Group by venue'}
+                >
+                  {groupByVenue ? <LayoutList size={16} /> : <MapPin size={16} />}
+                  <span>{groupByVenue ? 'By Time' : 'By Venue'}</span>
+                </button>
+              )}
+            </div>
             )}
 
             <AnimatePresence mode="wait">

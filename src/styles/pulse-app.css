@@ -14194,13 +14194,11 @@ h1.logo-text-premium {
   margin: 0;
 }
 
-/* H2 results count — sticky bar */
-h2.results-count {
-  font-size: 13px;
-  font-weight: 600;
-  color: #6b7280;
-  line-height: 1;
-  margin: 0;
+/* Results bar — sticky with toggle */
+.results-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding: 10px 20px;
   position: sticky;
   top: 0;
@@ -14209,6 +14207,52 @@ h2.results-count {
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   border-bottom: 1px solid #f3f4f6;
+}
+h2.results-count {
+  font-size: 13px;
+  font-weight: 600;
+  color: #6b7280;
+  line-height: 1;
+  margin: 0;
+}
+.group-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 500;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.group-toggle-btn:hover { border-color: #3b82f6; color: #3b82f6; }
+.group-toggle-btn.active {
+  background: #eff6ff;
+  border-color: #3b82f6;
+  color: #2563eb;
+}
+/* Venue group header */
+.venue-group { margin-bottom: 8px; }
+.venue-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 4px 8px;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 8px;
+}
+.venue-group-name { font-size: 15px; font-weight: 700; color: #1f2937; }
+.venue-group-count {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  background: #f3f4f6;
+  padding: 2px 8px;
+  border-radius: 10px;
 }
 
 /* Back to Top Button — positioned above the Feedback FAB */
