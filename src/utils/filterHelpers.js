@@ -134,17 +134,22 @@ export function filterEvents(allEvents, { currentSection, filters, searchQuery, 
     filtered = filtered.filter(e => e.category === filters.category || (e.tags && e.tags.includes(filters.category)));
   }
 
-  // Time of day
+  // Time of day — supports exact time (HH:MM) and range keywords (morning, afternoon, evening)
   if (filters.time !== 'all') {
-    const [filterHour, filterMin] = filters.time.split(':').map(Number);
-    const filterMinutes = filterHour * 60 + filterMin;
-
-    filtered = filtered.filter(e => {
-      const eventHour = e.start.getHours();
-      const eventMin = e.start.getMinutes();
-      const eventMinutes = eventHour * 60 + eventMin;
-      return eventMinutes >= filterMinutes;
-    });
+    if (filters.time === 'morning') {
+      filtered = filtered.filter(e => { const h = e.start.getHours(); return h >= 5 && h < 12; });
+    } else if (filters.time === 'afternoon') {
+      filtered = filtered.filter(e => { const h = e.start.getHours(); return h >= 12 && h < 17; });
+    } else if (filters.time === 'evening') {
+      filtered = filtered.filter(e => { const h = e.start.getHours(); return h >= 17; });
+    } else {
+      const [filterHour, filterMin] = filters.time.split(':').map(Number);
+      const filterMinutes = filterHour * 60 + filterMin;
+      filtered = filtered.filter(e => {
+        const eventMinutes = e.start.getHours() * 60 + e.start.getMinutes();
+        return eventMinutes >= filterMinutes;
+      });
+    }
   }
 
   // Price — null/unknown pricing shows in both "All" and "Paid" but not "Free"

@@ -1872,6 +1872,50 @@
           padding: 0 5px;
         }
 
+        /* ========== QUICK FILTER CHIPS ========== */
+        .quick-filter-chips {
+          display: flex;
+          gap: 8px;
+          padding: 8px 20px;
+          background: #ffffff;
+          border-bottom: 1px solid #f3f4f6;
+          overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
+          scrollbar-width: none;
+        }
+        .quick-filter-chips::-webkit-scrollbar { display: none; }
+
+        .quick-chip {
+          display: flex;
+          align-items: center;
+          gap: 5px;
+          padding: 6px 14px;
+          background: #f9fafb;
+          border: 1.5px solid #e5e7eb;
+          border-radius: 20px;
+          font-size: 13px;
+          font-weight: 500;
+          color: #6b7280;
+          cursor: pointer;
+          white-space: nowrap;
+          transition: all 0.2s ease;
+          flex-shrink: 0;
+        }
+        .quick-chip:hover {
+          border-color: #3b82f6;
+          color: #3b82f6;
+          background: #eff6ff;
+        }
+        .quick-chip-active {
+          background: #eff6ff;
+          border-color: #3b82f6;
+          color: #2563eb;
+          font-weight: 600;
+        }
+        .quick-chip svg {
+          flex-shrink: 0;
+        }
+
         /* ========== FILTERS TOGGLE BUTTON ========== */
         .filters-toggle-section {
           background: #ffffff;
