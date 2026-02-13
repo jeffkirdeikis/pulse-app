@@ -1570,7 +1570,10 @@ export default function PulseApp() {
                 {(currentSection === 'classes' || currentSection === 'events') && (
                   <button
                     className={`group-toggle-btn sort-btn ${sortBy !== 'soonest' ? 'active' : ''}`}
-                    onClick={() => setSortBy(s => s === 'soonest' ? 'price' : s === 'price' ? 'duration' : 'soonest')}
+                    onClick={() => {
+                      setSortBy(s => s === 'soonest' ? 'price' : s === 'price' ? 'duration' : 'soonest');
+                      document.querySelector('.results-bar')?.scrollIntoView({ behavior: 'smooth' });
+                    }}
                     aria-label={`Sort: ${sortBy}`}
                     title={`Sort: ${sortBy === 'soonest' ? 'Soonest first' : sortBy === 'price' ? 'Price: low to high' : 'Shortest first'}`}
                   >
