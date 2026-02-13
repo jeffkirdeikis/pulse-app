@@ -2631,6 +2631,12 @@
           overflow: hidden;
           text-overflow: ellipsis;
         }
+        .search-highlight {
+          background: #fef08a;
+          color: inherit;
+          border-radius: 2px;
+          padding: 0 1px;
+        }
         .duration-text {
           color: #9ca3af;
           font-size: 12px;

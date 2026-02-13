@@ -1189,7 +1189,7 @@ export default function PulseApp() {
               </div>
               {venueGroups[venue].map(event => {
                 const idx = venueGlobalIdx++;
-                return <EventCard key={event.id} event={event} index={idx} ref={(el) => eventCardRefs.current[idx] = el} venues={REAL_DATA.venues} isItemSavedLocal={isItemSavedLocal} toggleSave={toggleSave} getVenueName={getVenueName} onSelect={setSelectedEvent} onBookClick={handleBookClick} onPrefetch={prefetchEvent} addToCalendar={addToCalendar} isInMyCalendar={isInMyCalendar} showToast={showToast} />;
+                return <EventCard key={event.id} event={event} index={idx} ref={(el) => eventCardRefs.current[idx] = el} venues={REAL_DATA.venues} isItemSavedLocal={isItemSavedLocal} toggleSave={toggleSave} getVenueName={getVenueName} onSelect={setSelectedEvent} onBookClick={handleBookClick} onPrefetch={prefetchEvent} addToCalendar={addToCalendar} isInMyCalendar={isInMyCalendar} showToast={showToast} searchQuery={searchQuery} />;
               })}
             </div>
           ))}
@@ -1245,7 +1245,7 @@ export default function PulseApp() {
           
           {groupedEvents[dateKey].map((event) => {
             const currentIndex = globalEventIndex++;
-            return <EventCard key={event.id} event={event} index={currentIndex} ref={(el) => eventCardRefs.current[currentIndex] = el} venues={REAL_DATA.venues} isItemSavedLocal={isItemSavedLocal} toggleSave={toggleSave} getVenueName={getVenueName} onSelect={setSelectedEvent} onBookClick={handleBookClick} onPrefetch={prefetchEvent} addToCalendar={addToCalendar} isInMyCalendar={isInMyCalendar} showToast={showToast} />;
+            return <EventCard key={event.id} event={event} index={currentIndex} ref={(el) => eventCardRefs.current[currentIndex] = el} venues={REAL_DATA.venues} isItemSavedLocal={isItemSavedLocal} toggleSave={toggleSave} getVenueName={getVenueName} onSelect={setSelectedEvent} onBookClick={handleBookClick} onPrefetch={prefetchEvent} addToCalendar={addToCalendar} isInMyCalendar={isInMyCalendar} showToast={showToast} searchQuery={searchQuery} />;
           })}
         </div>
       );

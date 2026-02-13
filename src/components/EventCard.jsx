@@ -27,7 +27,14 @@ function getRelativeTime(start) {
   return null;
 }
 
-const EventCard = React.forwardRef(({ event, venues, isItemSavedLocal, toggleSave, getVenueName, onSelect, onBookClick, onPrefetch, addToCalendar, isInMyCalendar, showToast, index = 0 }, ref) => {
+function highlightMatch(text, query) {
+  if (!query || !text) return text;
+  const idx = text.toLowerCase().indexOf(query.toLowerCase());
+  if (idx === -1) return text;
+  return <>{text.slice(0, idx)}<mark className="search-highlight">{text.slice(idx, idx + query.length)}</mark>{text.slice(idx + query.length)}</>;
+}
+
+const EventCard = React.forwardRef(({ event, venues, isItemSavedLocal, toggleSave, getVenueName, onSelect, onBookClick, onPrefetch, addToCalendar, isInMyCalendar, showToast, searchQuery, index = 0 }, ref) => {
   const itemType = event.eventType === 'class' ? 'class' : 'event';
   const isSaved = isItemSavedLocal(itemType, event.id);
   const inCalendar = isInMyCalendar?.(event.id);
@@ -111,7 +118,7 @@ const EventCard = React.forwardRef(({ event, venues, isItemSavedLocal, toggleSav
 
       <div className="event-card-header">
         <div className="event-title-section">
-          <h3>{event.title}</h3>
+          <h3>{searchQuery ? highlightMatch(event.title, searchQuery) : event.title}</h3>
           {venues.find(v => v.id === event.venueId)?.verified && (
             <div
               className="verified-badge-premium-inline"
@@ -149,7 +156,7 @@ const EventCard = React.forwardRef(({ event, venues, isItemSavedLocal, toggleSav
             <div className="venue-avatar" style={{ background: categoryColor || '#6b7280' }}>
               {getVenueName(event.venueId, event).charAt(0).toUpperCase()}
             </div>
-            <span className="detail-text">{getVenueName(event.venueId, event)}</span>
+            <span className="detail-text">{searchQuery ? highlightMatch(getVenueName(event.venueId, event), searchQuery) : getVenueName(event.venueId, event)}</span>
             <ChevronRight size={14} className="venue-chevron" />
           </div>
         </div>
