@@ -1,9 +1,31 @@
-import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { Calendar, Star, DollarSign, Search, X, Heart, Wrench, MessageCircle, Bell, WifiOff } from 'lucide-react';
+import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
+import { Calendar, Star, DollarSign, Search, X, Heart, Wrench, MessageCircle, Bell, WifiOff, Clock, TrendingUp } from 'lucide-react';
+
+const RECENT_SEARCHES_KEY = 'pulse-recent-searches';
+const MAX_RECENT = 5;
+const MAX_SUGGESTIONS = 6;
+
+function getRecentSearches() {
+  try {
+    return JSON.parse(localStorage.getItem(RECENT_SEARCHES_KEY) || '[]');
+  } catch { return []; }
+}
+
+function saveRecentSearch(query) {
+  if (!query?.trim()) return;
+  const q = query.trim();
+  const recent = getRecentSearches().filter(s => s !== q);
+  recent.unshift(q);
+  localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(recent.slice(0, MAX_RECENT)));
+}
+
+function clearRecentSearches() {
+  localStorage.removeItem(RECENT_SEARCHES_KEY);
+}
 
 /**
  * Consumer view header with logo, auth/profile buttons, navigation tabs,
- * search bar, and offline banner.
+ * search bar with suggestions, and offline banner.
  */
 const ConsumerHeader = React.memo(function ConsumerHeader({
   user,
@@ -22,12 +44,17 @@ const ConsumerHeader = React.memo(function ConsumerHeader({
   showToast,
   onOpenNotifications,
   unreadNotifCount,
+  searchSuggestions = [],
 }) {
   const row1Tabs = ['classes', 'events', 'deals'];
   const row2Tabs = ['services', 'wellness'];
   const tabRefs = useRef({});
   const [indicator1, setIndicator1] = useState({ x: 0, w: 0 });
   const [indicator2, setIndicator2] = useState({ x: 0, w: 0 });
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [recentSearches, setRecentSearches] = useState(getRecentSearches);
+  const searchContainerRef = useRef(null);
+  const inputRef = useRef(null);
 
   const updateIndicator = useCallback(() => {
     const el = tabRefs.current[currentSection];
@@ -50,6 +77,49 @@ const ConsumerHeader = React.memo(function ConsumerHeader({
     window.addEventListener('resize', updateIndicator);
     return () => window.removeEventListener('resize', updateIndicator);
   }, [updateIndicator]);
+
+  // Close suggestions on outside click
+  useEffect(() => {
+    const handleClick = (e) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  // Filtered suggestions based on current query
+  const matchedSuggestions = useMemo(() => {
+    if (!searchQuery?.trim()) return [];
+    const q = searchQuery.trim().toLowerCase();
+    return searchSuggestions
+      .filter(s => s.toLowerCase().includes(q) && s.toLowerCase() !== q)
+      .slice(0, MAX_SUGGESTIONS);
+  }, [searchQuery, searchSuggestions]);
+
+  const handleSelectSuggestion = useCallback((text) => {
+    setSearchQuery(text);
+    saveRecentSearch(text);
+    setRecentSearches(getRecentSearches());
+    setShowSuggestions(false);
+  }, [setSearchQuery]);
+
+  const handleSearchSubmit = useCallback((e) => {
+    if (e.key === 'Enter' && searchQuery?.trim()) {
+      saveRecentSearch(searchQuery.trim());
+      setRecentSearches(getRecentSearches());
+      setShowSuggestions(false);
+      inputRef.current?.blur();
+    }
+  }, [searchQuery]);
+
+  const handleClearRecent = useCallback(() => {
+    clearRecentSearches();
+    setRecentSearches([]);
+  }, []);
+
+  const hasSuggestions = searchQuery?.trim() ? matchedSuggestions.length > 0 : recentSearches.length > 0;
 
   return (
     <>
@@ -191,27 +261,68 @@ const ConsumerHeader = React.memo(function ConsumerHeader({
         </div>
       </nav>
 
-      {/* Search Bar (hidden for wellness which has its own UI) */}
-      <div className="search-section-premium" style={currentSection === 'wellness' ? { display: 'none' } : undefined}>
+      {/* Search Bar with Suggestions (hidden for wellness which has its own UI) */}
+      <div className="search-section-premium" style={currentSection === 'wellness' ? { display: 'none' } : undefined} ref={searchContainerRef}>
         <div className="search-bar-premium">
           <Search size={20} className="search-icon-premium" />
           <input
+            ref={inputRef}
             type="text"
             placeholder={`Search ${currentSection}...`}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            onFocus={() => setShowSuggestions(true)}
+            onKeyDown={handleSearchSubmit}
             aria-label={`Search ${currentSection}`}
+            autoComplete="off"
           />
           {searchQuery && (
             <button
               className="search-clear-btn"
-              onClick={() => setSearchQuery('')}
+              onClick={() => { setSearchQuery(''); setShowSuggestions(false); }}
               aria-label="Clear search"
             >
               <X size={16} />
             </button>
           )}
         </div>
+
+        {/* Suggestions Dropdown */}
+        {showSuggestions && hasSuggestions && (
+          <div className="search-suggestions">
+            {searchQuery?.trim() ? (
+              /* Query-based autocomplete */
+              matchedSuggestions.map((s, i) => (
+                <button
+                  key={i}
+                  className="search-suggestion-item"
+                  onMouseDown={(e) => { e.preventDefault(); handleSelectSuggestion(s); }}
+                >
+                  <Search size={14} className="suggestion-icon" />
+                  <span className="suggestion-text">{s}</span>
+                </button>
+              ))
+            ) : (
+              /* Recent searches */
+              <>
+                <div className="suggestions-header">
+                  <span>Recent</span>
+                  <button className="clear-recent-btn" onMouseDown={(e) => { e.preventDefault(); handleClearRecent(); }}>Clear</button>
+                </div>
+                {recentSearches.map((s, i) => (
+                  <button
+                    key={i}
+                    className="search-suggestion-item"
+                    onMouseDown={(e) => { e.preventDefault(); handleSelectSuggestion(s); }}
+                  >
+                    <Clock size={14} className="suggestion-icon" />
+                    <span className="suggestion-text">{s}</span>
+                  </button>
+                ))}
+              </>
+            )}
+          </div>
+        )}
       </div>
     </>
   );

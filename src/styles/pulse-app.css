@@ -1570,7 +1570,95 @@
         .search-clear-btn:active {
           transform: translateY(-50%) scale(0.95);
         }
-        
+
+        /* ========== SEARCH SUGGESTIONS DROPDOWN ========== */
+        .search-section-premium {
+          position: relative;
+        }
+
+        .search-suggestions {
+          position: absolute;
+          top: calc(100% - 4px);
+          left: 20px;
+          right: 20px;
+          background: #ffffff;
+          border: 1px solid #e5e7eb;
+          border-radius: 12px;
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+          z-index: 50;
+          overflow: hidden;
+          animation: suggestionsSlide 0.15s ease-out;
+          max-height: 280px;
+          overflow-y: auto;
+        }
+
+        @keyframes suggestionsSlide {
+          from { opacity: 0; transform: translateY(-4px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+
+        .suggestions-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 10px 14px 4px;
+          font-size: 11px;
+          font-weight: 600;
+          color: #9ca3af;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        .clear-recent-btn {
+          background: none;
+          border: none;
+          font-size: 11px;
+          font-weight: 600;
+          color: #3b82f6;
+          cursor: pointer;
+          padding: 2px 4px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        .clear-recent-btn:hover {
+          color: #2563eb;
+        }
+
+        .search-suggestion-item {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          width: 100%;
+          padding: 10px 14px;
+          background: none;
+          border: none;
+          text-align: left;
+          cursor: pointer;
+          transition: background 0.1s;
+          font-size: 14px;
+          color: #374151;
+        }
+
+        .search-suggestion-item:hover {
+          background: #f3f4f6;
+        }
+
+        .search-suggestion-item:active {
+          background: #e5e7eb;
+        }
+
+        .suggestion-icon {
+          flex-shrink: 0;
+          color: #9ca3af;
+        }
+
+        .suggestion-text {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
         /* ========== HORIZONTAL DATE PICKER STRIP ========== */
         .date-strip-section {
           background: #ffffff;

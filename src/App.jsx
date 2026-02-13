@@ -992,6 +992,16 @@ export default function PulseApp() {
     );
   }, [dbEvents, currentSection, filters, searchQuery, kidsAgeRange]);
 
+  // Build search suggestions from venue names and event titles
+  const searchSuggestions = useMemo(() => {
+    const suggestions = new Set();
+    // Venue names
+    REAL_DATA.venues.forEach(v => { if (v.name) suggestions.add(v.name); });
+    // Unique event/class titles
+    dbEvents.forEach(e => { if (e.title) suggestions.add(e.title); });
+    return Array.from(suggestions).sort((a, b) => a.localeCompare(b));
+  }, [dbEvents]);
+
   // Group events by date for infinite scroll with dividers
   const groupEventsByDate = (events) => {
     const grouped = {};
@@ -1222,6 +1232,7 @@ export default function PulseApp() {
             showToast={showToast}
             onOpenNotifications={() => setShowNotifications(true)}
             unreadNotifCount={notifications.filter(n => !n.is_read).length}
+            searchSuggestions={searchSuggestions}
           />
 
           {/* Premium Filter System - Clean 5-Filter Layout */}
