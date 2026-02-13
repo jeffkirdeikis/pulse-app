@@ -14175,6 +14175,28 @@ h2.results-count {
   transform: scale(0.9);
 }
 
+/* Infinite Scroll Loader */
+.infinite-scroll-loader {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 0;
+}
+.loader-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #3b82f6;
+  animation: loaderBounce 1.4s ease-in-out infinite both;
+}
+.loader-dot:nth-child(1) { animation-delay: -0.32s; }
+.loader-dot:nth-child(2) { animation-delay: -0.16s; }
+@keyframes loaderBounce {
+  0%, 80%, 100% { transform: scale(0.4); opacity: 0.3; }
+  40% { transform: scale(1); opacity: 1; }
+}
+
 /* Footer */
 .app-footer {
   text-align: center;

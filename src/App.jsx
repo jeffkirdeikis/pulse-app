@@ -58,6 +58,7 @@ export default function PulseApp() {
   const serviceCardRefs = useRef([]);
   const classCardRefs = useRef([]);
   const venueCardRefs = useRef([]);
+  const loadMoreRef = useRef(null);
   const [installPromptEvent, setInstallPromptEvent] = useState(null);
   const [showInstallBanner, setShowInstallBanner] = useState(false);
   const [showBackToTop, setShowBackToTop] = useState(false);
@@ -1132,14 +1133,10 @@ export default function PulseApp() {
       <>
         {renderedDays}
         {hasMore && (
-          <div style={{ textAlign: 'center', padding: '16px 0 24px' }}>
-            <button
-              className="btn-secondary"
-              onClick={() => setVisibleEventCount(c => c + 50)}
-              style={{ padding: '12px 24px', fontSize: '14px', fontWeight: 600, minHeight: '44px' }}
-            >
-              Show More ({events.length - visibleEventCount} remaining)
-            </button>
+          <div ref={loadMoreRef} style={{ textAlign: 'center', padding: '24px 0', minHeight: '1px' }}>
+            <div className="infinite-scroll-loader">
+              <div className="loader-dot" /><div className="loader-dot" /><div className="loader-dot" />
+            </div>
           </div>
         )}
       </>
@@ -1261,6 +1258,19 @@ export default function PulseApp() {
   const scrollToTop = useCallback(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
+
+  // Infinite scroll — auto-load more events when sentinel comes into view
+  useEffect(() => {
+    const el = loadMoreRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setVisibleEventCount(c => c + 50);
+      }
+    }, { rootMargin: '200px' });
+    observer.observe(el);
+    return () => observer.disconnect();
+  });
 
   return (
     <div className="pulse-app">
