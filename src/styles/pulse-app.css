@@ -1919,6 +1919,15 @@
         .quick-chip-active:hover {
           background: #bfdbfe;
         }
+        .quick-chip-now {
+          background: #fee2e2;
+          border-color: #ef4444;
+          color: #dc2626;
+          box-shadow: 0 1px 4px rgba(239, 68, 68, 0.2);
+        }
+        .quick-chip-now:hover {
+          background: #fecaca;
+        }
         .quick-chip svg {
           flex-shrink: 0;
         }
@@ -2446,8 +2455,23 @@
         }
 
         .time-badge-now {
-          background: #fef3c7;
-          color: #92400e;
+          background: #fee2e2;
+          color: #dc2626;
+          display: flex;
+          align-items: center;
+          gap: 5px;
+        }
+        .time-badge-now::before {
+          content: '';
+          width: 6px;
+          height: 6px;
+          background: #dc2626;
+          border-radius: 50%;
+          animation: nowPulse 1.5s ease-in-out infinite;
+        }
+        @keyframes nowPulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.4; transform: scale(0.7); }
         }
 
         .time-badge-soon {

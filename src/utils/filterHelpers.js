@@ -36,6 +36,10 @@ export function filterEvents(allEvents, { currentSection, filters, searchQuery, 
   if (filters.day === 'anytime') {
     // "Anytime" = all future events (not past ones)
     filtered = filtered.filter(e => e.start >= now);
+  } else if (filters.day === 'happeningNow') {
+    // Events that started within the last 2 hours (currently in progress)
+    const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000);
+    filtered = filtered.filter(e => e.start >= twoHoursAgo && e.start <= now);
   } else if (filters.day === 'today') {
     // "Upcoming" = next 30 days, excluding events that already started
     const thirtyDaysLater = new Date(now);

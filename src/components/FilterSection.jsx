@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useEffect } from 'react';
-import { SlidersHorizontal, ChevronRight, Sparkles, Sun, Sunset, Moon, Baby, DollarSign, CalendarDays } from 'lucide-react';
+import { SlidersHorizontal, ChevronRight, Sparkles, Sun, Sunset, Moon, Baby, DollarSign, CalendarDays, Zap } from 'lucide-react';
 
 /**
  * Generate array of next N days starting from today (Pacific time).
@@ -126,6 +126,7 @@ const FilterSection = React.memo(function FilterSection({
       {/* Quick Filter Chips */}
       <div className="quick-filter-chips">
         {[
+          { key: 'now', label: 'Now', icon: <Zap size={14} />, apply: { day: 'happeningNow' }, match: (f) => f.day === 'happeningNow' },
           { key: 'free', label: 'Free', icon: <DollarSign size={14} />, apply: { price: 'free' }, match: (f) => f.price === 'free' },
           { key: 'weekend', label: 'Weekend', icon: <CalendarDays size={14} />, apply: { day: 'thisWeekend' }, match: (f) => f.day === 'thisWeekend' },
           { key: 'morning', label: 'Morning', icon: <Sun size={14} />, apply: { time: 'morning' }, match: (f) => f.time === 'morning' },
@@ -137,7 +138,7 @@ const FilterSection = React.memo(function FilterSection({
           return (
             <button
               key={chip.key}
-              className={`quick-chip ${isActive ? 'quick-chip-active' : ''}`}
+              className={`quick-chip ${isActive ? 'quick-chip-active' : ''} ${chip.key === 'now' && isActive ? 'quick-chip-now' : ''}`}
               onClick={() => {
                 if (isActive) {
                   // Toggle off — reset the relevant filter
