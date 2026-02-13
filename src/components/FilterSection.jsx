@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useEffect } from 'react';
-import { SlidersHorizontal, ChevronRight, Sparkles, Sun, Sunset, Moon, Baby, DollarSign } from 'lucide-react';
+import { SlidersHorizontal, ChevronRight, Sparkles, Sun, Sunset, Moon, Baby, DollarSign, CalendarDays } from 'lucide-react';
 
 /**
  * Generate array of next N days starting from today (Pacific time).
@@ -127,6 +127,7 @@ const FilterSection = React.memo(function FilterSection({
       <div className="quick-filter-chips">
         {[
           { key: 'free', label: 'Free', icon: <DollarSign size={14} />, apply: { price: 'free' }, match: (f) => f.price === 'free' },
+          { key: 'weekend', label: 'Weekend', icon: <CalendarDays size={14} />, apply: { day: 'thisWeekend' }, match: (f) => f.day === 'thisWeekend' },
           { key: 'morning', label: 'Morning', icon: <Sun size={14} />, apply: { time: 'morning' }, match: (f) => f.time === 'morning' },
           { key: 'afternoon', label: 'Afternoon', icon: <Sunset size={14} />, apply: { time: 'afternoon' }, match: (f) => f.time === 'afternoon' },
           { key: 'evening', label: 'Evening', icon: <Moon size={14} />, apply: { time: 'evening' }, match: (f) => f.time === 'evening' },
@@ -141,7 +142,8 @@ const FilterSection = React.memo(function FilterSection({
                 if (isActive) {
                   // Toggle off — reset the relevant filter
                   const resetKey = Object.keys(chip.apply)[0];
-                  setFilters({ ...filters, [resetKey]: 'all' });
+                  const resetDefaults = { day: 'today', time: 'all', age: 'all', price: 'all', category: 'all' };
+                  setFilters({ ...filters, [resetKey]: resetDefaults[resetKey] || 'all' });
                   if (chip.key === 'kids') setKidsAgeRange([0, 18]);
                 } else {
                   setFilters({ ...filters, ...chip.apply });
