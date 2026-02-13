@@ -2526,6 +2526,11 @@
           overflow: hidden;
           text-overflow: ellipsis;
         }
+        .relative-time {
+          font-weight: 500;
+          color: #6b7280;
+          font-size: 12px;
+        }
 
         .event-badges-row {
           display: flex;

@@ -12,11 +12,27 @@ function getTimeBadge(start) {
   return null;
 }
 
+function getRelativeTime(start) {
+  const now = new Date();
+  const diffMs = start - now;
+  const diffMin = Math.round(diffMs / 60000);
+  if (diffMin < -120) return null; // past events beyond 2 hrs
+  if (diffMin < 0) return 'now';
+  if (diffMin < 60) return `in ${diffMin} min`;
+  const diffHrs = Math.round(diffMin / 60);
+  if (diffHrs < 24) return `in ${diffHrs} hr${diffHrs > 1 ? 's' : ''}`;
+  const diffDays = Math.round(diffHrs / 24);
+  if (diffDays === 1) return 'tomorrow';
+  if (diffDays < 7) return `in ${diffDays} days`;
+  return null;
+}
+
 const EventCard = React.forwardRef(({ event, venues, isItemSavedLocal, toggleSave, getVenueName, onSelect, onBookClick, onPrefetch, addToCalendar, isInMyCalendar, index = 0 }, ref) => {
   const itemType = event.eventType === 'class' ? 'class' : 'event';
   const isSaved = isItemSavedLocal(itemType, event.id);
   const inCalendar = isInMyCalendar?.(event.id);
   const timeBadge = useMemo(() => getTimeBadge(event.start), [event.start]);
+  const relativeTime = useMemo(() => getRelativeTime(event.start), [event.start]);
 
   const handleSave = async (e) => {
     e.stopPropagation();
@@ -79,7 +95,10 @@ const EventCard = React.forwardRef(({ event, venues, isItemSavedLocal, toggleSav
             <div className="detail-icon">
               <Clock size={16} />
             </div>
-            <span className="detail-text">{event.start.toLocaleTimeString('en-US', { timeZone: PACIFIC_TZ, hour: 'numeric', minute: '2-digit' })}</span>
+            <span className="detail-text">
+              {event.start.toLocaleTimeString('en-US', { timeZone: PACIFIC_TZ, hour: 'numeric', minute: '2-digit' })}
+              {relativeTime && <span className="relative-time"> · {relativeTime}</span>}
+            </span>
           </div>
         </div>
 
