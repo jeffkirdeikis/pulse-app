@@ -234,7 +234,7 @@ const AdminDashboard = memo(function AdminDashboard({
               {impersonateSearchQuery.length > 1 && (
                 <div className="admin-search-dropdown">
                   {services
-                    .filter(s => s.name.toLowerCase().includes(impersonateSearchQuery.toLowerCase()))
+                    .filter(s => s.name?.toLowerCase().includes(impersonateSearchQuery.toLowerCase()))
                     .slice(0, 8)
                     .map(venue => (
                       <div key={venue.id} className="admin-search-result" onClick={() => enterImpersonation(venue)}>
@@ -247,7 +247,7 @@ const AdminDashboard = memo(function AdminDashboard({
                       </div>
                     ))
                   }
-                  {services.filter(s => s.name.toLowerCase().includes(impersonateSearchQuery.toLowerCase())).length === 0 && (
+                  {services.filter(s => s.name?.toLowerCase().includes(impersonateSearchQuery.toLowerCase())).length === 0 && (
                     <div className="admin-search-empty">No businesses found</div>
                   )}
                 </div>
@@ -533,7 +533,7 @@ const AdminDashboard = memo(function AdminDashboard({
 
         <div className="venues-grid-admin">
           {services
-            .filter(s => !adminSearchQuery || s.name.toLowerCase().includes(adminSearchQuery.toLowerCase()) || (s.category && s.category.toLowerCase().includes(adminSearchQuery.toLowerCase())))
+            .filter(s => !adminSearchQuery || s.name?.toLowerCase().includes(adminSearchQuery.toLowerCase()) || (s.category && s.category.toLowerCase().includes(adminSearchQuery.toLowerCase())))
             .filter(s => !adminCategoryFilter || s.category === adminCategoryFilter)
             .filter(s => {
               if (!adminStatusFilter) return true;
@@ -662,8 +662,8 @@ const AdminDashboard = memo(function AdminDashboard({
               return;
             }
             try {
-              const [hours, mins] = quickAddForm.startTime.split(':').map(Number);
-              const endMins = hours * 60 + mins + parseInt(quickAddForm.duration);
+              const [hours, mins] = (quickAddForm.startTime || '18:00').split(':').map(Number);
+              const endMins = (hours || 0) * 60 + (mins || 0) + parseInt(quickAddForm.duration || '60');
               const endTime = `${String(Math.floor(endMins / 60)).padStart(2, '0')}:${String(endMins % 60).padStart(2, '0')}`;
 
               const { error } = await supabase.from('events').insert({
@@ -675,7 +675,7 @@ const AdminDashboard = memo(function AdminDashboard({
                 end_time: endTime,
                 event_type: 'class',
                 price: quickAddForm.price || null,
-                recurrence: quickAddForm.recurrence.toLowerCase(),
+                recurrence: (quickAddForm.recurrence || 'weekly').toLowerCase(),
                 tags: ['admin-added'],
                 status: 'active'
               });

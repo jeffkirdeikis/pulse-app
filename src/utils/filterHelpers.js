@@ -106,7 +106,7 @@ export function filterEvents(allEvents, { currentSection, filters, searchQuery, 
     filtered = filtered.filter(e =>
       e.title?.toLowerCase().includes(query) ||
       e.description?.toLowerCase().includes(query) ||
-      getVenueName(e.venueId, e).toLowerCase().includes(query) ||
+      (getVenueName(e.venueId, e) || '').toLowerCase().includes(query) ||
       e.tags?.some(tag => tag.toLowerCase().includes(query))
     );
   }
@@ -171,7 +171,7 @@ export function filterEvents(allEvents, { currentSection, filters, searchQuery, 
   if (filters.price === 'free') {
     filtered = filtered.filter(e => e.price?.toLowerCase() === 'free');
   } else if (filters.price === 'paid') {
-    filtered = filtered.filter(e => e.price && e.price.toLowerCase() !== 'free');
+    filtered = filtered.filter(e => e.price && e.price?.toLowerCase() !== 'free');
   }
 
   // Sort by featured, then by date
@@ -211,7 +211,7 @@ export function filterDeals(allDeals, { searchQuery, filters, getVenueName }) {
       d.title?.toLowerCase().includes(query) ||
       d.description?.toLowerCase().includes(query) ||
       d.venueName?.toLowerCase().includes(query) ||
-      getVenueName(d.venueId, d).toLowerCase().includes(query)
+      (getVenueName(d.venueId, d) || '').toLowerCase().includes(query)
     );
   }
 
