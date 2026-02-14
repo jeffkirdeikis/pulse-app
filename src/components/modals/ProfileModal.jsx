@@ -304,7 +304,7 @@ const ProfileModal = memo(function ProfileModal({
                         <span className="activity-action">{activity.action} <strong>{activity.title}</strong></span>
                         <span className="activity-business">{activity.business}</span>
                       </div>
-                      <span className="activity-date">{new Date(activity.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                      <span className="activity-date">{activity.date && !isNaN(new Date(activity.date).getTime()) ? new Date(activity.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}</span>
                     </div>
                   ))}
                 </div>
@@ -338,7 +338,7 @@ const ProfileModal = memo(function ProfileModal({
                       <p><Building size={12} /> {activity.business}</p>
                     </div>
                     <div className="activity-meta">
-                      <span className="activity-date-full">{new Date(activity.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+                      <span className="activity-date-full">{activity.date && !isNaN(new Date(activity.date).getTime()) ? new Date(activity.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : ''}</span>
                     </div>
                   </div>
                 ))}

@@ -104,7 +104,7 @@ const MessagesModal = memo(function MessagesModal({
                   >
                     <p>{msg.content}</p>
                     <span className="message-time">
-                      {new Date(msg.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                      {msg.created_at && !isNaN(new Date(msg.created_at).getTime()) ? new Date(msg.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : ''}
                     </span>
                   </div>
                 ))

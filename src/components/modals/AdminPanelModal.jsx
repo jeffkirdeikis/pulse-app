@@ -127,7 +127,7 @@ const AdminPanelModal = memo(function AdminPanelModal({
                       {submission.type}
                     </div>
                     <span className="submission-time">
-                      {new Date(submission.submittedAt).toLocaleDateString()}
+                      {submission.submittedAt && !isNaN(new Date(submission.submittedAt).getTime()) ? new Date(submission.submittedAt).toLocaleDateString() : ''}
                     </span>
                   </div>
                   <h4>{submission.data.title}</h4>

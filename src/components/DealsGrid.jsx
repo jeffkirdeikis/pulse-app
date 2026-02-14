@@ -133,7 +133,7 @@ const DealsGrid = React.memo(function DealsGrid({
                 </div>
               )}
 
-              {deal.description && deal.description.toLowerCase() !== deal.title.toLowerCase() && (
+              {deal.description && deal.title && deal.description.toLowerCase() !== deal.title.toLowerCase() && (
                 <p className="deal-description-new">{deal.description.length > 80 ? deal.description.substring(0, 77) + '...' : deal.description}</p>
               )}
             </div>

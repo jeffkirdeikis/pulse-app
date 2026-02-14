@@ -18,8 +18,10 @@ const COLOR_MAP = {
 };
 
 function timeAgo(dateStr) {
+  if (!dateStr) return '';
   const now = new Date();
   const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return '';
   const diffMs = now - d;
   const mins = Math.floor(diffMs / 60000);
   if (mins < 1) return 'Just now';

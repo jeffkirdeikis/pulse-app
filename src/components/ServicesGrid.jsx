@@ -60,7 +60,7 @@ const ServicesGrid = React.memo(function ServicesGrid({
     }
 
     if (tier1 && idx < 3 && rating >= 4.5) {
-      return { type: 'rank', text: `⭐ Top rated in ${svc.category.split('&')[0].trim()}` };
+      return { type: 'rank', text: `⭐ Top rated in ${(svc.category || '').split('&')[0].trim()}` };
     }
     if (rating >= 4.8 && reviews >= 50) {
       return { type: 'excellent', text: `⭐ ${rating} rating from ${reviews} Google reviews` };
@@ -84,8 +84,8 @@ const ServicesGrid = React.memo(function ServicesGrid({
     .filter(service => {
       if (debouncedSearch) {
         const query = debouncedSearch.toLowerCase().trim();
-        const nameMatch = service.name.toLowerCase().includes(query);
-        const categoryMatch = service.category.toLowerCase().includes(query);
+        const nameMatch = service.name?.toLowerCase().includes(query);
+        const categoryMatch = service.category?.toLowerCase().includes(query);
         const addressMatch = service.address?.toLowerCase().includes(query);
         if (!nameMatch && !categoryMatch && !addressMatch) return false;
       }

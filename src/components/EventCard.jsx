@@ -179,7 +179,7 @@ const EventCard = React.forwardRef(({ event, venues, isItemSavedLocal, toggleSav
         <div className="event-detail-row">
           <div className="event-detail-item venue-item">
             <div className="venue-avatar" style={{ background: categoryColor || '#6b7280' }}>
-              {getVenueName(event.venueId, event).charAt(0).toUpperCase()}
+              {(getVenueName(event.venueId, event) || '?').charAt(0).toUpperCase()}
             </div>
             <span className="detail-text">{searchQuery ? highlightMatch(getVenueName(event.venueId, event), searchQuery) : getVenueName(event.venueId, event)}</span>
             <ChevronRight size={14} className="venue-chevron" />
