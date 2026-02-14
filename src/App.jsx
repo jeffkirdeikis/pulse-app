@@ -814,11 +814,14 @@ export default function PulseApp() {
   };
 
   const handleClaimBusiness = async () => {
-    if (!claimFormData.businessName || !claimFormData.ownerName || !claimFormData.email) {
+    const trimmedName = claimFormData.businessName.trim();
+    const trimmedOwner = claimFormData.ownerName.trim();
+    const trimmedEmail = claimFormData.email.trim();
+    if (!trimmedName || !trimmedOwner || !trimmedEmail) {
       showToast('Please fill in all required fields', 'error');
       return;
     }
-    if (!/\S+@\S+\.\S+/.test(claimFormData.email)) {
+    if (!/\S+@\S+\.\S+/.test(trimmedEmail)) {
       showToast('Please enter a valid email address', 'error');
       return;
     }
@@ -852,11 +855,11 @@ export default function PulseApp() {
 
       const claimData = {
         user_id: session.user.id,
-        business_name: claimSelectedBusiness?.name || claimFormData.businessName,
-        business_address: claimSelectedBusiness?.address || claimFormData.address || null,
-        owner_name: claimFormData.ownerName,
-        contact_email: claimFormData.email,
-        contact_phone: claimFormData.phone || null,
+        business_name: claimSelectedBusiness?.name || trimmedName,
+        business_address: claimSelectedBusiness?.address || claimFormData.address?.trim() || null,
+        owner_name: trimmedOwner,
+        contact_email: trimmedEmail,
+        contact_phone: claimFormData.phone?.trim() || null,
         owner_role: claimFormData.role,
         status: isAdmin ? 'verified' : isDocumentVerification ? 'pending' : 'pending_verification',
         verification_method: isAdmin ? null : claimVerificationMethod,

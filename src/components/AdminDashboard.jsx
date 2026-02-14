@@ -362,31 +362,37 @@ const AdminDashboard = memo(function AdminDashboard({
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
-                  <button
-                    onClick={() => handleClaimAction(claim.id, 'approve')}
-                    style={{
-                      display: 'inline-flex', alignItems: 'center', gap: '6px',
-                      padding: '8px 16px', borderRadius: '8px', border: 'none', cursor: 'pointer',
-                      background: 'linear-gradient(135deg, #10b981, #059669)', color: '#fff',
-                      fontWeight: 600, fontSize: '13px'
-                    }}
-                  >
-                    <ShieldCheck size={15} /> Approve
-                  </button>
-                  <button
-                    onClick={() => {
-                      const reason = prompt('Rejection reason (optional):');
-                      if (reason !== null) handleClaimAction(claim.id, 'reject', reason);
-                    }}
-                    style={{
-                      display: 'inline-flex', alignItems: 'center', gap: '6px',
-                      padding: '8px 16px', borderRadius: '8px', border: '1px solid #e5e7eb',
-                      cursor: 'pointer', background: '#fff', color: '#ef4444',
-                      fontWeight: 600, fontSize: '13px'
-                    }}
-                  >
-                    <XCircle size={15} /> Reject
-                  </button>
+                  {claim.status === 'pending_verification' ? (
+                    <span style={{ fontSize: '12px', color: '#9ca3af', fontStyle: 'italic', padding: '8px 0' }}>Waiting for email verification</span>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => handleClaimAction(claim.id, 'approve')}
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: '6px',
+                          padding: '8px 16px', borderRadius: '8px', border: 'none', cursor: 'pointer',
+                          background: 'linear-gradient(135deg, #10b981, #059669)', color: '#fff',
+                          fontWeight: 600, fontSize: '13px'
+                        }}
+                      >
+                        <ShieldCheck size={15} /> Approve
+                      </button>
+                      <button
+                        onClick={() => {
+                          const reason = prompt('Rejection reason (optional):');
+                          if (reason !== null) handleClaimAction(claim.id, 'reject', reason);
+                        }}
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: '6px',
+                          padding: '8px 16px', borderRadius: '8px', border: '1px solid #e5e7eb',
+                          cursor: 'pointer', background: '#fff', color: '#ef4444',
+                          fontWeight: 600, fontSize: '13px'
+                        }}
+                      >
+                        <XCircle size={15} /> Reject
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             );
