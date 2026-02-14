@@ -238,7 +238,7 @@ const AdminDashboard = memo(function AdminDashboard({
                     .slice(0, 8)
                     .map(venue => (
                       <div key={venue.id} className="admin-search-result" onClick={() => enterImpersonation(venue)}>
-                        <div className="admin-search-avatar">{venue.name.charAt(0)}</div>
+                        <div className="admin-search-avatar">{venue.name?.charAt(0) || '?'}</div>
                         <div className="admin-search-info">
                           <div className="admin-search-name">{venue.name}</div>
                           <div className="admin-search-meta">{venue.category}</div>
@@ -550,7 +550,7 @@ const AdminDashboard = memo(function AdminDashboard({
               <div key={venue.id} className="venue-card-admin" ref={(el) => venueCardRefs.current[idx] = el}>
                 <div className="venue-card-header">
                   <div className="venue-avatar-admin">
-                    {venue.name.charAt(0)}
+                    {venue.name?.charAt(0) || '?'}
                   </div>
                   <div className="venue-status-indicators">
                     {venue.verified && (

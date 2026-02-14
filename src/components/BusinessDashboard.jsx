@@ -208,7 +208,7 @@ const BusinessDashboard = memo(function BusinessDashboard({
                   <div className="venue-avatar">
                     {activeBusiness.logo_url
                       ? <img src={activeBusiness.logo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
-                      : <span className="venue-initial">{activeBusiness.name.charAt(0)}</span>
+                      : <span className="venue-initial">{activeBusiness.name?.charAt(0) || '?'}</span>
                     }
                   </div>
                   <div className="upload-overlay">

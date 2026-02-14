@@ -4,6 +4,7 @@ import { Calendar, CalendarPlus, Check, ChevronRight, Clock, MapPin, Share2, Sta
 import { PACIFIC_TZ, getPacificNow } from '../utils/timezoneHelpers';
 
 function getTimeBadge(start) {
+  if (!start || !(start instanceof Date)) return null;
   const now = getPacificNow();
   const diffMs = start - now;
   const diffMin = diffMs / 60000;
@@ -13,6 +14,7 @@ function getTimeBadge(start) {
 }
 
 function getRelativeTime(start) {
+  if (!start || !(start instanceof Date)) return null;
   const now = getPacificNow();
   const diffMs = start - now;
   const diffMin = Math.round(diffMs / 60000);
@@ -80,7 +82,7 @@ const EventCard = React.forwardRef(({ event, venues, isItemSavedLocal, toggleSav
   const handleShare = useCallback(async (e) => {
     e.stopPropagation();
     const venue = getVenueName(event.venueId, event);
-    const time = event.start.toLocaleString('en-US', { timeZone: PACIFIC_TZ, weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+    const time = event.start?.toLocaleString('en-US', { timeZone: PACIFIC_TZ, weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) || '';
     const text = `${event.title}\n📍 ${venue}\n🕐 ${time}`;
     const url = `${window.location.origin}${window.location.pathname}#${event.eventType === 'class' ? 'classes' : 'events'}`;
     if (navigator.share) {
@@ -94,7 +96,7 @@ const EventCard = React.forwardRef(({ event, venues, isItemSavedLocal, toggleSav
   }, [event, getVenueName, showToast]);
 
   if (compact) {
-    const timeStr = event.start.toLocaleTimeString('en-US', { timeZone: PACIFIC_TZ, hour: 'numeric', minute: '2-digit' });
+    const timeStr = event.start?.toLocaleTimeString('en-US', { timeZone: PACIFIC_TZ, hour: 'numeric', minute: '2-digit' }) || '';
     const venueName = getVenueName(event.venueId, event);
     return (
       <motion.div
@@ -160,14 +162,14 @@ const EventCard = React.forwardRef(({ event, venues, isItemSavedLocal, toggleSav
             <div className="detail-icon">
               <Calendar size={16} />
             </div>
-            <span className="detail-text">{event.start.toLocaleDateString('en-US', { timeZone: PACIFIC_TZ, weekday: 'short', month: 'short', day: 'numeric' })}</span>
+            <span className="detail-text">{event.start?.toLocaleDateString('en-US', { timeZone: PACIFIC_TZ, weekday: 'short', month: 'short', day: 'numeric' }) || 'Date TBD'}</span>
           </div>
           <div className="event-detail-item">
             <div className="detail-icon">
               <Clock size={16} />
             </div>
             <span className="detail-text">
-              {event.start.toLocaleTimeString('en-US', { timeZone: PACIFIC_TZ, hour: 'numeric', minute: '2-digit' })}
+              {event.start?.toLocaleTimeString('en-US', { timeZone: PACIFIC_TZ, hour: 'numeric', minute: '2-digit' }) || 'Time TBD'}
               {duration && <span className="duration-text"> · {duration}</span>}
               {relativeTime && <span className="relative-time"> · {relativeTime}</span>}
             </span>
