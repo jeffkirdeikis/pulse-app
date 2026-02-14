@@ -170,19 +170,28 @@ async function scrapeStudio(browser, studio) {
     await new Promise(r => setTimeout(r, 3000));
 
     // Click on the correct tab to load classes
+    // Mindbody Classic uses full-page navigation for tab clicks,
+    // so we must wait for navigation to complete after the click.
     console.log('   Clicking tab...');
-    await page.evaluate((tabId) => {
-      const tabs = document.querySelectorAll('li[onclick]');
-      for (const tab of tabs) {
-        const onclick = tab.getAttribute('onclick') || '';
-        if (onclick.includes('tabID=' + tabId)) {
-          tab.click();
-          return true;
-        }
-      }
-      return false;
-    }, studio.tabId);
-    await new Promise(r => setTimeout(r, 5000));
+    try {
+      await Promise.all([
+        page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 }).catch(() => {}),
+        page.evaluate((tabId) => {
+          const tabs = document.querySelectorAll('li[onclick]');
+          for (const tab of tabs) {
+            const onclick = tab.getAttribute('onclick') || '';
+            if (onclick.includes('tabID=' + tabId)) {
+              tab.click();
+              return true;
+            }
+          }
+          return false;
+        }, studio.tabId)
+      ]);
+    } catch {
+      // Tab click may not trigger navigation on some studios
+    }
+    await new Promise(r => setTimeout(r, 3000));
 
     // Scrape multiple weeks (Classic Mindbody shows one week at a time)
     const allClasses = [];
@@ -210,39 +219,50 @@ async function scrapeStudio(browser, studio) {
       allClasses.push(...weekClasses);
 
       // Click "next week" button to navigate forward
+      // Mindbody Classic triggers full-page navigation on week arrows,
+      // so we must use Promise.all with waitForNavigation to avoid
+      // "Execution context was destroyed" errors.
       if (week < WEEKS_TO_SCRAPE - 1) {
-        const clicked = await page.evaluate(() => {
-          // Mindbody classic uses #week-arrow-r for next week navigation
-          const weekArrowRight = document.querySelector('#week-arrow-r');
-          if (weekArrowRight) {
-            weekArrowRight.click();
-            return 'week-arrow-r';
-          }
-          // Fallback selectors for navigation resilience
-          const fallbackSelectors = [
-            '.date-arrow-r',
-            'a[href*="fw=1"]',
-            '.next-week',
-            '[class*="arrow-right"]',
-            '[class*="next"]',
-            'a[title*="Next"]',
-            '.fa-chevron-right',
-            '.fa-arrow-right'
-          ];
-          for (const sel of fallbackSelectors) {
-            const btn = document.querySelector(sel);
-            if (btn) {
-              btn.click();
-              return sel;
-            }
-          }
-          return null;
-        });
+        let clicked = false;
+        try {
+          const [, result] = await Promise.all([
+            page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 15000 }).catch(() => {}),
+            page.evaluate(() => {
+              const weekArrowRight = document.querySelector('#week-arrow-r');
+              if (weekArrowRight) {
+                weekArrowRight.click();
+                return 'week-arrow-r';
+              }
+              const fallbackSelectors = [
+                '.date-arrow-r',
+                'a[href*="fw=1"]',
+                '.next-week',
+                '[class*="arrow-right"]',
+                '[class*="next"]',
+                'a[title*="Next"]',
+                '.fa-chevron-right',
+                '.fa-arrow-right'
+              ];
+              for (const sel of fallbackSelectors) {
+                const btn = document.querySelector(sel);
+                if (btn) {
+                  btn.click();
+                  return sel;
+                }
+              }
+              return null;
+            })
+          ]);
+          clicked = !!result;
+        } catch {
+          // Navigation may have completed before evaluate returned
+          clicked = true;
+        }
 
         if (clicked) {
-          await new Promise(r => setTimeout(r, 3000));
+          await new Promise(r => setTimeout(r, 2000));
         } else {
-          console.log(`   Week ${week + 1}: Could not find next week button (tried all fallback selectors)`);
+          console.log(`   Week ${week + 1}: Could not find next week button`);
           break;
         }
       }

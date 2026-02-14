@@ -160,11 +160,14 @@ function parseClasses(text, studio) {
     // Next line should be class name (e.g., "Hot Rise & Shine")
     const className = lines[i + 2];
     if (!className || className.length < 3 || className.length > 100) continue;
-    if (/^(Show Details|Book|Oxygen|Squamish|\d)/.test(className)) continue;
+    // Skip UI elements — but NOT studio/brand names that could be part of class names
+    if (/^(Show Details|Book Now|Book Class|Sign Up|Add to Cart|Waitlist|Cancel|Close|\d)/.test(className)) continue;
+    // Skip if class name exactly matches the studio name (header text, not a real class)
+    if (className === studio.name) continue;
 
     // Next line should be instructor name
     const instructor = lines[i + 3] || '';
-    const cleanInstructor = /^(Show Details|Book|Oxygen)/.test(instructor) ? '' : instructor;
+    const cleanInstructor = /^(Show Details|Book Now|Book Class|Sign Up|\d)/.test(instructor) ? '' : instructor;
 
     classes.push({
       title: className,
