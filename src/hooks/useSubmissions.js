@@ -45,6 +45,7 @@ export function useSubmissions(user, { showToast, userClaimedBusinesses, updateA
   const [submissionType, setSubmissionType] = useState(null);
   const [submissionForm, setSubmissionForm] = useState(INITIAL_SUBMISSION_FORM);
   const [pendingSubmissions, setPendingSubmissions] = useState([]);
+  const [submitting, setSubmitting] = useState(false);
 
   // Image cropper state (shared between submissions and profile)
   const [showImageCropper, setShowImageCropper] = useState(false);
@@ -185,6 +186,8 @@ export function useSubmissions(user, { showToast, userClaimedBusinesses, updateA
 
   // Submit for admin approval
   const submitForApproval = useCallback(async () => {
+    if (submitting) return;
+    setSubmitting(true);
     const selectedBusiness = getSelectedBusinessInfo();
     try {
       // Rate limit check: 5 submissions per hour
@@ -249,8 +252,10 @@ export function useSubmissions(user, { showToast, userClaimedBusinesses, updateA
     } catch (err) {
       console.error('Submission error:', err);
       showToast?.('Failed to submit. Please try again.', 'error');
+    } finally {
+      setSubmitting(false);
     }
-  }, [getSelectedBusinessInfo, submissionType, submissionForm, user?.name, user?.email, user?.id, showToast]);
+  }, [submitting, getSelectedBusinessInfo, submissionType, submissionForm, user?.name, user?.email, user?.id, showToast]);
 
   // Admin: Approve submission
   const approveSubmission = useCallback(async (submissionId) => {
@@ -391,6 +396,7 @@ export function useSubmissions(user, { showToast, userClaimedBusinesses, updateA
     submissionType, setSubmissionType,
     submissionForm, setSubmissionForm,
     pendingSubmissions, setPendingSubmissions,
+    submitting,
 
     // Image cropper state
     showImageCropper, setShowImageCropper,

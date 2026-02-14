@@ -29,6 +29,7 @@ const SubmissionModal = memo(function SubmissionModal({
   handleImageSelect,
   handleCropComplete,
   submitForApproval,
+  submitting,
   getSelectedBusinessInfo,
   showToast,
 }) {
@@ -479,13 +480,14 @@ const SubmissionModal = memo(function SubmissionModal({
                   className="btn-submit"
                   onClick={submitForApproval}
                   disabled={
+                    submitting ||
                     !submissionForm.title || !submissionForm.description || !submissionForm.businessType ||
                     (submissionForm.businessType === 'new' && !submissionForm.businessName) ||
                     ((submissionType === 'event' || submissionType === 'class') && (!submissionForm.date || !submissionForm.startTime || !submissionForm.endTime || !submissionForm.category)) ||
                     (submissionType === 'deal' && !submissionForm.schedule)
                   }
                 >
-                  Submit for Review
+                  {submitting ? 'Submitting...' : 'Submit for Review'}
                 </button>
               </div>
             </div>

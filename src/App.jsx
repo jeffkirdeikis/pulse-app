@@ -552,7 +552,7 @@ export default function PulseApp() {
     submissionStep, setSubmissionStep,
     submissionType, setSubmissionType,
     submissionForm, setSubmissionForm,
-    pendingSubmissions,
+    pendingSubmissions, submitting,
     showImageCropper, setShowImageCropper,
     cropperType, setCropperType,
     cropperImage, setCropperImage,
@@ -1968,6 +1968,7 @@ export default function PulseApp() {
               handleImageSelect={handleImageSelect}
               handleCropComplete={handleCropComplete}
               submitForApproval={submitForApproval}
+              submitting={submitting}
               getSelectedBusinessInfo={getSelectedBusinessInfo}
               showToast={showToast}
             />
