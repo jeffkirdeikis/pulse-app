@@ -55,7 +55,8 @@ export function filterEvents(allEvents, { currentSection, filters, searchQuery, 
   } else if (filters.day === 'thisWeekend') {
     const dayOfWeek = now.getDay(); // 0=Sun, 5=Fri, 6=Sat
     const friday = new Date(now);
-    if (dayOfWeek === 5 || dayOfWeek === 6 || dayOfWeek === 0) {
+    const isWeekend = dayOfWeek === 5 || dayOfWeek === 6 || dayOfWeek === 0;
+    if (isWeekend) {
       // Already Fri/Sat/Sun — show THIS weekend (go back to this Friday)
       const daysBackToFriday = dayOfWeek === 0 ? 2 : dayOfWeek - 5;
       friday.setDate(now.getDate() - daysBackToFriday);
@@ -67,7 +68,9 @@ export function filterEvents(allEvents, { currentSection, filters, searchQuery, 
     friday.setHours(0, 0, 0, 0);
     const monday = new Date(friday);
     monday.setDate(friday.getDate() + 3);
-    filtered = filtered.filter(e => e.start >= friday && e.start < monday);
+    // If we're already in the weekend, don't show past events
+    const startCutoff = isWeekend ? now : friday;
+    filtered = filtered.filter(e => e.start >= startCutoff && e.start < monday);
   } else if (filters.day === 'thisWeek') {
     // Current week: from now until end of Sunday
     const dayOfWeek = now.getDay(); // 0=Sun

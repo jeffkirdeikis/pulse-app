@@ -20,6 +20,7 @@ const BusinessDashboard = memo(function BusinessDashboard({
   businessInboxTab,
   setBusinessInboxTab,
   businessConversations,
+  inboxUnreadCounts,
   businessConversationsLoading,
   selectedBusinessConversation,
   setSelectedBusinessConversation,
@@ -27,7 +28,7 @@ const BusinessDashboard = memo(function BusinessDashboard({
   businessMessages,
   businessReplyInput,
   setBusinessReplyInput,
-  sendingMessage,
+  sendingBusinessReply,
   eventsRefreshKey,
   setShowAuthModal,
   setShowClaimBusinessModal,
@@ -817,8 +818,8 @@ const BusinessDashboard = memo(function BusinessDashboard({
                   }}
                 >
                   Booking Requests
-                  {businessConversations.filter(c => c.conversation_type === 'booking' && c.unread_count > 0).length > 0 && (
-                    <span className="inbox-badge">{businessConversations.filter(c => c.conversation_type === 'booking' && c.unread_count > 0).length}</span>
+                  {(inboxUnreadCounts?.bookings || 0) > 0 && (
+                    <span className="inbox-badge">{inboxUnreadCounts.bookings}</span>
                   )}
                 </button>
                 <button
@@ -829,8 +830,8 @@ const BusinessDashboard = memo(function BusinessDashboard({
                   }}
                 >
                   Messages
-                  {businessConversations.filter(c => c.conversation_type === 'general' && c.unread_count > 0).length > 0 && (
-                    <span className="inbox-badge">{businessConversations.filter(c => c.conversation_type === 'general' && c.unread_count > 0).length}</span>
+                  {(inboxUnreadCounts?.messages || 0) > 0 && (
+                    <span className="inbox-badge">{inboxUnreadCounts.messages}</span>
                   )}
                 </button>
               </div>
@@ -894,12 +895,12 @@ const BusinessDashboard = memo(function BusinessDashboard({
                       placeholder="Type your reply..."
                       value={businessReplyInput}
                       onChange={(e) => setBusinessReplyInput(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && businessReplyInput.trim() && sendBusinessReply()}
+                      onKeyDown={(e) => e.key === 'Enter' && businessReplyInput.trim() && !sendingBusinessReply && sendBusinessReply()}
                     />
                     <button
                       className="send-reply-btn"
                       onClick={sendBusinessReply}
-                      disabled={!businessReplyInput.trim() || sendingMessage}
+                      disabled={!businessReplyInput.trim() || sendingBusinessReply}
                     >
                       <Send size={18} />
                     </button>

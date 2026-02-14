@@ -78,13 +78,15 @@ export default function PulseApp() {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showCalendarToast, setShowCalendarToast] = useState(false);
   const [calendarToastMessage, setCalendarToastMessage] = useState('');
+  const [calendarToastType, setCalendarToastType] = useState('info');
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
 
   // Helper function to show toast messages
-  const showToast = useCallback((message, _type = 'info') => {
+  const showToast = useCallback((message, type = 'info') => {
     setCalendarToastMessage(message);
+    setCalendarToastType(type);
     setShowCalendarToast(true);
     setTimeout(() => setShowCalendarToast(false), 3000);
   }, []);
@@ -512,6 +514,7 @@ export default function PulseApp() {
     if (view === 'business' && activeBusiness) {
       const businessId = activeBusiness.id;
       fetchBusinessInbox(businessId, 'booking');
+      fetchInboxUnreadCounts(businessId);
     }
   }, [view, activeBusiness?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -553,6 +556,10 @@ export default function PulseApp() {
     userClaimedBusinesses,
     updateAvatar,
     updateCoverPhoto,
+    onDataRefresh: () => {
+      setEventsRefreshKey(k => k + 1);
+      setDealsRefreshKey(k => k + 1);
+    },
   });
 
   // Load pending submissions when admin panel opens
@@ -665,6 +672,7 @@ export default function PulseApp() {
     conversationMessages, messagesLoading,
     messageInput, setMessageInput,
     sendingMessage, setSendingMessage,
+    sendingBusinessReply,
     showContactSheet, setShowContactSheet,
     contactBusiness, contactSubject, setContactSubject,
     contactMessage, setContactMessage,
@@ -675,8 +683,9 @@ export default function PulseApp() {
     businessReplyInput, setBusinessReplyInput,
     fetchConversations, fetchMessages, sendMessage,
     startConversation, submitContactForm, openMessages,
-    fetchBusinessInbox, fetchBusinessMessages,
+    fetchBusinessInbox, fetchInboxUnreadCounts, fetchBusinessMessages,
     sendBusinessReply, markConversationResolved,
+    inboxUnreadCounts,
   } = msg;
 
   // Build categories dynamically from actual DB event data only (not stale REAL_DATA)
@@ -1373,29 +1382,39 @@ export default function PulseApp() {
       return;
     }
 
-    // Optimistic update for logged-in users
-    const wasIncluded = localSavedItems.includes(itemKey);
+    // Optimistic update for logged-in users — use functional updater to avoid stale closure
+    let wasIncluded = false;
     setLocalSavedItems(prev => {
-      const exists = prev.includes(itemKey);
-      return exists ? prev.filter(k => k !== itemKey) : [...prev, itemKey];
+      wasIncluded = prev.includes(itemKey);
+      return wasIncluded ? prev.filter(k => k !== itemKey) : [...prev, itemKey];
     });
 
     try {
       const result = await toggleSaveItem(type, String(id), name, data);
       if (result?.error) {
-        // Revert optimistic update on error
-        setLocalSavedItems(prev => wasIncluded ? [...prev, itemKey] : prev.filter(k => k !== itemKey));
+        // Revert optimistic update on error — toggle back
+        setLocalSavedItems(prev => {
+          const currentlyIncluded = prev.includes(itemKey);
+          if (wasIncluded && !currentlyIncluded) return [...prev, itemKey];
+          if (!wasIncluded && currentlyIncluded) return prev.filter(k => k !== itemKey);
+          return prev;
+        });
         showToast('Failed to save. Please try again.', 'error');
       } else if (!wasIncluded && name) {
         // Create a confirmation notification when saving (not unsaving)
         createSaveNotification(type, name, id);
       }
     } catch {
-      // Revert optimistic update on error
-      setLocalSavedItems(prev => wasIncluded ? [...prev, itemKey] : prev.filter(k => k !== itemKey));
+      // Revert optimistic update on error — toggle back
+      setLocalSavedItems(prev => {
+        const currentlyIncluded = prev.includes(itemKey);
+        if (wasIncluded && !currentlyIncluded) return [...prev, itemKey];
+        if (!wasIncluded && currentlyIncluded) return prev.filter(k => k !== itemKey);
+        return prev;
+      });
       showToast('Failed to save. Please try again.', 'error');
     }
-  }, [isAuthenticated, toggleSaveItem, localSavedItems, showToast, createSaveNotification]);
+  }, [isAuthenticated, toggleSaveItem, showToast, createSaveNotification]);
 
   // Combined check for saved items (local + database)
   const isItemSavedLocal = useCallback((type, id) => {
@@ -1855,7 +1874,7 @@ export default function PulseApp() {
           {showCalendarToast && (
             <motion.div
               key="toast"
-              className="calendar-toast"
+              className={`calendar-toast ${calendarToastType === 'error' ? 'toast-error' : calendarToastType === 'success' ? 'toast-success' : ''}`}
               role="alert"
               aria-live="assertive"
               initial={{ opacity: 0, y: 20, scale: 0.95 }}
@@ -1864,7 +1883,7 @@ export default function PulseApp() {
               transition={{ type: 'spring', stiffness: 400, damping: 30 }}
             >
               <div className="toast-icon">
-                <Calendar size={20} />
+                {calendarToastType === 'error' ? <X size={20} /> : calendarToastType === 'success' ? <CheckCircle size={20} /> : <Calendar size={20} />}
               </div>
               <span>{calendarToastMessage}</span>
             </motion.div>
@@ -2122,6 +2141,7 @@ export default function PulseApp() {
           businessInboxTab={businessInboxTab}
           setBusinessInboxTab={setBusinessInboxTab}
           businessConversations={businessConversations}
+          inboxUnreadCounts={inboxUnreadCounts}
           businessConversationsLoading={businessConversationsLoading}
           selectedBusinessConversation={selectedBusinessConversation}
           setSelectedBusinessConversation={setSelectedBusinessConversation}
@@ -2129,7 +2149,7 @@ export default function PulseApp() {
           businessMessages={businessMessages}
           businessReplyInput={businessReplyInput}
           setBusinessReplyInput={setBusinessReplyInput}
-          sendingMessage={sendingMessage}
+          sendingBusinessReply={sendingBusinessReply}
           eventsRefreshKey={eventsRefreshKey}
           setShowAuthModal={setShowAuthModal}
           setShowClaimBusinessModal={setShowClaimBusinessModal}

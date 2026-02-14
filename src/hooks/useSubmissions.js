@@ -38,7 +38,7 @@ const INITIAL_SUBMISSION_FORM = {
  * @param {Function} options.updateAvatar - Profile avatar upload (for image cropper)
  * @param {Function} options.updateCoverPhoto - Profile cover photo upload (for image cropper)
  */
-export function useSubmissions(user, { showToast, userClaimedBusinesses, updateAvatar, updateCoverPhoto } = {}) {
+export function useSubmissions(user, { showToast, userClaimedBusinesses, updateAvatar, updateCoverPhoto, onDataRefresh } = {}) {
   // Submission state
   const [showSubmissionModal, setShowSubmissionModal] = useState(false);
   const [submissionStep, setSubmissionStep] = useState(1);
@@ -314,10 +314,12 @@ export function useSubmissions(user, { showToast, userClaimedBusinesses, updateA
       );
 
       showToast?.('Submission approved and published!', 'success');
+      // Refresh event/deal lists so the approved item appears immediately
+      onDataRefresh?.();
     } catch (_err) {
       showToast?.('Failed to approve. Please try again.', 'error');
     }
-  }, [pendingSubmissions, user?.id, showToast]);
+  }, [pendingSubmissions, user?.id, showToast, onDataRefresh]);
 
   // Admin: Reject submission
   const rejectSubmission = useCallback(async (submissionId, reason) => {

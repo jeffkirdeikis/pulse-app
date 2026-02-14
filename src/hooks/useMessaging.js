@@ -22,6 +22,7 @@ export function useMessaging(user, { showToast, onAuthRequired, activeBusiness, 
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [messageInput, setMessageInput] = useState('');
   const [sendingMessage, setSendingMessage] = useState(false);
+  const [sendingBusinessReply, setSendingBusinessReply] = useState(false);
 
   // Contact sheet state
   const [showContactSheet, setShowContactSheet] = useState(false);
@@ -37,6 +38,7 @@ export function useMessaging(user, { showToast, onAuthRequired, activeBusiness, 
   const [businessMessages, setBusinessMessages] = useState([]);
   const [businessMessagesLoading, setBusinessMessagesLoading] = useState(false);
   const [businessReplyInput, setBusinessReplyInput] = useState('');
+  const [inboxUnreadCounts, setInboxUnreadCounts] = useState({ bookings: 0, messages: 0 });
 
   // Fetch user conversations
   const fetchConversations = useCallback(async () => {
@@ -172,6 +174,23 @@ export function useMessaging(user, { showToast, onAuthRequired, activeBusiness, 
     setCurrentConversation(null);
   }, [user?.isGuest, onAuthRequired, fetchConversations]);
 
+  // Fetch unread counts for both inbox tabs
+  const fetchInboxUnreadCounts = useCallback(async (businessId) => {
+    if (!businessId) return;
+    try {
+      const { data, error } = await supabase.rpc('get_business_inbox', {
+        p_business_id: businessId,
+        p_filter_type: null
+      });
+      if (error) throw error;
+      const all = data || [];
+      setInboxUnreadCounts({
+        bookings: all.filter(c => c.conversation_type === 'booking' && c.unread_count > 0).length,
+        messages: all.filter(c => c.conversation_type !== 'booking' && c.unread_count > 0).length,
+      });
+    } catch { /* silent */ }
+  }, []);
+
   // Fetch business inbox conversations
   const fetchBusinessInbox = useCallback(async (businessId, type = 'all') => {
     if (!businessId) return;
@@ -217,8 +236,8 @@ export function useMessaging(user, { showToast, onAuthRequired, activeBusiness, 
 
   // Send reply from business
   const sendBusinessReply = useCallback(async () => {
-    if (!businessReplyInput.trim() || !selectedBusinessConversation || !activeBusiness?.id) return;
-    setSendingMessage(true);
+    if (!businessReplyInput.trim() || !selectedBusinessConversation || !activeBusiness?.id || sendingBusinessReply) return;
+    setSendingBusinessReply(true);
     try {
       const businessId = activeBusiness?.id;
       const { error } = await supabase.rpc('send_message', {
@@ -234,9 +253,9 @@ export function useMessaging(user, { showToast, onAuthRequired, activeBusiness, 
       console.error('Error sending reply:', err);
       showToast?.('Failed to send reply. Please try again.', 'error');
     } finally {
-      setSendingMessage(false);
+      setSendingBusinessReply(false);
     }
-  }, [businessReplyInput, selectedBusinessConversation, activeBusiness?.id, fetchBusinessMessages, showToast]);
+  }, [businessReplyInput, selectedBusinessConversation, activeBusiness?.id, sendingBusinessReply, fetchBusinessMessages, showToast]);
 
   // Mark conversation as resolved
   const markConversationResolved = useCallback(async (conversationId) => {
@@ -271,6 +290,7 @@ export function useMessaging(user, { showToast, onAuthRequired, activeBusiness, 
     messagesLoading,
     messageInput, setMessageInput,
     sendingMessage, setSendingMessage,
+    sendingBusinessReply,
 
     // Contact sheet state
     showContactSheet, setShowContactSheet,
@@ -286,6 +306,7 @@ export function useMessaging(user, { showToast, onAuthRequired, activeBusiness, 
     businessMessages,
     businessMessagesLoading,
     businessReplyInput, setBusinessReplyInput,
+    inboxUnreadCounts,
 
     // Functions
     fetchConversations,
@@ -295,6 +316,7 @@ export function useMessaging(user, { showToast, onAuthRequired, activeBusiness, 
     submitContactForm,
     openMessages,
     fetchBusinessInbox,
+    fetchInboxUnreadCounts,
     fetchBusinessMessages,
     sendBusinessReply,
     markConversationResolved,
