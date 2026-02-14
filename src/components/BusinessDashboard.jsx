@@ -240,7 +240,7 @@ const BusinessDashboard = memo(function BusinessDashboard({
 
           {/* Pulse Score Card */}
           <div className="biz-pulse-score-card">
-            <button className="pulse-share-btn" title="Share your Pulse Score" onClick={async () => {
+            <button className="pulse-share-btn" title="Share your Pulse Score" aria-label="Share your Pulse Score" onClick={async () => {
               const shareText = `${activeBusiness?.name} has a Pulse Score of ${pulseScore}/100 on Pulse Squamish! ${earnedBadgeCount} badges earned. Check them out!`;
               if (navigator.share) {
                 try { await navigator.share({ title: `${activeBusiness?.name} - Pulse Score`, text: shareText, url: `https://pulse-app.ca/squamish#services` }); } catch {}

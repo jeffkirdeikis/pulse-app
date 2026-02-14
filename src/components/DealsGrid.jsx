@@ -80,11 +80,14 @@ const DealsGrid = React.memo(function DealsGrid({
             key={deal.id}
             className="deal-card card-enter"
             layout
+            role="button"
+            tabIndex={0}
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ type: 'spring', stiffness: 300, damping: 30, delay: index < 10 ? index * 0.04 : 0 }}
             onClick={() => onSelectDeal(deal)}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelectDeal(deal); } }}
             onMouseEnter={() => handlePrefetch(deal.id)}
             onTouchStart={() => handlePrefetch(deal.id)}
             whileTap={{ scale: 0.97 }}

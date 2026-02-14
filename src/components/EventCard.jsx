@@ -103,7 +103,10 @@ const EventCard = React.forwardRef(({ event, venues, isItemSavedLocal, toggleSav
         ref={ref}
         className={`compact-card${timeBadge ? ' compact-card-urgent' : ''}`}
         style={categoryColor ? { borderLeftColor: categoryColor } : undefined}
+        role="button"
+        tabIndex={0}
         onClick={() => onSelect(event)}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(event); } }}
         onMouseEnter={handlePrefetch}
         whileTap={{ scale: 0.98 }}
       >
@@ -123,11 +126,14 @@ const EventCard = React.forwardRef(({ event, venues, isItemSavedLocal, toggleSav
       ref={ref}
       className={`event-card card-enter${timeBadge ? ' event-card-urgent' : ''}`}
       layout
+      role="button"
+      tabIndex={0}
       style={{
         ...(index < 10 ? { animationDelay: `${index * 50}ms` } : undefined),
         ...(categoryColor ? { borderLeftColor: categoryColor } : undefined),
       }}
       onClick={() => onSelect(event)}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(event); } }}
       onMouseEnter={handlePrefetch}
       onTouchStart={handlePrefetch}
       whileTap={{ scale: 0.97 }}
