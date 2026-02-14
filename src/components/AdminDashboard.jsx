@@ -276,9 +276,9 @@ const AdminDashboard = memo(function AdminDashboard({
             <Calendar size={24} />
           </div>
           <div className="stat-content">
-            <div className="stat-number">{Math.round((REAL_DATA.events.length + dbEvents.length) / 7)}</div>
+            <div className="stat-number">{Math.round(dbEvents.length / 7)}</div>
             <div className="stat-label">Weekly Classes</div>
-            <div className="stat-change">{REAL_DATA.events.length + dbEvents.length} total instances</div>
+            <div className="stat-change">{dbEvents.length} total instances</div>
           </div>
         </div>
 
@@ -298,7 +298,7 @@ const AdminDashboard = memo(function AdminDashboard({
             <DollarSign size={24} />
           </div>
           <div className="stat-content">
-            <div className="stat-number">{REAL_DATA.deals.length + dbDeals.length}</div>
+            <div className="stat-number">{dbDeals.length}</div>
             <div className="stat-label">Active Deals</div>
             <div className="stat-change">{dbDeals.length} from verified owners</div>
           </div>

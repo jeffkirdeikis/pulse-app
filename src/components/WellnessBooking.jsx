@@ -72,7 +72,7 @@ function formatPrice(min, max) {
 
 function getInitials(name) {
   if (!name) return '?';
-  return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+  return name.split(' ').filter(Boolean).map(w => w[0]).join('').toUpperCase().slice(0, 2);
 }
 
 // ============================================

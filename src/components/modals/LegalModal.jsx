@@ -1,7 +1,16 @@
-import React, { memo } from 'react';
+import React, { memo, useEffect } from 'react';
 import { X } from 'lucide-react';
 
 const LegalModal = memo(function LegalModal({ type, onClose }) {
+  // Capture ESC key before it reaches the global handler (prevents closing AuthModal underneath)
+  useEffect(() => {
+    const handleEsc = (e) => {
+      if (e.key === 'Escape') { e.stopImmediatePropagation(); onClose(); }
+    };
+    document.addEventListener('keydown', handleEsc, true); // capture phase
+    return () => document.removeEventListener('keydown', handleEsc, true);
+  }, [onClose]);
+
   return (
     <div className="modal-overlay" role="dialog" aria-modal="true" aria-label={type === 'privacy' ? 'Privacy Policy' : 'Terms of Service'} onClick={onClose}>
       <div className="auth-modal" style={{ maxHeight: '85vh', overflow: 'auto' }} onClick={(e) => e.stopPropagation()}>

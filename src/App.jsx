@@ -224,6 +224,11 @@ export default function PulseApp() {
     }
   }, [session]);
 
+  // Cleanup claim cooldown timer on unmount
+  useEffect(() => {
+    return () => { if (claimCooldownTimerRef.current) clearInterval(claimCooldownTimerRef.current); };
+  }, []);
+
   // Fetch notifications on login + subscribe to real-time updates
   useEffect(() => {
     if (!session?.user?.id) return;
@@ -394,7 +399,7 @@ export default function PulseApp() {
 
   // Business Analytics State
   const [businessAnalytics, setBusinessAnalytics] = useState(null);
-  const [, setAnalyticsLoading] = useState(false);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [analyticsPeriod, setAnalyticsPeriod] = useState(30); // days
 
   // Fetch business analytics
@@ -1719,81 +1724,6 @@ export default function PulseApp() {
           </main>
           </PullToRefresh>
 
-          {/* Event/Class Detail Modal */}
-          <AnimatePresence>
-          {selectedEvent && (
-            <motion.div
-              key="event-modal"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              style={{ position: 'fixed', inset: 0, zIndex: 1000 }}
-            >
-            <EventDetailModal
-              event={selectedEvent}
-              onClose={() => setSelectedEvent(null)}
-              getVenueName={getVenueName}
-              isVerified={isVerified}
-              isInMyCalendar={isInMyCalendar}
-              addToCalendar={addToCalendar}
-              handleBookClick={handleBookClick}
-              isItemSavedLocal={isItemSavedLocal}
-              toggleSave={toggleSave}
-              showToast={showToast}
-            />
-            </motion.div>
-          )}
-          </AnimatePresence>
-
-          {/* Deal Detail Modal */}
-          <AnimatePresence>
-          {selectedDeal && (
-            <motion.div
-              key="deal-modal"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              style={{ position: 'fixed', inset: 0, zIndex: 1000 }}
-            >
-            <DealDetailModal
-              deal={selectedDeal}
-              onClose={() => setSelectedDeal(null)}
-              getVenueName={getVenueName}
-              isItemSavedLocal={isItemSavedLocal}
-              toggleSave={toggleSave}
-              showToast={showToast}
-              onSelectDeal={setSelectedDeal}
-              session={session}
-              onAuthRequired={() => setShowAuthModal(true)}
-              supabase={supabase}
-              allDeals={dbDeals}
-            />
-            </motion.div>
-          )}
-          </AnimatePresence>
-          {/* Service Detail Modal */}
-          <AnimatePresence>
-          {selectedService && (
-            <motion.div
-              key="service-modal"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              style={{ position: 'fixed', inset: 0, zIndex: 1000 }}
-            >
-            <ServiceDetailModal
-              service={selectedService}
-              onClose={() => setSelectedService(null)}
-              isItemSavedLocal={isItemSavedLocal}
-              toggleSave={toggleSave}
-              showToast={showToast}
-            />
-            </motion.div>
-          )}
-          </AnimatePresence>
 
           {/* Profile Menu Dropdown */}
           <AnimatePresence>
@@ -2109,6 +2039,7 @@ export default function PulseApp() {
           analyticsPeriod={analyticsPeriod}
           setAnalyticsPeriod={setAnalyticsPeriod}
           businessAnalytics={businessAnalytics}
+          analyticsLoading={analyticsLoading}
           dbEvents={dbEvents}
           dbDeals={dbDeals}
           businessInboxTab={businessInboxTab}
@@ -2313,6 +2244,62 @@ export default function PulseApp() {
 
       {/* ========== GLOBAL MODALS (render regardless of view) ========== */}
 
+      {/* Event/Class Detail Modal - Global (works from consumer + admin preview) */}
+      <AnimatePresence>
+      {selectedEvent && (
+        <motion.div key="event-modal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} style={{ position: 'fixed', inset: 0, zIndex: 1000 }}>
+        <EventDetailModal
+          event={selectedEvent}
+          onClose={() => setSelectedEvent(null)}
+          getVenueName={getVenueName}
+          isVerified={isVerified}
+          isInMyCalendar={isInMyCalendar}
+          addToCalendar={addToCalendar}
+          handleBookClick={handleBookClick}
+          isItemSavedLocal={isItemSavedLocal}
+          toggleSave={toggleSave}
+          showToast={showToast}
+        />
+        </motion.div>
+      )}
+      </AnimatePresence>
+
+      {/* Deal Detail Modal - Global (works from consumer + admin preview) */}
+      <AnimatePresence>
+      {selectedDeal && (
+        <motion.div key="deal-modal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} style={{ position: 'fixed', inset: 0, zIndex: 1000 }}>
+        <DealDetailModal
+          deal={selectedDeal}
+          onClose={() => setSelectedDeal(null)}
+          getVenueName={getVenueName}
+          isItemSavedLocal={isItemSavedLocal}
+          toggleSave={toggleSave}
+          showToast={showToast}
+          onSelectDeal={setSelectedDeal}
+          session={session}
+          onAuthRequired={() => setShowAuthModal(true)}
+          supabase={supabase}
+          allDeals={dbDeals}
+        />
+        </motion.div>
+      )}
+      </AnimatePresence>
+
+      {/* Service Detail Modal - Global (works from any view) */}
+      <AnimatePresence>
+      {selectedService && (
+        <motion.div key="service-modal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} style={{ position: 'fixed', inset: 0, zIndex: 1000 }}>
+        <ServiceDetailModal
+          service={selectedService}
+          onClose={() => setSelectedService(null)}
+          isItemSavedLocal={isItemSavedLocal}
+          toggleSave={toggleSave}
+          showToast={showToast}
+        />
+        </motion.div>
+      )}
+      </AnimatePresence>
+
       {/* Auth Modal */}
       <AnimatePresence>
       {showAuthModal && (
@@ -2354,10 +2341,10 @@ export default function PulseApp() {
             <div className="footer-links">
               <div className="footer-link-group">
                 <h4>Explore</h4>
-                <button onClick={() => { setCurrentSection('classes'); window.scrollTo(0, 0); }}>Classes</button>
-                <button onClick={() => { setCurrentSection('events'); window.scrollTo(0, 0); }}>Events</button>
-                <button onClick={() => { setCurrentSection('deals'); window.scrollTo(0, 0); }}>Deals</button>
-                <button onClick={() => { setCurrentSection('services'); window.scrollTo(0, 0); }}>Services</button>
+                <button onClick={() => { setCurrentSection('classes'); window.history.pushState({ section: 'classes' }, '', '#classes'); window.scrollTo(0, 0); }}>Classes</button>
+                <button onClick={() => { setCurrentSection('events'); window.history.pushState({ section: 'events' }, '', '#events'); window.scrollTo(0, 0); }}>Events</button>
+                <button onClick={() => { setCurrentSection('deals'); window.history.pushState({ section: 'deals' }, '', '#deals'); window.scrollTo(0, 0); }}>Deals</button>
+                <button onClick={() => { setCurrentSection('services'); window.history.pushState({ section: 'services' }, '', '#services'); window.scrollTo(0, 0); }}>Services</button>
               </div>
               <div className="footer-link-group">
                 <h4>For Business</h4>
