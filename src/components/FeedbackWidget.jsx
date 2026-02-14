@@ -54,6 +54,8 @@ const FeedbackWidget = memo(function FeedbackWidget() {
             .from('feedback-screenshots')
             .getPublicUrl(filename);
           screenshot_url = urlData.publicUrl;
+        } else {
+          console.error('Screenshot upload error:', uploadError);
         }
       }
 

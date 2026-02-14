@@ -85,7 +85,10 @@ export function useAuth() {
       provider: 'google',
       options: { redirectTo: window.location.origin + window.location.pathname, queryParams: { prompt: 'select_account' } }
     });
-    if (error) console.error('Auth error:', error);
+    if (error) {
+      console.error('Auth error:', error);
+      setAuthError('Google sign-in failed. Please try again.');
+    }
   };
 
   return {
