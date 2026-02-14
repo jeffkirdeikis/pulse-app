@@ -6829,7 +6829,9 @@
           cursor: pointer !important;
         }
         /* Override: close buttons must be absolutely positioned (beats .modal-overlay button) */
-        .modal-overlay .close-btn {
+        .modal-overlay .close-btn,
+        .modal-overlay .claim-modal-close,
+        .modal-overlay .auth-modal-close {
           position: absolute !important;
           display: flex !important;
           align-items: center !important;
@@ -7101,20 +7103,21 @@
 
         .claim-modal-close {
           position: absolute;
-          top: 14px;
-          left: 14px;
-          background: rgba(0,0,0,0.3);
+          top: 12px;
+          right: 12px;
+          background: rgba(255,255,255,0.95);
           border: none;
           border-radius: 50%;
-          width: 32px;
-          height: 32px;
+          width: 36px;
+          height: 36px;
           display: flex;
           align-items: center;
           justify-content: center;
           cursor: pointer;
-          color: #fff;
+          color: #4b5563;
           z-index: 10;
           transition: background 0.2s;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.15);
         }
 
         .claim-modal-close svg {
@@ -7123,7 +7126,7 @@
         }
 
         .claim-modal-close:hover {
-          background: rgba(0,0,0,0.5);
+          background: #fff;
         }
 
         .claim-modal-header {
