@@ -924,6 +924,7 @@
 
         .message-input-container input:focus {
           border-color: #3b82f6;
+          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
         }
 
         .send-btn {
@@ -4001,6 +4002,7 @@
 
         .thread-reply input:focus {
           border-color: #3b82f6;
+          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
         }
 
         .send-reply-btn {
@@ -14044,6 +14046,7 @@
 
 .feedback-textarea:focus {
   border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
 .feedback-screenshot-section {
@@ -14123,6 +14126,7 @@
 
 .feedback-email:focus {
   border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
 .feedback-context-badge {

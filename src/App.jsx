@@ -1520,7 +1520,7 @@ export default function PulseApp() {
     }, { rootMargin: '200px' });
     observer.observe(el);
     return () => observer.disconnect();
-  }, [currentSection, filters.day, filters.category]);
+  }, [currentSection, filters.day, filters.category, filters.time, filters.price, filters.age]);
 
   return (
     <div className="pulse-app">
