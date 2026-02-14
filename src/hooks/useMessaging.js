@@ -140,6 +140,10 @@ export function useMessaging(user, { showToast, onAuthRequired, activeBusiness, 
   // Submit contact form
   const submitContactForm = useCallback(async () => {
     if (!contactMessage.trim() || !contactBusiness) return;
+    if (user?.isGuest || !user?.id) {
+      onAuthRequired?.();
+      return;
+    }
     setSendingMessage(true);
     try {
       const conversationId = await startConversation(
@@ -161,7 +165,7 @@ export function useMessaging(user, { showToast, onAuthRequired, activeBusiness, 
     } finally {
       setSendingMessage(false);
     }
-  }, [contactMessage, contactBusiness, contactSubject, startConversation, trackAnalytics, showToast]);
+  }, [contactMessage, contactBusiness, contactSubject, startConversation, trackAnalytics, showToast, user?.isGuest, user?.id, onAuthRequired]);
 
   // Open messages modal (with auth check)
   const openMessages = useCallback(() => {
@@ -280,6 +284,12 @@ export function useMessaging(user, { showToast, onAuthRequired, activeBusiness, 
     }
   }, [activeBusiness?.id, businessInboxTab, fetchBusinessInbox, showToast]);
 
+  // Clear business inbox state (used when exiting impersonation)
+  const clearBusinessInbox = useCallback(() => {
+    setBusinessConversations([]);
+    setSelectedBusinessConversation(null);
+  }, []);
+
   return {
     // User messages state
     showMessagesModal, setShowMessagesModal,
@@ -320,5 +330,6 @@ export function useMessaging(user, { showToast, onAuthRequired, activeBusiness, 
     fetchBusinessMessages,
     sendBusinessReply,
     markConversationResolved,
+    clearBusinessInbox,
   };
 }

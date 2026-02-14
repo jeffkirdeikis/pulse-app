@@ -53,6 +53,7 @@ export default function PulseApp() {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [selectedDeal, setSelectedDeal] = useState(null);
   const [selectedService, setSelectedService] = useState(null);
+  const toastTimeoutRef = useRef(null);
   const dealCardRefs = useRef([]);
   const eventCardRefs = useRef([]);
   const serviceCardRefs = useRef([]);
@@ -85,10 +86,11 @@ export default function PulseApp() {
 
   // Helper function to show toast messages
   const showToast = useCallback((message, type = 'info') => {
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
     setCalendarToastMessage(message);
     setCalendarToastType(type);
     setShowCalendarToast(true);
-    setTimeout(() => setShowCalendarToast(false), 3000);
+    toastTimeoutRef.current = setTimeout(() => setShowCalendarToast(false), 3000);
   }, []);
 
   // Track view count on events/deals tables for business analytics
@@ -398,9 +400,16 @@ export default function PulseApp() {
     return () => window.removeEventListener('keydown', handleKeydown);
   }, [view, showImageCropper, showBookingSheet, showContactSheet, showEditEventModal, showEditVenueModal, showAddEventModal, showSubmissionModal, selectedEvent, selectedDeal, selectedService, showMyCalendarModal, showMessagesModal, showAuthModal, showClaimBusinessModal, showProfileModal, showAdminPanel, showProfileMenu, showNotifications]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ESC to exit impersonation mode (separate effect with proper deps)
+  // ESC to exit impersonation mode — only when no modals are open
+  // (the main ESC handler above closes modals first; this fires only when nothing else is open)
   useEffect(() => {
     if (!impersonatedBusiness) return;
+    const anyModalOpen = showImageCropper || showBookingSheet || showContactSheet ||
+      showEditEventModal || showEditVenueModal || showAddEventModal || showSubmissionModal ||
+      selectedEvent || selectedDeal || selectedService || showMyCalendarModal ||
+      showMessagesModal || showAuthModal || showClaimBusinessModal || showProfileModal ||
+      showAdminPanel || showProfileMenu || showNotifications;
+    if (anyModalOpen) return; // Don't register ESC-to-exit while modals are open
     const handleImpersonateEsc = (e) => {
       if (e.key === 'Escape') {
         exitImpersonation();
@@ -408,7 +417,7 @@ export default function PulseApp() {
     };
     window.addEventListener('keydown', handleImpersonateEsc);
     return () => window.removeEventListener('keydown', handleImpersonateEsc);
-  }, [impersonatedBusiness]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [impersonatedBusiness, showImageCropper, showBookingSheet, showContactSheet, showEditEventModal, showEditVenueModal, showAddEventModal, showSubmissionModal, selectedEvent, selectedDeal, selectedService, showMyCalendarModal, showMessagesModal, showAuthModal, showClaimBusinessModal, showProfileModal, showAdminPanel, showProfileMenu, showNotifications]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Track analytics event
   const trackAnalytics = async (eventType, businessId, referenceId = null) => {
@@ -500,8 +509,7 @@ export default function PulseApp() {
     setImpersonatedBusiness(null);
     setView('admin');
     setBusinessAnalytics(null);
-    setBusinessConversations([]);
-    setSelectedBusinessConversation(null);
+    clearBusinessInbox();
     if (savedState) {
       setAdminTab(savedState.adminTab);
       setTimeout(() => window.scrollTo(0, savedState.scrollPosition || 0), 100);
@@ -685,7 +693,7 @@ export default function PulseApp() {
     startConversation, submitContactForm, openMessages,
     fetchBusinessInbox, fetchInboxUnreadCounts, fetchBusinessMessages,
     sendBusinessReply, markConversationResolved,
-    inboxUnreadCounts,
+    inboxUnreadCounts, clearBusinessInbox,
   } = msg;
 
   // Build categories dynamically from actual DB event data only (not stale REAL_DATA)

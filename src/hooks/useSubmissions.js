@@ -258,17 +258,7 @@ export function useSubmissions(user, { showToast, userClaimedBusinesses, updateA
       const submission = pendingSubmissions.find(s => s.id === submissionId);
       if (!submission) return;
 
-      const { error: updateError } = await supabase
-        .from('pending_items')
-        .update({
-          status: 'approved',
-          reviewed_by: user?.id,
-          reviewed_at: new Date().toISOString()
-        })
-        .eq('id', submissionId);
-
-      if (updateError) throw updateError;
-
+      // Insert the event/deal FIRST, then mark as approved (atomic: if insert fails, status stays pending)
       if (submission.type === 'event' || submission.type === 'class') {
         const eventData = {
           title: submission.data.title,
@@ -308,6 +298,18 @@ export function useSubmissions(user, { showToast, userClaimedBusinesses, updateA
         const { error: insertError } = await supabase.from('deals').insert(dealData);
         if (insertError) throw insertError;
       }
+
+      // Only mark as approved AFTER successful insert
+      const { error: updateError } = await supabase
+        .from('pending_items')
+        .update({
+          status: 'approved',
+          reviewed_by: user?.id,
+          reviewed_at: new Date().toISOString()
+        })
+        .eq('id', submissionId);
+
+      if (updateError) throw updateError;
 
       setPendingSubmissions(prev =>
         prev.map(s => s.id === submissionId ? { ...s, status: 'approved', approvedAt: new Date() } : s)
