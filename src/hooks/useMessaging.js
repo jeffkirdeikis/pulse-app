@@ -158,6 +158,8 @@ export function useMessaging(user, { showToast, onAuthRequired, activeBusiness, 
         setContactSubject('');
         setContactMessage('');
         showToast?.('Message sent!');
+      } else {
+        showToast?.('Failed to send message. Please try again.', 'error');
       }
     } catch (err) {
       console.error('Error submitting contact form:', err);
