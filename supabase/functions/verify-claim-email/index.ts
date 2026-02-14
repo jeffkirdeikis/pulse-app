@@ -2,6 +2,10 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')!
 
+function escapeHtml(str: string): string {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+}
+
 serve(async (req) => {
   try {
     const { email, businessName, ownerName, verificationCode } = await req.json()
@@ -13,6 +17,8 @@ serve(async (req) => {
       })
     }
 
+    const safeName = escapeHtml(ownerName || 'there')
+    const safeBusiness = escapeHtml(businessName || 'a business')
     const subject = `Verify your business claim on Pulse`
 
     const htmlBody = `
@@ -22,9 +28,9 @@ serve(async (req) => {
           <p style="color: rgba(255,255,255,0.85); margin: 8px 0 0; font-size: 14px;">Business Verification</p>
         </div>
         <div style="background: #ffffff; padding: 32px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 16px 16px;">
-          <p style="color: #374151; font-size: 16px; margin: 0 0 8px;">Hi ${(ownerName || 'there').replace(/</g, '&lt;')},</p>
+          <p style="color: #374151; font-size: 16px; margin: 0 0 8px;">Hi ${safeName},</p>
           <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 0 0 24px;">
-            You're claiming <strong style="color: #111827;">${(businessName || 'a business').replace(/</g, '&lt;')}</strong> on Pulse. Enter this code to verify your email:
+            You're claiming <strong style="color: #111827;">${safeBusiness}</strong> on Pulse. Enter this code to verify your email:
           </p>
           <div style="background: #f3f4f6; border-radius: 12px; padding: 24px; text-align: center; margin: 0 0 24px;">
             <span style="font-size: 36px; font-weight: 700; letter-spacing: 8px; color: #111827; font-family: monospace;">${verificationCode}</span>

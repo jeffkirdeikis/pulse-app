@@ -24,6 +24,7 @@ const ClaimBusinessModal = memo(function ClaimBusinessModal({
   handleVerifyClaimCode,
   handleResendClaimCode,
   setClaimVerificationStep,
+  claimResendCooldown,
   session,
   services,
   onClose,
@@ -114,10 +115,11 @@ const ClaimBusinessModal = memo(function ClaimBusinessModal({
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
                 <button
                   onClick={handleResendClaimCode}
-                  style={{ background: 'none', border: 'none', color: '#4f46e5', cursor: 'pointer', fontSize: '14px', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '6px' }}
+                  disabled={claimResendCooldown > 0}
+                  style={{ background: 'none', border: 'none', color: claimResendCooldown > 0 ? '#9ca3af' : '#4f46e5', cursor: claimResendCooldown > 0 ? 'default' : 'pointer', fontSize: '14px', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '6px' }}
                 >
                   <RefreshCw size={14} />
-                  Resend Code
+                  {claimResendCooldown > 0 ? `Resend in ${claimResendCooldown}s` : 'Resend Code'}
                 </button>
                 <button
                   onClick={() => { setClaimVerificationCode(''); setClaimVerificationStep('form'); }}
