@@ -60,13 +60,22 @@ const EditEventModal = memo(function EditEventModal({
             title: editEventForm.title,
             description: editEventForm.description,
             start_date: editEventForm.date,
+            end_date: editEventForm.date,
             start_time: editEventForm.startTime,
             end_time: editEventForm.endTime,
             category: editEventForm.category
           };
-          if (editEventForm.price && editEventForm.price.toLowerCase() !== 'free') {
-            updateData.price = editEventForm.price.replace(/[^0-9.]/g, '');
-            updateData.is_free = false;
+          const priceStr = (editEventForm.price || '').trim();
+          if (priceStr && priceStr.toLowerCase() !== 'free') {
+            const cleaned = priceStr.replace(/[^0-9.]/g, '');
+            const parsed = parseFloat(cleaned);
+            if (!isNaN(parsed) && parsed >= 0) {
+              updateData.price = String(parsed);
+              updateData.is_free = false;
+            } else {
+              updateData.is_free = true;
+              updateData.price = null;
+            }
           } else {
             updateData.is_free = true;
             updateData.price = null;

@@ -37,6 +37,8 @@ const BusinessDashboard = memo(function BusinessDashboard({
   setShowSubmissionModal,
   setSubmissionStep,
   setSubmissionType,
+  openSubmissionModal,
+  selectSubmissionType,
   setEditingVenue,
   setEditVenueForm,
   setShowEditVenueModal,
@@ -470,12 +472,11 @@ const BusinessDashboard = memo(function BusinessDashboard({
             <div className="insights-cards">
               <div className="insight-item hot">
                 <div className="insight-tag">Get Started</div>
-                <p>Post your first <strong>deal or event</strong> to start attracting customers on Pulse.</p>
-                <button className="insight-btn" onClick={() => {
-                  setShowSubmissionModal(true);
-                  setSubmissionStep(1);
-                  setSubmissionType('deal');
-                }}>Create Deal</button>
+                <p>Post your first <strong>event, class, or deal</strong> to start attracting customers on Pulse.</p>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button className="insight-btn" onClick={() => { openSubmissionModal(); selectSubmissionType('event'); }}>Create Event</button>
+                  <button className="insight-btn" onClick={() => { openSubmissionModal(); selectSubmissionType('deal'); }}>Create Deal</button>
+                </div>
               </div>
               <div className="insight-item">
                 <div className="insight-tag">Tip</div>
@@ -689,7 +690,7 @@ const BusinessDashboard = memo(function BusinessDashboard({
             <div className="section-header-premium">
               <h2>Your Active Listings</h2>
               <div className="section-actions">
-                <button className="btn-primary-gradient" onClick={() => { setShowSubmissionModal(true); setSubmissionStep(1); }}><Plus size={18} /> Add New</button>
+                <button className="btn-primary-gradient" onClick={() => openSubmissionModal()}><Plus size={18} /> Add New</button>
               </div>
             </div>
 
@@ -741,7 +742,8 @@ const BusinessDashboard = memo(function BusinessDashboard({
                                     if (error) throw error;
                                     showToast(`"${listing.title}" deleted`, 'success');
                                     setEventsRefreshKey(k => k + 1);
-                                  } catch (_err) {
+                                  } catch (err) {
+                                    console.error('Error deleting listing:', err);
                                     showToast('Failed to delete', 'error');
                                   }
                                 }
@@ -792,24 +794,24 @@ const BusinessDashboard = memo(function BusinessDashboard({
                   className={`inbox-tab ${businessInboxTab === 'bookings' ? 'active' : ''}`}
                   onClick={() => {
                     setBusinessInboxTab('bookings');
-                    fetchBusinessInbox(activeBusiness?.id, 'booking_request');
+                    fetchBusinessInbox(activeBusiness?.id, 'booking');
                   }}
                 >
                   Booking Requests
-                  {businessConversations.filter(c => c.type === 'booking_request' && c.unread_count > 0).length > 0 && (
-                    <span className="inbox-badge">{businessConversations.filter(c => c.type === 'booking_request' && c.unread_count > 0).length}</span>
+                  {businessConversations.filter(c => c.conversation_type === 'booking' && c.unread_count > 0).length > 0 && (
+                    <span className="inbox-badge">{businessConversations.filter(c => c.conversation_type === 'booking' && c.unread_count > 0).length}</span>
                   )}
                 </button>
                 <button
                   className={`inbox-tab ${businessInboxTab === 'messages' ? 'active' : ''}`}
                   onClick={() => {
                     setBusinessInboxTab('messages');
-                    fetchBusinessInbox(activeBusiness?.id, 'general_inquiry');
+                    fetchBusinessInbox(activeBusiness?.id, 'general');
                   }}
                 >
                   Messages
-                  {businessConversations.filter(c => c.type === 'general_inquiry' && c.unread_count > 0).length > 0 && (
-                    <span className="inbox-badge">{businessConversations.filter(c => c.type === 'general_inquiry' && c.unread_count > 0).length}</span>
+                  {businessConversations.filter(c => c.conversation_type === 'general' && c.unread_count > 0).length > 0 && (
+                    <span className="inbox-badge">{businessConversations.filter(c => c.conversation_type === 'general' && c.unread_count > 0).length}</span>
                   )}
                 </button>
               </div>
@@ -928,11 +930,15 @@ const BusinessDashboard = memo(function BusinessDashboard({
           {/* Quick Actions */}
           <div className="premium-section actions-section">
             <div className="quick-actions-grid">
-              <button className="qa-btn primary" onClick={() => { setShowSubmissionModal(true); setSubmissionStep(1); setSubmissionType('event'); }}>
+              <button className="qa-btn primary" onClick={() => { openSubmissionModal(); selectSubmissionType('event'); }}>
                 <Plus size={20} />
                 <span>New Event</span>
               </button>
-              <button className="qa-btn" onClick={() => { setShowSubmissionModal(true); setSubmissionStep(1); setSubmissionType('deal'); }}>
+              <button className="qa-btn" onClick={() => { openSubmissionModal(); selectSubmissionType('class'); }}>
+                <Sparkles size={20} />
+                <span>New Class</span>
+              </button>
+              <button className="qa-btn" onClick={() => { openSubmissionModal(); selectSubmissionType('deal'); }}>
                 <Percent size={20} />
                 <span>New Deal</span>
               </button>

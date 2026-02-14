@@ -475,10 +475,14 @@ const SubmissionModal = memo(function SubmissionModal({
                 <button className="btn-back" onClick={() => setSubmissionStep(1)}>
                   Back
                 </button>
-                <button 
+                <button
                   className="btn-submit"
                   onClick={submitForApproval}
-                  disabled={!submissionForm.title || !submissionForm.description || !submissionForm.businessType || (submissionForm.businessType === 'new' && !submissionForm.businessName)}
+                  disabled={
+                    !submissionForm.title || !submissionForm.description || !submissionForm.businessType ||
+                    (submissionForm.businessType === 'new' && !submissionForm.businessName) ||
+                    ((submissionType === 'event' || submissionType === 'class') && (!submissionForm.date || !submissionForm.startTime || !submissionForm.endTime || !submissionForm.category))
+                  }
                 >
                   Submit for Review
                 </button>

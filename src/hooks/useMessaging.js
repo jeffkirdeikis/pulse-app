@@ -241,20 +241,23 @@ export function useMessaging(user, { showToast, onAuthRequired, activeBusiness, 
   // Mark conversation as resolved
   const markConversationResolved = useCallback(async (conversationId) => {
     try {
-      await supabase
+      const { error } = await supabase
         .from('conversations')
         .update({ status: 'resolved' })
         .eq('id', conversationId);
+      if (error) throw error;
 
+      showToast?.('Conversation resolved', 'success');
       // Refresh inbox
       if (activeBusiness?.id) {
-        fetchBusinessInbox(activeBusiness.id, businessInboxTab === 'bookings' ? 'booking_request' : 'general_inquiry');
+        fetchBusinessInbox(activeBusiness.id, businessInboxTab === 'bookings' ? 'booking' : 'general');
       }
       setSelectedBusinessConversation(null);
     } catch (err) {
       console.error('Error marking resolved:', err);
+      showToast?.('Failed to resolve conversation', 'error');
     }
-  }, [activeBusiness?.id, businessInboxTab, fetchBusinessInbox]);
+  }, [activeBusiness?.id, businessInboxTab, fetchBusinessInbox, showToast]);
 
   return {
     // User messages state

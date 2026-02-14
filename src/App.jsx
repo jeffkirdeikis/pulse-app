@@ -2126,6 +2126,8 @@ export default function PulseApp() {
           setShowSubmissionModal={setShowSubmissionModal}
           setSubmissionStep={setSubmissionStep}
           setSubmissionType={setSubmissionType}
+          openSubmissionModal={openSubmissionModal}
+          selectSubmissionType={selectSubmissionType}
           setEditingVenue={setEditingVenue}
           setEditVenueForm={setEditVenueForm}
           setShowEditVenueModal={setShowEditVenueModal}
