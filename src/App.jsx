@@ -455,7 +455,7 @@ export default function PulseApp() {
     }
     return event?.venue_name || event?.title || '';
   }, []);
-  const isVerified = (venueId) => REAL_DATA.venues.find(v => v.id === venueId)?.verified || false;
+  const isVerified = useCallback((venueId) => REAL_DATA.venues.find(v => v.id === venueId)?.verified || false, []);
 
   // Business Analytics State
   const [businessAnalytics, setBusinessAnalytics] = useState(null);
@@ -611,8 +611,6 @@ export default function PulseApp() {
   // Pagination — render events incrementally to avoid 981+ DOM nodes
   const [visibleEventCount, setVisibleEventCount] = useState(50);
   const [compactMode, setCompactMode] = useState(false);
-  const [showSavedOnly, setShowSavedOnly] = useState(false);
-  const [sortBy, setSortBy] = useState('soonest'); // soonest | price | duration
 
   // Filter states - all dropdowns (persisted to localStorage, excluding specific dates)
   const [filters, setFilters] = useState(() => {
