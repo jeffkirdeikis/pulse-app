@@ -925,9 +925,7 @@ const ProfileModal = memo(function ProfileModal({
                 <h3>Danger Zone</h3>
                 <div className="danger-actions">
                   <button className="danger-btn" onClick={() => {
-                    if (confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
-                      showToast('Please contact support to delete your account', 'info');
-                    }
+                    showToast('Please contact support to delete your account', 'info');
                   }}>
                     <Trash2 size={16} />
                     Delete Account

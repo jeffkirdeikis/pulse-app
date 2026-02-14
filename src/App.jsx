@@ -829,9 +829,9 @@ export default function PulseApp() {
         const dayEnd = new Date(y, m - 1, d + 1, 0, 0, 0, 0);
         return e.start >= dayStart && e.start < dayEnd;
       } else if (filters.day === 'today') {
-        const thirtyDays = new Date(todayMidnight);
-        thirtyDays.setDate(todayMidnight.getDate() + 30);
-        return e.start >= todayMidnight && e.start < thirtyDays;
+        const thirtyDays = new Date(now);
+        thirtyDays.setDate(now.getDate() + 30);
+        return e.start >= now && e.start < thirtyDays;
       } else if (filters.day === 'tomorrow') {
         const tomorrow = new Date(todayMidnight);
         tomorrow.setDate(todayMidnight.getDate() + 1);
@@ -839,7 +839,7 @@ export default function PulseApp() {
         dayAfter.setDate(tomorrow.getDate() + 1);
         return e.start >= tomorrow && e.start < dayAfter;
       }
-      return e.start >= todayMidnight;
+      return e.start >= now;
     });
 
     events.forEach(event => {
