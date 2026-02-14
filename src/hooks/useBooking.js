@@ -123,6 +123,9 @@ export function useBooking({ getVenueName, venues, trackAnalytics, addToCalendar
       if (conversationId) {
         await trackAnalytics('message_received', business.id, eventSnapshot.id);
         setTimeout(() => openMessages(), 1500);
+      } else {
+        // startConversation returned null — request failed silently
+        showToast('Failed to send request. Please try again.', 'error');
       }
     } catch (err) {
       console.error('Error submitting booking request:', err);

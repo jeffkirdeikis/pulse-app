@@ -34,7 +34,7 @@ const EventDetailModal = memo(function EventDetailModal({
         await navigator.share(shareData);
       } else {
         await navigator.clipboard.writeText(`${shareData.text} - ${shareData.url}`);
-        showToast('Link copied to clipboard!');
+        showToast('Link copied to clipboard!', 'success');
       }
     } catch (err) {
       // User cancelled share or share failed — don't show misleading toast
