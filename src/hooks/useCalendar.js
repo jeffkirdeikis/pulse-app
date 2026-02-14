@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { supabase } from '../lib/supabase';
 import { PACIFIC_TZ } from '../utils/timezoneHelpers';
 
 /**
@@ -41,21 +42,30 @@ export function useCalendar({ myCalendar, isAuthenticated, registerForEvent, ref
       });
       showToast(`"${event.title}" added to My Calendar!`);
       if (onCalendarAdd) onCalendarAdd();
+      // Only open Google Calendar on successful add
+      window.open(generateGoogleCalendarUrl(event), '_blank');
     } else if (isAlreadyInCalendar) {
       showToast(`"${event.title}" is already in your calendar`);
     } else {
       showToast('Sign in to add events to your calendar');
     }
-
-    // Open Google Calendar in new tab
-    window.open(generateGoogleCalendarUrl(event), '_blank');
-  }, [myCalendar, isAuthenticated, registerForEvent, getVenueName, showToast, generateGoogleCalendarUrl]);
+  }, [myCalendar, isAuthenticated, registerForEvent, getVenueName, showToast, generateGoogleCalendarUrl, onCalendarAdd]);
 
   // Remove event from My Calendar
-  const removeFromCalendar = useCallback(async (_eventId) => {
+  const removeFromCalendar = useCallback(async (eventId) => {
     if (!isAuthenticated) return;
-    showToast('Event removed from My Calendar');
-    refreshUserData();
+    try {
+      const { error } = await supabase
+        .from('user_calendar')
+        .delete()
+        .eq('event_id', eventId);
+      if (error) throw error;
+      showToast('Event removed from My Calendar');
+      refreshUserData();
+    } catch (err) {
+      console.error('Error removing from calendar:', err);
+      showToast('Failed to remove event', 'error');
+    }
   }, [isAuthenticated, refreshUserData, showToast]);
 
   // Check if event is in My Calendar
@@ -67,17 +77,19 @@ export function useCalendar({ myCalendar, isAuthenticated, registerForEvent, ref
   const getCalendarEventsByDate = useCallback(() => {
     const grouped = {};
     myCalendar.forEach(event => {
-      const dateKey = event.start.toDateString();
+      const eventDate = event.start ? new Date(event.start) : (event.date ? new Date(event.date) : null);
+      if (!eventDate) return;
+      const dateKey = eventDate.toDateString();
       if (!grouped[dateKey]) {
         grouped[dateKey] = [];
       }
-      grouped[dateKey].push(event);
+      grouped[dateKey].push({ ...event, _sortDate: eventDate });
     });
     return Object.entries(grouped)
       .sort((a, b) => new Date(a[0]) - new Date(b[0]))
       .map(([date, events]) => ({
         date: new Date(date),
-        events: events.sort((a, b) => a.start - b.start)
+        events: events.sort((a, b) => a._sortDate - b._sortDate)
       }));
   }, [myCalendar]);
 

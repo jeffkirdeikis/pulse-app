@@ -187,7 +187,7 @@ const ProfileModal = memo(function ProfileModal({
                 <h3>About</h3>
                 <p className="profile-bio">{user.bio}</p>
                 <div className="profile-interests">
-                  {user.interests.map((interest, idx) => (
+                  {(user.interests || []).map((interest, idx) => (
                     <span key={idx} className="interest-tag">{interest}</span>
                   ))}
                 </div>
@@ -730,7 +730,7 @@ const ProfileModal = memo(function ProfileModal({
                     </button>
                   </div>
 
-                  <button className="add-another-business" onClick={() => { setClaimSelectedBusiness(null); setClaimSearchQuery(''); setShowClaimBusinessModal(true); }}>
+                  <button className="add-another-business" onClick={() => { setShowClaimBusinessModal(true); }}>
                     <Plus size={16} />
                     Claim Another Business
                   </button>
@@ -783,7 +783,7 @@ const ProfileModal = memo(function ProfileModal({
                       <span className="setting-toggle-desc">Get notified before events you've saved</span>
                     </div>
                     <label className="toggle-switch">
-                      <input type="checkbox" checked={user.notifications.eventReminders} onChange={(e) => setUser(prev => ({ ...prev, notifications: { ...prev.notifications, eventReminders: e.target.checked } }))} />
+                      <input type="checkbox" checked={user.notifications?.eventReminders ?? true} onChange={(e) => setUser(prev => ({ ...prev, notifications: { ...(prev.notifications || {}), eventReminders: e.target.checked } }))} />
                       <span className="toggle-slider"></span>
                     </label>
                   </div>
@@ -793,7 +793,7 @@ const ProfileModal = memo(function ProfileModal({
                       <span className="setting-toggle-desc">Get notified about new deals in your area</span>
                     </div>
                     <label className="toggle-switch">
-                      <input type="checkbox" checked={user.notifications.newDeals} onChange={(e) => setUser(prev => ({ ...prev, notifications: { ...prev.notifications, newDeals: e.target.checked } }))} />
+                      <input type="checkbox" checked={user.notifications?.newDeals ?? true} onChange={(e) => setUser(prev => ({ ...prev, notifications: { ...(prev.notifications || {}), newDeals: e.target.checked } }))} />
                       <span className="toggle-slider"></span>
                     </label>
                   </div>
@@ -803,7 +803,7 @@ const ProfileModal = memo(function ProfileModal({
                       <span className="setting-toggle-desc">Receive a weekly summary of what's happening</span>
                     </div>
                     <label className="toggle-switch">
-                      <input type="checkbox" checked={user.notifications.weeklyDigest} onChange={(e) => setUser(prev => ({ ...prev, notifications: { ...prev.notifications, weeklyDigest: e.target.checked } }))} />
+                      <input type="checkbox" checked={user.notifications?.weeklyDigest ?? true} onChange={(e) => setUser(prev => ({ ...prev, notifications: { ...(prev.notifications || {}), weeklyDigest: e.target.checked } }))} />
                       <span className="toggle-slider"></span>
                     </label>
                   </div>
@@ -813,7 +813,7 @@ const ProfileModal = memo(function ProfileModal({
                       <span className="setting-toggle-desc">Updates from businesses you follow</span>
                     </div>
                     <label className="toggle-switch">
-                      <input type="checkbox" checked={user.notifications.businessUpdates} onChange={(e) => setUser(prev => ({ ...prev, notifications: { ...prev.notifications, businessUpdates: e.target.checked } }))} />
+                      <input type="checkbox" checked={user.notifications?.businessUpdates ?? false} onChange={(e) => setUser(prev => ({ ...prev, notifications: { ...(prev.notifications || {}), businessUpdates: e.target.checked } }))} />
                       <span className="toggle-slider"></span>
                     </label>
                   </div>
@@ -830,7 +830,7 @@ const ProfileModal = memo(function ProfileModal({
                       <span className="setting-toggle-desc">Let others see your recent activity</span>
                     </div>
                     <label className="toggle-switch">
-                      <input type="checkbox" checked={user.privacy.showActivity} onChange={(e) => setUser(prev => ({ ...prev, privacy: { ...prev.privacy, showActivity: e.target.checked } }))} />
+                      <input type="checkbox" checked={user.privacy?.showActivity ?? true} onChange={(e) => setUser(prev => ({ ...prev, privacy: { ...(prev.privacy || {}), showActivity: e.target.checked } }))} />
                       <span className="toggle-slider"></span>
                     </label>
                   </div>
@@ -840,7 +840,7 @@ const ProfileModal = memo(function ProfileModal({
                       <span className="setting-toggle-desc">Let others see items you've saved</span>
                     </div>
                     <label className="toggle-switch">
-                      <input type="checkbox" checked={user.privacy.showSavedItems} onChange={(e) => setUser(prev => ({ ...prev, privacy: { ...prev.privacy, showSavedItems: e.target.checked } }))} />
+                      <input type="checkbox" checked={user.privacy?.showSavedItems ?? false} onChange={(e) => setUser(prev => ({ ...prev, privacy: { ...(prev.privacy || {}), showSavedItems: e.target.checked } }))} />
                       <span className="toggle-slider"></span>
                     </label>
                   </div>
@@ -850,7 +850,7 @@ const ProfileModal = memo(function ProfileModal({
                       <span className="setting-toggle-desc">Show which events you're attending</span>
                     </div>
                     <label className="toggle-switch">
-                      <input type="checkbox" checked={user.privacy.showAttendance} onChange={(e) => setUser(prev => ({ ...prev, privacy: { ...prev.privacy, showAttendance: e.target.checked } }))} />
+                      <input type="checkbox" checked={user.privacy?.showAttendance ?? true} onChange={(e) => setUser(prev => ({ ...prev, privacy: { ...(prev.privacy || {}), showAttendance: e.target.checked } }))} />
                       <span className="toggle-slider"></span>
                     </label>
                   </div>
@@ -865,17 +865,17 @@ const ProfileModal = memo(function ProfileModal({
                   {['Fitness', 'Music', 'Arts', 'Food & Drink', 'Outdoors & Nature', 'Wellness', 'Community', 'Family', 'Nightlife', 'Games'].map(interest => (
                     <button 
                       key={interest} 
-                      className={`interest-btn ${user.interests.includes(interest) ? 'selected' : ''}`}
+                      className={`interest-btn ${(user.interests || []).includes(interest) ? 'selected' : ''}`}
                       onClick={() => {
                         setUser(prev => ({
                           ...prev,
-                          interests: prev.interests.includes(interest) 
-                            ? prev.interests.filter(i => i !== interest)
-                            : [...prev.interests, interest]
+                          interests: (prev.interests || []).includes(interest)
+                            ? (prev.interests || []).filter(i => i !== interest)
+                            : [...(prev.interests || []), interest]
                         }));
                       }}
                     >
-                      {user.interests.includes(interest) && <Check size={14} />}
+                      {(user.interests || []).includes(interest) && <Check size={14} />}
                       {interest}
                     </button>
                   ))}

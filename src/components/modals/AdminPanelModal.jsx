@@ -133,13 +133,13 @@ const AdminPanelModal = memo(function AdminPanelModal({
                   <h4>{submission.data.title}</h4>
                   <p className="submission-business">
                     <Building size={14} />
-                    {submission.business.name}
-                    {submission.business.verified && <Check size={12} className="verified-mini" />}
+                    {submission.business?.name || 'Unknown Business'}
+                    {submission.business?.verified && <Check size={12} className="verified-mini" />}
                   </p>
-                  <p className="submission-desc">{submission.data.description}</p>
+                  <p className="submission-desc">{submission.data?.description}</p>
                   <div className="submission-meta">
-                    <span>By: {submission.submittedBy.name}</span>
-                    <span>{submission.submittedBy.email}</span>
+                    <span>By: {submission.submittedBy?.name || 'Unknown'}</span>
+                    <span>{submission.submittedBy?.email || ''}</span>
                   </div>
                   <div className="admin-actions">
                     <button 

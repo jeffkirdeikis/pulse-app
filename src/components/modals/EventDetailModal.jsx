@@ -37,7 +37,7 @@ const EventDetailModal = memo(function EventDetailModal({
         showToast('Link copied to clipboard!');
       }
     } catch (err) {
-      showToast('Link copied!');
+      // User cancelled share or share failed — don't show misleading toast
     }
   };
 
@@ -129,6 +129,7 @@ const EventDetailModal = memo(function EventDetailModal({
             <div className="datetime-time">
               {(() => {
                 const startStr = event.start.toLocaleString('en-US', { timeZone: PACIFIC_TZ, hour: 'numeric', minute: '2-digit' });
+                if (!event.end) return startStr;
                 const endStr = event.end.toLocaleString('en-US', { timeZone: PACIFIC_TZ, hour: 'numeric', minute: '2-digit' });
                 return startStr === endStr ? startStr : `${startStr} - ${endStr}`;
               })()}
@@ -161,7 +162,7 @@ const EventDetailModal = memo(function EventDetailModal({
           )}
           <button
             className={`quick-action-btn ${isItemSavedLocal(itemType, event.id) ? 'saved' : ''}`}
-            onClick={() => toggleSave(event.id, itemType, event.title, { venue: event.venue, date: event.date })}
+            onClick={() => toggleSave(event.id, itemType, event.title, { venue: event.venueName, date: event.start })}
           >
             <div className={`quick-action-icon save ${isItemSavedLocal(itemType, event.id) ? 'saved' : ''}`}>
               <Star size={20} fill={isItemSavedLocal(itemType, event.id) ? 'currentColor' : 'none'} />
@@ -216,6 +217,7 @@ const EventDetailModal = memo(function EventDetailModal({
                 <span className="event-detail-label">Duration</span>
                 <span className="event-detail-value">
                   {(() => {
+                    if (!event.end) return 'See details';
                     const mins = Math.round((event.end - event.start) / (1000 * 60));
                     return mins > 0 ? `${mins} min` : 'See details';
                   })()}

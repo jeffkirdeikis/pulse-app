@@ -201,7 +201,7 @@ export function useUserData() {
             memberSince: new Date().toISOString(),
             interests: [],
             isGuest: false,
-            isAdmin: userMeta.is_admin || false,
+            isAdmin: false,
             socialLinks: { instagram: '', facebook: '', website: '' },
             notifications: { eventReminders: true, newDeals: true, weeklyDigest: true, businessUpdates: false },
             privacy: { showActivity: true, showSavedItems: false, showAttendance: true }

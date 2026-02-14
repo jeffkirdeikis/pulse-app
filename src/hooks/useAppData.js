@@ -200,7 +200,10 @@ export function useAppData() {
           recurrence: 'none',
           description: event.description || '',
           featured: event.featured || false,
-          image: event.image_url
+          image: event.image_url,
+          viewCount: event.view_count || 0,
+          createdAt: event.created_at || null,
+          businessId: event.business_id || event.venue_id || null
         };
       });
 
@@ -250,7 +253,8 @@ export function useAppData() {
         validUntil: deal.valid_until,
         terms: deal.terms_conditions || '',
         image: deal.image_url,
-        featured: deal.featured || false
+        featured: deal.featured || false,
+        schedule: deal.schedule || ''
       }));
 
       setDbDeals(mappedDeals);

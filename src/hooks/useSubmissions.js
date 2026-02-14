@@ -68,6 +68,7 @@ export function useSubmissions(user, { showToast, userClaimedBusinesses, updateA
     setShowSubmissionModal(false);
     setSubmissionStep(1);
     setSubmissionType(null);
+    setSubmissionForm(INITIAL_SUBMISSION_FORM);
     setShowImageCropper(false);
     setCropperImage(null);
   }, []);

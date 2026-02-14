@@ -117,7 +117,7 @@ const MessagesModal = memo(function MessagesModal({
                 placeholder="Type a message..."
                 value={messageInput}
                 onChange={(e) => setMessageInput(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                onKeyPress={(e) => e.key === 'Enter' && messageInput.trim() && sendMessage()}
               />
               <button
                 className="send-btn"
