@@ -23,6 +23,7 @@ const ClaimBusinessModal = memo(function ClaimBusinessModal({
   setClaimDocuments,
   handleVerifyClaimCode,
   handleResendClaimCode,
+  setClaimVerificationStep,
   session,
   services,
   onClose,
@@ -119,7 +120,7 @@ const ClaimBusinessModal = memo(function ClaimBusinessModal({
                   Resend Code
                 </button>
                 <button
-                  onClick={() => { setClaimVerificationCode(''); }}
+                  onClick={() => { setClaimVerificationCode(''); setClaimVerificationStep('form'); }}
                   style={{ background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer', fontSize: '13px' }}
                 >
                   Wrong email? Go back

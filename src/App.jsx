@@ -1884,6 +1884,7 @@ export default function PulseApp() {
               setClaimDocuments={setClaimDocuments}
               handleVerifyClaimCode={handleVerifyClaimCode}
               handleResendClaimCode={handleResendClaimCode}
+              setClaimVerificationStep={setClaimVerificationStep}
               session={session}
               services={services}
               onClose={() => { setShowClaimBusinessModal(false); setClaimFormData({ businessName: '', ownerName: '', email: '', phone: '', role: 'owner', address: '' }); setClaimVerificationStep('form'); setClaimVerificationCode(''); setClaimDocuments([]); setClaimVerificationMethod('email'); }}
