@@ -4,6 +4,18 @@ import {
   Phone, Star, Users, Wrench, X
 } from 'lucide-react';
 
+function getSafeWebsiteUrl(url) {
+  if (!url) return null;
+  try {
+    const full = url.startsWith('http') ? url : `https://${url}`;
+    const parsed = new URL(full);
+    if (!['http:', 'https:'].includes(parsed.protocol)) return null;
+    return parsed.href;
+  } catch {
+    return null;
+  }
+}
+
 const ServiceDetailModal = memo(function ServiceDetailModal({
   service,
   onClose,
@@ -15,6 +27,7 @@ const ServiceDetailModal = memo(function ServiceDetailModal({
   const [hoverServiceRating, setHoverServiceRating] = useState(0);
 
   if (!service) return null;
+  const safeWebsite = getSafeWebsiteUrl(service.website);
 
   const handleClose = () => {
     setUserServiceRating(0);
@@ -72,11 +85,11 @@ const ServiceDetailModal = memo(function ServiceDetailModal({
             <span>Directions</span>
           </a>
           <a
-            href={service.website ? (service.website.startsWith('http') ? service.website : `https://${service.website}`) : `https://www.google.com/search?q=${encodeURIComponent(service.name + ' Squamish BC')}`}
+            href={safeWebsite || `https://www.google.com/search?q=${encodeURIComponent(service.name + ' Squamish BC')}`}
             target="_blank" rel="noopener noreferrer" className="quick-action-btn"
           >
             <div className="quick-action-icon website"><Globe size={20} /></div>
-            <span>{service.website ? 'Website' : 'Search'}</span>
+            <span>{safeWebsite ? 'Website' : 'Search'}</span>
           </a>
           <button
             className={`quick-action-btn ${isItemSavedLocal('service', service.id) ? 'saved' : ''}`}
@@ -223,11 +236,11 @@ const ServiceDetailModal = memo(function ServiceDetailModal({
             View on Google Maps
           </a>
           <a
-            href={service.website ? (service.website.startsWith('http') ? service.website : `https://${service.website}`) : `https://www.google.com/search?q=${encodeURIComponent(service.name + ' Squamish BC')}`}
+            href={safeWebsite || `https://www.google.com/search?q=${encodeURIComponent(service.name + ' Squamish BC')}`}
             target="_blank" rel="noopener noreferrer" className="service-cta-btn secondary"
           >
             <Globe size={18} />
-            {service.website ? 'Visit Website' : 'Search Online'}
+            {safeWebsite ? 'Visit Website' : 'Search Online'}
           </a>
         </div>
 

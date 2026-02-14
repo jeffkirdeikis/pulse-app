@@ -321,9 +321,10 @@ export default function PulseApp() {
     const hash = window.location.hash.replace('#', '');
     const validSections = ['classes', 'events', 'deals', 'services', 'wellness'];
     // Don't overwrite hash if it contains OAuth callback tokens
+    let authTimer;
     if (hash.includes('access_token') || hash.includes('error_description')) {
       // Let Supabase client handle the auth callback, then default to classes
-      setTimeout(() => {
+      authTimer = setTimeout(() => {
         if (!window.location.hash.includes('access_token')) return;
         window.history.replaceState({ section: 'classes' }, '', '#classes');
       }, 2000);
@@ -348,7 +349,10 @@ export default function PulseApp() {
       }
     };
     window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
+    return () => {
+      if (authTimer) clearTimeout(authTimer);
+      window.removeEventListener('popstate', handlePopState);
+    };
   }, []);
 
   // Global keyboard shortcuts
@@ -1740,7 +1744,7 @@ export default function PulseApp() {
               handleBookClick={handleBookClick}
               isItemSavedLocal={isItemSavedLocal}
               toggleSave={toggleSave}
-              showToast={(msg) => { setCalendarToastMessage(msg); setShowCalendarToast(true); setTimeout(() => setShowCalendarToast(false), 2000); }}
+              showToast={showToast}
             />
             </motion.div>
           )}
@@ -1763,12 +1767,7 @@ export default function PulseApp() {
               getVenueName={getVenueName}
               isItemSavedLocal={isItemSavedLocal}
               toggleSave={toggleSave}
-              showToast={(msg, type, duration) => {
-                if (type === 'error') { showToast(msg, 'error'); return; }
-                setCalendarToastMessage(msg);
-                setShowCalendarToast(true);
-                setTimeout(() => setShowCalendarToast(false), duration || 2000);
-              }}
+              showToast={showToast}
               onSelectDeal={setSelectedDeal}
               session={session}
               onAuthRequired={() => setShowAuthModal(true)}
@@ -2037,8 +2036,7 @@ export default function PulseApp() {
               trackAnalytics={trackAnalytics}
               addToCalendar={addToCalendar}
               submitBookingRequest={submitBookingRequest}
-              setCalendarToastMessage={setCalendarToastMessage}
-              setShowCalendarToast={setShowCalendarToast}
+              showToast={showToast}
             />
             </motion.div>
           )}
@@ -2323,11 +2321,7 @@ export default function PulseApp() {
         <motion.div key="auth" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} style={{ position: 'fixed', inset: 0, zIndex: 1000 }}>
         <AuthModal
           onClose={() => setShowAuthModal(false)}
-          onSuccess={(msg) => {
-            setCalendarToastMessage(msg);
-            setShowCalendarToast(true);
-            setTimeout(() => setShowCalendarToast(false), 5000);
-          }}
+          onSuccess={(msg) => showToast(msg, 'success')}
         />
         </motion.div>
       )}

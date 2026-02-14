@@ -14,8 +14,7 @@ const BookingSheet = memo(function BookingSheet({
   trackAnalytics,
   addToCalendar,
   submitBookingRequest,
-  setCalendarToastMessage,
-  setShowCalendarToast,
+  showToast,
 }) {
   if (!bookingEvent) return null;
   return (
@@ -69,9 +68,7 @@ const BookingSheet = memo(function BookingSheet({
                 className="add-calendar-secondary"
                 onClick={() => {
                   addToCalendar(bookingEvent);
-                  setCalendarToastMessage('Added to your calendar!');
-                  setShowCalendarToast(true);
-                  setTimeout(() => setShowCalendarToast(false), 2000);
+                  showToast('Added to your calendar!', 'success');
                 }}
               >
                 <Calendar size={18} />
