@@ -295,17 +295,19 @@ export function useUserData() {
         setMyCalendar(calendarData);
       }
 
-      // Fetch claimed businesses
+      // Fetch claimed businesses (only verified claims grant dashboard access)
       const { data: claimsData } = await supabase
         .from('business_claims')
         .select('*')
-        .eq('user_id', userId);
+        .eq('user_id', userId)
+        .eq('status', 'verified');
       if (claimsData) {
-        setUserClaimedBusinesses(claimsData.map(c => ({
-          id: c.id,
+        setUserClaimedBusinesses(claimsData.filter(c => c.business_id).map(c => ({
+          id: c.business_id,
+          claimId: c.id,
           name: c.business_name,
           address: c.business_address,
-          verified: c.status === 'verified',
+          verified: true,
           category: c.business_category
         })));
       }
