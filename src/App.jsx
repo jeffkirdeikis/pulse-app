@@ -1419,7 +1419,7 @@ export default function PulseApp() {
         const newSaves = exists
           ? prev.filter(k => k !== itemKey)
           : [...prev, itemKey];
-        localStorage.setItem('pulse_local_saves', JSON.stringify(newSaves));
+        try { localStorage.setItem('pulse_local_saves', JSON.stringify(newSaves)); } catch {}
         if (exists) {
           showToast('Removed from saved items.', 'info');
         } else {
@@ -2405,7 +2405,7 @@ export default function PulseApp() {
           }}>Install</button>
           <button onClick={() => {
             setShowInstallBanner(false);
-            localStorage.setItem('pulse_install_dismissed', 'true');
+            try { localStorage.setItem('pulse_install_dismissed', 'true'); } catch {}
           }} style={{
             background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer',
             padding: '4px', opacity: 0.7,

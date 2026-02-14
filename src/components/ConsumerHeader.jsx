@@ -16,11 +16,11 @@ function saveRecentSearch(query) {
   const q = query.trim();
   const recent = getRecentSearches().filter(s => s !== q);
   recent.unshift(q);
-  localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(recent.slice(0, MAX_RECENT)));
+  try { localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(recent.slice(0, MAX_RECENT))); } catch {}
 }
 
 function clearRecentSearches() {
-  localStorage.removeItem(RECENT_SEARCHES_KEY);
+  try { localStorage.removeItem(RECENT_SEARCHES_KEY); } catch {}
 }
 
 /**

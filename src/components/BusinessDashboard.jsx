@@ -245,8 +245,12 @@ const BusinessDashboard = memo(function BusinessDashboard({
               if (navigator.share) {
                 try { await navigator.share({ title: `${activeBusiness?.name} - Pulse Score`, text: shareText, url: `https://pulse-app.ca/squamish#services` }); } catch {}
               } else {
-                navigator.clipboard.writeText(shareText);
-                showToast('Copied to clipboard!', 'success');
+                try {
+                  await navigator.clipboard.writeText(shareText);
+                  showToast('Copied to clipboard!', 'success');
+                } catch {
+                  showToast('Failed to copy to clipboard', 'error');
+                }
               }
             }}>
               <Share2 size={16} />
