@@ -7101,14 +7101,13 @@
 
         .claim-modal-close {
           position: absolute;
-          top: 16px;
-          left: 16px;
-          background: rgba(255,255,255,0.25);
-          backdrop-filter: blur(8px);
+          top: 14px;
+          left: 14px;
+          background: rgba(0,0,0,0.3);
           border: none;
           border-radius: 50%;
-          width: 36px;
-          height: 36px;
+          width: 32px;
+          height: 32px;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -7118,8 +7117,13 @@
           transition: background 0.2s;
         }
 
+        .claim-modal-close svg {
+          width: 18px;
+          height: 18px;
+        }
+
         .claim-modal-close:hover {
-          background: rgba(255,255,255,0.4);
+          background: rgba(0,0,0,0.5);
         }
 
         .claim-modal-header {
@@ -7127,7 +7131,7 @@
           padding: 40px 32px 32px;
           text-align: center;
           border-radius: 24px 24px 0 0;
-          margin: 0;
+          margin-bottom: -1px;
         }
 
         .claim-modal-icon {
@@ -7161,6 +7165,7 @@
           z-index: 5;
           background: #fff;
           border-radius: 0 0 24px 24px;
+          margin-top: -1px;
         }
 
         .claim-signin-prompt {
