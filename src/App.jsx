@@ -60,6 +60,7 @@ export default function PulseApp() {
   const classCardRefs = useRef([]);
   const venueCardRefs = useRef([]);
   const loadMoreRef = useRef(null);
+  const claimCooldownTimerRef = useRef(null);
   const [installPromptEvent, setInstallPromptEvent] = useState(null);
   const [showInstallBanner, setShowInstallBanner] = useState(false);
   const [showBackToTop, setShowBackToTop] = useState(false);
@@ -609,8 +610,6 @@ export default function PulseApp() {
 
   // Pagination — render events incrementally to avoid 981+ DOM nodes
   const [visibleEventCount, setVisibleEventCount] = useState(50);
-  // Group by venue toggle for classes
-  const [groupByVenue, setGroupByVenue] = useState(false);
   const [compactMode, setCompactMode] = useState(false);
   const [showSavedOnly, setShowSavedOnly] = useState(false);
   const [sortBy, setSortBy] = useState('soonest'); // soonest | price | duration
@@ -713,16 +712,45 @@ export default function PulseApp() {
     todayMidnight.setHours(0, 0, 0, 0);
     if (filters.day === 'anytime') {
       events = events.filter(e => e.start >= todayMidnight);
-    } else if (/^\d{4}-\d{2}-\d{2}$/.test(filters.day)) {
-      // Specific date — show categories for that day
-      const [y, m, d] = filters.day.split('-').map(Number);
-      const dayStart = new Date(y, m - 1, d, 0, 0, 0, 0);
-      const dayEnd = new Date(y, m - 1, d + 1, 0, 0, 0, 0);
-      events = events.filter(e => e.start >= dayStart && e.start < dayEnd);
+    } else if (filters.day === 'happeningNow') {
+      const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000);
+      events = events.filter(e => e.start >= twoHoursAgo && e.start <= now);
     } else if (filters.day === 'today') {
       const thirtyDays = new Date(now);
       thirtyDays.setDate(now.getDate() + 30);
       events = events.filter(e => e.start >= now && e.start < thirtyDays);
+    } else if (filters.day === 'tomorrow') {
+      const tomorrow = new Date(todayMidnight);
+      tomorrow.setDate(todayMidnight.getDate() + 1);
+      const dayAfter = new Date(tomorrow);
+      dayAfter.setDate(tomorrow.getDate() + 1);
+      events = events.filter(e => e.start >= tomorrow && e.start < dayAfter);
+    } else if (filters.day === 'thisWeek') {
+      const dayOfWeek = now.getDay();
+      const sunday = new Date(now);
+      sunday.setDate(now.getDate() + ((7 - dayOfWeek) % 7));
+      sunday.setHours(23, 59, 59, 999);
+      events = events.filter(e => e.start >= now && e.start <= sunday);
+    } else if (filters.day === 'thisWeekend') {
+      const dayOfWeek = now.getDay();
+      const friday = new Date(now);
+      const isWeekend = dayOfWeek === 5 || dayOfWeek === 6 || dayOfWeek === 0;
+      if (isWeekend) {
+        const daysBackToFriday = dayOfWeek === 0 ? 2 : dayOfWeek - 5;
+        friday.setDate(now.getDate() - daysBackToFriday);
+      } else {
+        friday.setDate(now.getDate() + (5 - dayOfWeek));
+      }
+      friday.setHours(0, 0, 0, 0);
+      const monday = new Date(friday);
+      monday.setDate(friday.getDate() + 3);
+      const startCutoff = isWeekend ? now : friday;
+      events = events.filter(e => e.start >= startCutoff && e.start < monday);
+    } else if (/^\d{4}-\d{2}-\d{2}$/.test(filters.day)) {
+      const [y, m, d] = filters.day.split('-').map(Number);
+      const dayStart = new Date(y, m - 1, d, 0, 0, 0, 0);
+      const dayEnd = new Date(y, m - 1, d + 1, 0, 0, 0, 0);
+      events = events.filter(e => e.start >= dayStart && e.start < dayEnd);
     }
     events.forEach(e => {
       if (e.category) catCounts[e.category] = (catCounts[e.category] || 0) + 1;
@@ -989,11 +1017,12 @@ export default function PulseApp() {
         return;
       }
       showToast('New code sent to your email!', 'success');
-      // Start 60-second cooldown
+      // Start 60-second cooldown (clear any existing timer first)
+      if (claimCooldownTimerRef.current) clearInterval(claimCooldownTimerRef.current);
       setClaimResendCooldown(60);
-      const timer = setInterval(() => {
+      claimCooldownTimerRef.current = setInterval(() => {
         setClaimResendCooldown(prev => {
-          if (prev <= 1) { clearInterval(timer); return 0; }
+          if (prev <= 1) { clearInterval(claimCooldownTimerRef.current); claimCooldownTimerRef.current = null; return 0; }
           return prev - 1;
         });
       }, 1000);
@@ -1493,7 +1522,7 @@ export default function PulseApp() {
     }, { rootMargin: '200px' });
     observer.observe(el);
     return () => observer.disconnect();
-  }, []);
+  }, [currentSection, filters.day, filters.category]);
 
   return (
     <div className="pulse-app">
@@ -1848,7 +1877,7 @@ export default function PulseApp() {
               session={session}
               services={services}
               claimResendCooldown={claimResendCooldown}
-              onClose={() => { setShowClaimBusinessModal(false); setClaimFormData({ businessName: '', ownerName: '', email: '', phone: '', role: 'owner', address: '' }); setClaimVerificationStep('form'); setClaimVerificationCode(''); setClaimId(null); setClaimResendCooldown(0); setClaimDocuments([]); setClaimVerificationMethod('email'); setClaimSelectedBusiness(null); setClaimSearchQuery(''); }}
+              onClose={() => { setShowClaimBusinessModal(false); setClaimFormData({ businessName: '', ownerName: '', email: '', phone: '', role: 'owner', address: '' }); setClaimVerificationStep('form'); setClaimVerificationCode(''); setClaimId(null); setClaimResendCooldown(0); if (claimCooldownTimerRef.current) { clearInterval(claimCooldownTimerRef.current); claimCooldownTimerRef.current = null; } setClaimDocuments([]); setClaimVerificationMethod('email'); setClaimSelectedBusiness(null); setClaimSearchQuery(''); }}
               setShowAuthModal={setShowAuthModal}
               handleClaimBusiness={handleClaimBusiness}
             />
