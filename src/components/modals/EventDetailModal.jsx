@@ -125,10 +125,11 @@ const EventDetailModal = memo(function EventDetailModal({
           </div>
           <div className="datetime-content">
             <div className="datetime-date">
-              {event.start.toLocaleString('en-US', { timeZone: PACIFIC_TZ, weekday: 'long', month: 'long', day: 'numeric' })}
+              {event.start?.toLocaleString('en-US', { timeZone: PACIFIC_TZ, weekday: 'long', month: 'long', day: 'numeric' }) || 'Date TBD'}
             </div>
             <div className="datetime-time">
               {(() => {
+                if (!event.start) return 'Time TBD';
                 const startStr = event.start.toLocaleString('en-US', { timeZone: PACIFIC_TZ, hour: 'numeric', minute: '2-digit' });
                 if (!event.end) return startStr;
                 const endStr = event.end.toLocaleString('en-US', { timeZone: PACIFIC_TZ, hour: 'numeric', minute: '2-digit' });

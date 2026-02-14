@@ -946,11 +946,17 @@ export default function PulseApp() {
       } else {
         // Send verification email
         setClaimId(inserted.id);
-        supabase.functions.invoke('verify-claim-email', {
-          body: { email: claimFormData.email, businessName: claimData.business_name, ownerName: claimFormData.ownerName, verificationCode },
-        }).catch((err) => console.error('Email send error:', err));
-        setClaimVerificationStep('verify');
-        showToast('Verification code sent to your email!', 'success');
+        try {
+          await supabase.functions.invoke('verify-claim-email', {
+            body: { email: claimFormData.email, businessName: claimData.business_name, ownerName: claimFormData.ownerName, verificationCode },
+          });
+          setClaimVerificationStep('verify');
+          showToast('Verification code sent to your email!', 'success');
+        } catch (emailErr) {
+          console.error('Email send error:', emailErr);
+          setClaimVerificationStep('verify');
+          showToast('Code created but email may be delayed. Check your inbox.', 'warning');
+        }
       }
     } catch (error) {
       console.error('Error submitting claim:', error);
