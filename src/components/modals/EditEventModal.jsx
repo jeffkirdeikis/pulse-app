@@ -10,6 +10,7 @@ const EditEventModal = memo(function EditEventModal({
   showToast,
   setEventsRefreshKey,
 }) {
+  const [saving, setSaving] = React.useState(false);
   if (!editingEvent) return null;
   return (
 <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Edit event" onClick={() => { onClose(); }}>
@@ -54,7 +55,9 @@ const EditEventModal = memo(function EditEventModal({
     </div>
     <div className="modal-actions-premium">
       <button className="btn-secondary" onClick={() => { onClose(); }}>Cancel</button>
-      <button className="btn-primary-gradient" onClick={async () => {
+      <button className="btn-primary-gradient" disabled={saving || !editEventForm.title?.trim()} onClick={async () => {
+        if (saving || !editEventForm.title?.trim()) return;
+        setSaving(true);
         try {
           const updateData = {
             title: editEventForm.title,
@@ -88,8 +91,10 @@ const EditEventModal = memo(function EditEventModal({
         } catch (err) {
           console.error('Error updating event:', err);
           showToast('Failed to update', 'error');
+        } finally {
+          setSaving(false);
         }
-      }}>Save Changes</button>
+      }}>{saving ? 'Saving...' : 'Save Changes'}</button>
     </div>
   </div>
 </div>

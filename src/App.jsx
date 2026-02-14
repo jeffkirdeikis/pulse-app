@@ -350,26 +350,25 @@ export default function PulseApp() {
       const isTyping = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.target.isContentEditable;
 
       if (e.key === 'Escape') {
-        // Close any open modal
-        setSelectedEvent(null);
-        setSelectedDeal(null);
-        setSelectedService(null);
-        setShowAuthModal(false);
-        setShowClaimBusinessModal(false);
-        setShowSubmissionModal(false);
-        setShowProfileModal(false);
-        setShowAdminPanel(false);
-        setShowEditVenueModal(false);
-        setShowEditEventModal(false);
-        setEditingEvent(null);
-        setShowMessagesModal(false);
-        setShowAddEventModal(false);
-        setShowMyCalendarModal(false);
-        setShowBookingSheet(false);
-        setShowContactSheet(false);
-        setShowProfileMenu(false);
-        setShowNotifications(false);
-        setShowImageCropper(false);
+        // Close topmost modal (priority order: overlays first, then detail modals, then panels)
+        if (showImageCropper) { setShowImageCropper(false); return; }
+        if (showBookingSheet) { setShowBookingSheet(false); return; }
+        if (showContactSheet) { setShowContactSheet(false); return; }
+        if (showEditEventModal) { setShowEditEventModal(false); setEditingEvent(null); return; }
+        if (showEditVenueModal) { setShowEditVenueModal(false); return; }
+        if (showAddEventModal) { setShowAddEventModal(false); return; }
+        if (showSubmissionModal) { setShowSubmissionModal(false); return; }
+        if (selectedEvent) { setSelectedEvent(null); return; }
+        if (selectedDeal) { setSelectedDeal(null); return; }
+        if (selectedService) { setSelectedService(null); return; }
+        if (showMyCalendarModal) { setShowMyCalendarModal(false); return; }
+        if (showMessagesModal) { setShowMessagesModal(false); return; }
+        if (showAuthModal) { setShowAuthModal(false); return; }
+        if (showClaimBusinessModal) { setShowClaimBusinessModal(false); return; }
+        if (showProfileModal) { setShowProfileModal(false); return; }
+        if (showAdminPanel) { setShowAdminPanel(false); return; }
+        if (showProfileMenu) { setShowProfileMenu(false); return; }
+        if (showNotifications) { setShowNotifications(false); return; }
         return;
       }
 
@@ -395,7 +394,7 @@ export default function PulseApp() {
     };
     window.addEventListener('keydown', handleKeydown);
     return () => window.removeEventListener('keydown', handleKeydown);
-  }, [view]);
+  }, [view, showImageCropper, showBookingSheet, showContactSheet, showEditEventModal, showEditVenueModal, showAddEventModal, showSubmissionModal, selectedEvent, selectedDeal, selectedService, showMyCalendarModal, showMessagesModal, showAuthModal, showClaimBusinessModal, showProfileModal, showAdminPanel, showProfileMenu, showNotifications]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ESC to exit impersonation mode (separate effect with proper deps)
   useEffect(() => {
@@ -704,9 +703,9 @@ export default function PulseApp() {
       const dayEnd = new Date(y, m - 1, d + 1, 0, 0, 0, 0);
       events = events.filter(e => e.start >= dayStart && e.start < dayEnd);
     } else if (filters.day === 'today') {
-      const thirtyDays = new Date(todayMidnight);
-      thirtyDays.setDate(todayMidnight.getDate() + 30);
-      events = events.filter(e => e.start >= todayMidnight && e.start < thirtyDays);
+      const thirtyDays = new Date(now);
+      thirtyDays.setDate(now.getDate() + 30);
+      events = events.filter(e => e.start >= now && e.start < thirtyDays);
     }
     events.forEach(e => {
       if (e.category) catCounts[e.category] = (catCounts[e.category] || 0) + 1;

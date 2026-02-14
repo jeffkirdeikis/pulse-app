@@ -10,6 +10,7 @@ const EditVenueModal = memo(function EditVenueModal({
   showToast,
   fetchServices,
 }) {
+  const [saving, setSaving] = React.useState(false);
   if (!editingVenue) return null;
   return (
 <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Edit venue" onClick={() => { onClose(); }}>
@@ -84,12 +85,13 @@ const EditVenueModal = memo(function EditVenueModal({
 
       <div className="claim-modal-actions">
         <button className="claim-cancel-btn" onClick={() => { onClose(); }}>Cancel</button>
-        <button className="claim-submit-btn" onClick={async () => {
+        <button className="claim-submit-btn" disabled={saving || !editVenueForm.name?.trim()} onClick={async () => {
           if (!editingVenue?.id) {
             showToast('Error: No venue ID found', 'error');
             return;
           }
-
+          if (!editVenueForm.name?.trim()) return;
+          setSaving(true);
           try {
             const { data, error } = await supabase
               .from('businesses')
@@ -119,8 +121,10 @@ const EditVenueModal = memo(function EditVenueModal({
           } catch (err) {
             console.error('Error updating business:', err);
             showToast('Failed to update business', 'error');
+          } finally {
+            setSaving(false);
           }
-        }}>Save Changes</button>
+        }}>{saving ? 'Saving...' : 'Save Changes'}</button>
       </div>
     </div>
   </div>

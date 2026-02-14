@@ -195,7 +195,7 @@ const ServiceDetailModal = memo(function ServiceDetailModal({
               </div>
               <p className="rate-helper">
                 {userServiceRating > 0
-                  ? `You rated ${userServiceRating} star${userServiceRating > 1 ? 's' : ''} — Thanks!`
+                  ? `You rated ${userServiceRating} star${userServiceRating > 1 ? 's' : ''} — Rating feature coming soon!`
                   : 'Tap a star to rate'}
               </p>
             </div>

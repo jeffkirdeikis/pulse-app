@@ -1,10 +1,10 @@
 import React, { useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Calendar, CalendarPlus, Check, ChevronRight, Clock, MapPin, Share2, Star, Zap } from 'lucide-react';
-import { PACIFIC_TZ } from '../utils/timezoneHelpers';
+import { PACIFIC_TZ, getPacificNow } from '../utils/timezoneHelpers';
 
 function getTimeBadge(start) {
-  const now = new Date();
+  const now = getPacificNow();
   const diffMs = start - now;
   const diffMin = diffMs / 60000;
   if (diffMin < 0 && diffMin > -120) return { label: 'Happening Now', className: 'time-badge-now' };
@@ -13,7 +13,7 @@ function getTimeBadge(start) {
 }
 
 function getRelativeTime(start) {
-  const now = new Date();
+  const now = getPacificNow();
   const diffMs = start - now;
   const diffMin = Math.round(diffMs / 60000);
   if (diffMin < -120) return null; // past events beyond 2 hrs
