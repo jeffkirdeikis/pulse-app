@@ -24,7 +24,7 @@ const DealDetailModal = memo(function DealDetailModal({
   const handleShare = async () => {
     const shareData = {
       title: deal.title,
-      text: `Check out this deal: ${deal.title} at ${getVenueName(deal.venueId, deal)}`,
+      text: `Check out this deal: ${deal.title} at ${getVenueName(deal.venueId, deal) || 'a local business'}`,
       url: window.location.href
     };
     try {

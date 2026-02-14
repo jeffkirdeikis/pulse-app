@@ -278,7 +278,9 @@ export default function WellnessBooking({
       p_preferred_time_range: alertTimeRange,
     });
 
-    if (!error) {
+    if (error) {
+      showToast?.('Failed to save alert. Please try again.');
+    } else {
       showToast?.('Alert saved! We\'ll notify you when matching slots appear.');
       setShowAlertModal(false);
       fetchUserAlerts();
@@ -311,7 +313,7 @@ export default function WellnessBooking({
       groups[key].slots.push(slot);
     });
     return Object.values(groups).sort((a, b) =>
-      a.provider.clinic_name.localeCompare(b.provider.clinic_name)
+      (a.provider.clinic_name || '').localeCompare(b.provider.clinic_name || '')
     );
   };
 

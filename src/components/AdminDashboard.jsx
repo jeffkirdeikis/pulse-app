@@ -72,7 +72,7 @@ function ContentReviewSection({ unverifiedContent, handleVerifyContent, handleRe
       {activeItems.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '32px', color: '#9ca3af', fontSize: '14px' }}>
           <CheckCircle size={32} style={{ margin: '0 auto 8px', display: 'block', opacity: 0.4 }} />
-          All {tabs.find(t => t.key === reviewTab)?.label.toLowerCase()} verified
+          All {tabs.find(t => t.key === reviewTab)?.label?.toLowerCase() ?? 'items'} verified
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '500px', overflowY: 'auto' }}>
@@ -96,8 +96,8 @@ function ContentReviewSection({ unverifiedContent, handleVerifyContent, handleRe
                     {item.tags.slice(0, 3).map(tag => (
                       <span key={tag} style={{
                         fontSize: '10px', padding: '1px 6px', borderRadius: '4px',
-                        background: tag === 'auto-scraped' ? '#fef3c7' : tag.includes('verified') ? '#d1fae5' : '#f3f4f6',
-                        color: tag === 'auto-scraped' ? '#92400e' : tag.includes('verified') ? '#065f46' : '#6b7280',
+                        background: tag === 'auto-scraped' ? '#fef3c7' : (typeof tag === 'string' && tag.includes('verified')) ? '#d1fae5' : '#f3f4f6',
+                        color: tag === 'auto-scraped' ? '#92400e' : (typeof tag === 'string' && tag.includes('verified')) ? '#065f46' : '#6b7280',
                       }}>{tag}</span>
                     ))}
                   </div>
@@ -341,7 +341,7 @@ const AdminDashboard = memo(function AdminDashboard({
                     {claim.owner_role && <span> · {claim.owner_role}</span>}
                   </div>
                   <div style={{ fontSize: '12px', color: '#9ca3af', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                    <span>{new Date(claim.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                    <span>{claim.created_at && !isNaN(new Date(claim.created_at).getTime()) ? new Date(claim.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}</span>
                     {claim.verification_method && (
                       <span style={{ background: '#f3f4f6', padding: '1px 6px', borderRadius: '4px', fontSize: '11px' }}>
                         {claim.verification_method === 'document' ? '📎 Documents' : '✉️ Email verified'}

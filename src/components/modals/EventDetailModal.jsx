@@ -219,9 +219,9 @@ const EventDetailModal = memo(function EventDetailModal({
                 <span className="event-detail-label">Duration</span>
                 <span className="event-detail-value">
                   {(() => {
-                    if (!event.end) return 'See details';
+                    if (!event.end || !event.start) return 'See details';
                     const mins = Math.round((event.end - event.start) / (1000 * 60));
-                    return mins > 0 ? `${mins} min` : 'See details';
+                    return mins > 0 && isFinite(mins) ? `${mins} min` : 'See details';
                   })()}
                 </span>
               </div>
