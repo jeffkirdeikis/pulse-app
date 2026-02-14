@@ -746,7 +746,9 @@ const BusinessDashboard = memo(function BusinessDashboard({
                                   setEditingEvent(listing);
                                   const s = listing.start ? (listing.start instanceof Date ? listing.start : new Date(listing.start)) : null;
                                   const e = listing.end ? (listing.end instanceof Date ? listing.end : new Date(listing.end)) : null;
-                                  setEditEventForm({ title: listing.title || '', description: listing.description || '', date: s ? `${s.getFullYear()}-${String(s.getMonth()+1).padStart(2,'0')}-${String(s.getDate()).padStart(2,'0')}` : '', startTime: s ? `${String(s.getHours()).padStart(2,'0')}:${String(s.getMinutes()).padStart(2,'0')}` : '', endTime: e ? `${String(e.getHours()).padStart(2,'0')}:${String(e.getMinutes()).padStart(2,'0')}` : '', price: listing.price || '', category: listing.category || '' });
+                                  const sValid = s && !isNaN(s.getTime());
+                                  const eValid = e && !isNaN(e.getTime());
+                                  setEditEventForm({ title: listing.title || '', description: listing.description || '', date: sValid ? `${s.getFullYear()}-${String(s.getMonth()+1).padStart(2,'0')}-${String(s.getDate()).padStart(2,'0')}` : '', startTime: sValid ? `${String(s.getHours()).padStart(2,'0')}:${String(s.getMinutes()).padStart(2,'0')}` : '', endTime: eValid ? `${String(e.getHours()).padStart(2,'0')}:${String(e.getMinutes()).padStart(2,'0')}` : '', price: listing.price || '', category: listing.category || '' });
                                   setShowEditEventModal(true);
                                 }}><Edit2 size={14} /></button>
                               )}

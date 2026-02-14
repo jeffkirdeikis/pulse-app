@@ -131,7 +131,7 @@ const EventDetailModal = memo(function EventDetailModal({
               {(() => {
                 if (!event.start) return 'Time TBD';
                 const startStr = event.start.toLocaleString('en-US', { timeZone: PACIFIC_TZ, hour: 'numeric', minute: '2-digit' });
-                if (!event.end) return startStr;
+                if (!event.end || (event.end instanceof Date && isNaN(event.end.getTime()))) return startStr;
                 const endStr = event.end.toLocaleString('en-US', { timeZone: PACIFIC_TZ, hour: 'numeric', minute: '2-digit' });
                 return startStr === endStr ? startStr : `${startStr} - ${endStr}`;
               })()}

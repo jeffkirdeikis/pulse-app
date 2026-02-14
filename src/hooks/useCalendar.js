@@ -16,9 +16,9 @@ import { PACIFIC_TZ } from '../utils/timezoneHelpers';
 export function useCalendar({ myCalendar, isAuthenticated, session, registerForEvent, refreshUserData, getVenueName, showToast, onCalendarAdd }) {
   // Generate Google Calendar URL
   const generateGoogleCalendarUrl = useCallback((event) => {
-    if (!event.start) return '';
+    if (!event.start || isNaN(event.start.getTime())) return '';
     const startDate = event.start.toISOString().replace(/-|:|\.\d+/g, '');
-    const endDate = event.end ? event.end.toISOString().replace(/-|:|\.\d+/g, '') : startDate;
+    const endDate = event.end && !isNaN(event.end.getTime()) ? event.end.toISOString().replace(/-|:|\.\d+/g, '') : startDate;
     const title = encodeURIComponent(event.title);
     const details = encodeURIComponent(event.description || '');
     const location = encodeURIComponent(getVenueName(event.venueId, event) + ', Squamish, BC');
@@ -35,8 +35,8 @@ export function useCalendar({ myCalendar, isAuthenticated, session, registerForE
         id: event.id,
         eventType: event.eventType || 'event',
         title: event.title,
-        date: event.start ? event.start.toISOString().split('T')[0] : event.date,
-        time: event.start ? event.start.toLocaleTimeString('en-US', { timeZone: PACIFIC_TZ, hour: 'numeric', minute: '2-digit' }) : event.time,
+        date: event.start && !isNaN(event.start.getTime()) ? event.start.toISOString().split('T')[0] : event.date,
+        time: event.start && !isNaN(event.start.getTime()) ? event.start.toLocaleTimeString('en-US', { timeZone: PACIFIC_TZ, hour: 'numeric', minute: '2-digit' }) : event.time,
         venue: getVenueName(event.venueId, event),
         address: event.location || event.address || '',
         ...event

@@ -68,7 +68,7 @@ const MyCalendarModal = memo(function MyCalendarModal({
                       <div key={event.id} className={`calendar-event-card ${event.eventType === 'class' ? 'class' : 'event'}`}>
                         <div className="calendar-event-time">
                           <span>{event.start ? new Date(event.start).toLocaleString('en-US', { timeZone: PACIFIC_TZ, hour: 'numeric', minute: '2-digit' }) : ''}</span>
-                          {event.end && <>
+                          {event.end && !isNaN(new Date(event.end).getTime()) && <>
                             <span className="time-separator">-</span>
                             <span>{new Date(event.end).toLocaleString('en-US', { timeZone: PACIFIC_TZ, hour: 'numeric', minute: '2-digit' })}</span>
                           </>}

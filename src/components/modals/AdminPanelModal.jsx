@@ -93,7 +93,7 @@ const AdminPanelModal = memo(function AdminPanelModal({
                         {' '}{fb.type}
                       </div>
                       <span className="submission-time">
-                        {new Date(fb.created_at).toLocaleDateString()} {new Date(fb.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        {fb.created_at && !isNaN(new Date(fb.created_at).getTime()) ? `${new Date(fb.created_at).toLocaleDateString()} ${new Date(fb.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''}
                       </span>
                     </div>
                     <p className="submission-desc" style={{ margin: '8px 0', whiteSpace: 'pre-wrap' }}>{fb.message}</p>

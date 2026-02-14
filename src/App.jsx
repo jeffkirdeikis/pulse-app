@@ -1209,6 +1209,7 @@ export default function PulseApp() {
     const grouped = {};
     
     events.forEach(event => {
+      if (!event.start) return;
       const dateKey = event.start.toDateString();
       if (!grouped[dateKey]) {
         grouped[dateKey] = [];
@@ -1347,7 +1348,7 @@ export default function PulseApp() {
                 { key: 'evening', label: 'Evening', icon: <Moon size={14} />, test: h => h >= 17 || h < 5 },
               ];
               return periods.map(period => {
-                const periodEvents = dayEvents.filter(e => period.test(e.start.getHours()));
+                const periodEvents = dayEvents.filter(e => e.start && period.test(e.start.getHours()));
                 if (periodEvents.length === 0) return null;
                 return (
                   <React.Fragment key={period.key}>
@@ -1607,7 +1608,7 @@ export default function PulseApp() {
                     count = services.filter(s => {
                       if (debouncedSearch) {
                         const query = debouncedSearch.toLowerCase().trim();
-                        if (!s.name.toLowerCase().includes(query) && !s.category.toLowerCase().includes(query) && !s.address?.toLowerCase().includes(query)) return false;
+                        if (!s.name?.toLowerCase().includes(query) && !s.category?.toLowerCase().includes(query) && !s.address?.toLowerCase().includes(query)) return false;
                       }
                       if (serviceCategoryFilter === 'All') return true;
                       const mainCategories = ['Restaurants & Dining', 'Retail & Shopping', 'Cafes & Bakeries', 'Outdoor Adventures', 'Auto Services', 'Real Estate', 'Fitness & Gyms', 'Recreation & Sports', 'Health & Wellness', 'Construction & Building', 'Outdoor Gear & Shops', 'Community Services', 'Hotels & Lodging', 'Web & Marketing', 'Financial Services', 'Medical Clinics', 'Photography', 'Attractions', 'Churches & Religious', 'Salons & Spas', 'Arts & Culture'];
