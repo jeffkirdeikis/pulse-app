@@ -106,7 +106,7 @@ const ServiceDetailModal = memo(function ServiceDetailModal({
         <div className="service-section">
           <h2 className="service-section-title">About</h2>
           <p className="service-about-text">
-            {service.description || `${service.name} is a ${service.category.toLowerCase()} business located in Squamish, BC.`}
+            {service.description || `${service.name} is a ${(service.category || 'local').toLowerCase()} business located in Squamish, BC.`}
           </p>
         </div>
 

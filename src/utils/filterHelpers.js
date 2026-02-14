@@ -107,7 +107,7 @@ export function filterEvents(allEvents, { currentSection, filters, searchQuery, 
       e.title?.toLowerCase().includes(query) ||
       e.description?.toLowerCase().includes(query) ||
       (getVenueName(e.venueId, e) || '').toLowerCase().includes(query) ||
-      e.tags?.some(tag => tag.toLowerCase().includes(query))
+      e.tags?.some(tag => typeof tag === 'string' && tag.toLowerCase().includes(query))
     );
   }
 
@@ -169,9 +169,9 @@ export function filterEvents(allEvents, { currentSection, filters, searchQuery, 
 
   // Price — null/unknown pricing shows in both "All" and "Paid" but not "Free"
   if (filters.price === 'free') {
-    filtered = filtered.filter(e => e.price?.toLowerCase() === 'free');
+    filtered = filtered.filter(e => typeof e.price === 'string' && e.price.toLowerCase() === 'free');
   } else if (filters.price === 'paid') {
-    filtered = filtered.filter(e => e.price && e.price?.toLowerCase() !== 'free');
+    filtered = filtered.filter(e => e.price && (typeof e.price !== 'string' || e.price.toLowerCase() !== 'free'));
   }
 
   // Sort by featured, then by date
