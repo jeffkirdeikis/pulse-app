@@ -277,7 +277,7 @@ export function useSubmissions(user, { showToast, userClaimedBusinesses, updateA
           start_time: submission.data.startTime,
           end_time: submission.data.endTime,
           venue_name: submission.data.businessName || submission.business?.name,
-          venue_id: submission.business_id,
+          venue_id: submission.data?.selectedBusinessId || submission.business?.id || null,
           event_type: submission.type,
           category: submission.data.category,
           price: submission.data.price,

@@ -360,6 +360,8 @@ export default function PulseApp() {
         setShowProfileModal(false);
         setShowAdminPanel(false);
         setShowEditVenueModal(false);
+        setShowEditEventModal(false);
+        setEditingEvent(null);
         setShowMessagesModal(false);
         setShowAddEventModal(false);
         setShowMyCalendarModal(false);
@@ -367,6 +369,7 @@ export default function PulseApp() {
         setShowContactSheet(false);
         setShowProfileMenu(false);
         setShowNotifications(false);
+        setShowImageCropper(false);
         return;
       }
 
@@ -509,8 +512,14 @@ export default function PulseApp() {
   useEffect(() => {
     if (view === 'business' && activeBusiness) {
       const businessId = activeBusiness.id;
-      fetchBusinessInbox(businessId, 'booking_request');
-      fetchBusinessAnalytics(businessId, analyticsPeriod);
+      fetchBusinessInbox(businessId, 'booking');
+    }
+  }, [view, activeBusiness?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Fetch analytics separately so inbox isn't re-fetched on period change
+  useEffect(() => {
+    if (view === 'business' && activeBusiness) {
+      fetchBusinessAnalytics(activeBusiness.id, analyticsPeriod);
     }
   }, [view, activeBusiness?.id, analyticsPeriod]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -722,6 +731,7 @@ export default function PulseApp() {
   } = useCalendar({
     myCalendar,
     isAuthenticated,
+    session,
     registerForEvent,
     refreshUserData,
     getVenueName,
@@ -1062,9 +1072,13 @@ export default function PulseApp() {
     }
   }, [showToast, fetchAdminClaims]);
 
+  // Reset pagination when filter inputs change
+  useEffect(() => {
+    setVisibleEventCount(50);
+  }, [currentSection, filters, searchQuery, kidsAgeRange]);
+
   // Memoized filter — only recomputes when inputs change (Bug #20: called twice per render)
   const filteredEvents = useMemo(() => {
-    setVisibleEventCount(50); // Reset pagination when filters change
     return filterEventsUtil(
       dbEvents,
       { currentSection, filters, searchQuery, kidsAgeRange, getVenueName, now: getPacificNow() }
@@ -1453,16 +1467,16 @@ export default function PulseApp() {
     }, { rootMargin: '200px' });
     observer.observe(el);
     return () => observer.disconnect();
-  });
+  }, []);
 
   return (
     <div className="pulse-app">
       <a href="#main-content" className="skip-to-content" style={{position:'absolute',left:'-9999px',top:'auto',width:'1px',height:'1px',overflow:'hidden',zIndex:9999}} onFocus={(e)=>{e.target.style.position='fixed';e.target.style.left='50%';e.target.style.top='8px';e.target.style.transform='translateX(-50%)';e.target.style.width='auto';e.target.style.height='auto';e.target.style.overflow='visible';e.target.style.background='#1f2937';e.target.style.color='#fff';e.target.style.padding='8px 16px';e.target.style.borderRadius='8px';e.target.style.fontSize='14px';e.target.style.fontWeight='600';e.target.style.textDecoration='none';}} onBlur={(e)=>{e.target.style.position='absolute';e.target.style.left='-9999px';e.target.style.width='1px';e.target.style.height='1px';e.target.style.overflow='hidden';}}>Skip to content</a>
-      {user.isAdmin && (
+      {(user.isAdmin || userClaimedBusinesses.length > 0) && (
         <div className="view-switcher">
           <button tabIndex={-1} className={view === 'consumer' ? 'active' : ''} onClick={() => { if (impersonatedBusiness) setImpersonatedBusiness(null); setView('consumer'); }}>Consumer</button>
           <button tabIndex={-1} className={view === 'business' ? 'active' : ''} onClick={() => { if (impersonatedBusiness) setImpersonatedBusiness(null); setView('business'); }}>Business</button>
-          <button tabIndex={-1} className={view === 'admin' ? 'active' : ''} onClick={() => { if (impersonatedBusiness) { exitImpersonation(); } else { setView('admin'); } }}>Admin</button>
+          {user.isAdmin && <button tabIndex={-1} className={view === 'admin' ? 'active' : ''} onClick={() => { if (impersonatedBusiness) { exitImpersonation(); } else { setView('admin'); } }}>Admin</button>}
         </div>
       )}
 
@@ -1808,7 +1822,7 @@ export default function PulseApp() {
               session={session}
               services={services}
               claimResendCooldown={claimResendCooldown}
-              onClose={() => { setShowClaimBusinessModal(false); setClaimFormData({ businessName: '', ownerName: '', email: '', phone: '', role: 'owner', address: '' }); setClaimVerificationStep('form'); setClaimVerificationCode(''); setClaimId(null); setClaimResendCooldown(0); setClaimDocuments([]); setClaimVerificationMethod('email'); }}
+              onClose={() => { setShowClaimBusinessModal(false); setClaimFormData({ businessName: '', ownerName: '', email: '', phone: '', role: 'owner', address: '' }); setClaimVerificationStep('form'); setClaimVerificationCode(''); setClaimId(null); setClaimResendCooldown(0); setClaimDocuments([]); setClaimVerificationMethod('email'); setClaimSelectedBusiness(null); setClaimSearchQuery(''); }}
               setShowAuthModal={setShowAuthModal}
               handleClaimBusiness={handleClaimBusiness}
             />
@@ -2105,6 +2119,7 @@ export default function PulseApp() {
           setAnalyticsPeriod={setAnalyticsPeriod}
           businessAnalytics={businessAnalytics}
           dbEvents={dbEvents}
+          dbDeals={dbDeals}
           businessInboxTab={businessInboxTab}
           setBusinessInboxTab={setBusinessInboxTab}
           businessConversations={businessConversations}
@@ -2132,6 +2147,7 @@ export default function PulseApp() {
           setEditVenueForm={setEditVenueForm}
           setShowEditVenueModal={setShowEditVenueModal}
           setEventsRefreshKey={setEventsRefreshKey}
+          setDealsRefreshKey={setDealsRefreshKey}
           fetchServices={fetchServices}
           showToast={showToast}
           exitImpersonation={exitImpersonation}

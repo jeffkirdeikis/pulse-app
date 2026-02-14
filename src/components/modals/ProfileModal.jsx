@@ -155,7 +155,7 @@ const ProfileModal = memo(function ProfileModal({
                   </div>
                 </div>
                 <div className="xp-progress-bar">
-                  <div className="xp-progress-fill" style={{ width: `${((userStats.xpForCurrentLevel - userStats.xpToNextLevel) / userStats.xpForCurrentLevel) * 100}%` }}></div>
+                  <div className="xp-progress-fill" style={{ width: `${userStats.xpForCurrentLevel > 0 ? ((userStats.xpForCurrentLevel - userStats.xpToNextLevel) / userStats.xpForCurrentLevel) * 100 : 0}%` }}></div>
                 </div>
                 <div className="level-card-footer">
                   <div className="streak-box">

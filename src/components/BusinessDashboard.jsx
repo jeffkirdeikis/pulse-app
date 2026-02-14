@@ -16,6 +16,7 @@ const BusinessDashboard = memo(function BusinessDashboard({
   setAnalyticsPeriod,
   businessAnalytics,
   dbEvents,
+  dbDeals,
   businessInboxTab,
   setBusinessInboxTab,
   businessConversations,
@@ -43,6 +44,7 @@ const BusinessDashboard = memo(function BusinessDashboard({
   setEditVenueForm,
   setShowEditVenueModal,
   setEventsRefreshKey,
+  setDealsRefreshKey,
   fetchServices,
   showToast,
   exitImpersonation,
@@ -53,6 +55,8 @@ const BusinessDashboard = memo(function BusinessDashboard({
 }) {
   // === Computed: Top Performing Content ===
   const businessListingsAll = activeBusiness ? dbEvents.filter(e => e.venueId === activeBusiness.id || (e.venueName && activeBusiness.name && e.venueName.toLowerCase() === activeBusiness.name.toLowerCase())) : [];
+  const businessDealsAll = activeBusiness && dbDeals ? dbDeals.filter(d => d.venueName && activeBusiness.name && d.venueName.toLowerCase() === activeBusiness.name.toLowerCase()) : [];
+  const totalListingsCount = businessListingsAll.length + businessDealsAll.length;
   const topPerforming = [...businessListingsAll].sort((a, b) => (b.viewCount || 0) - (a.viewCount || 0)).slice(0, 3).filter(e => e.viewCount > 0 || businessListingsAll.length > 0);
   // If no views yet, just show top 3 listings as a starting point
   const topItems = topPerforming.length > 0 ? topPerforming : businessListingsAll.slice(0, 3);
@@ -62,10 +66,11 @@ const BusinessDashboard = memo(function BusinessDashboard({
   const profileScore = Math.round((profileFields / 6) * 100);
   const totalViews = (businessAnalytics?.totals?.profile_views || 0) + (businessAnalytics?.totals?.class_views || 0) + (businessAnalytics?.totals?.event_views || 0);
   const engagementScore = Math.min(100, Math.round(totalViews / 10));
-  const resolvedConvos = businessConversations.filter(c => c.status === 'resolved').length;
-  const totalConvos = businessConversations.length;
+  const conversations = businessConversations || [];
+  const resolvedConvos = conversations.filter(c => c.status === 'resolved').length;
+  const totalConvos = conversations.length;
   const responseScore = totalConvos > 0 ? Math.round((resolvedConvos / totalConvos) * 100) : 0;
-  const qualityScore = Math.min(100, businessListingsAll.length * 10);
+  const qualityScore = Math.min(100, totalListingsCount * 10);
   const pulseScore = Math.round((profileScore + engagementScore + responseScore + qualityScore) / 4);
 
   // === Computed: Weekly Goals ===
@@ -318,7 +323,7 @@ const BusinessDashboard = memo(function BusinessDashboard({
                   {businessAnalytics?.totals?.profile_views?.toLocaleString() || '0'}
                 </div>
                 <div className="stat-change neutral">
-                  <span className="change-text">Last {analyticsPeriod} days</span>
+                  <span className="change-text">Last {analyticsPeriod >= 9999 ? 'All Time' : `${analyticsPeriod} days`}</span>
                 </div>
               </div>
               <div className="stat-chart">
@@ -343,7 +348,7 @@ const BusinessDashboard = memo(function BusinessDashboard({
                   {((businessAnalytics?.totals?.class_views || 0) + (businessAnalytics?.totals?.event_views || 0)).toLocaleString()}
                 </div>
                 <div className="stat-change neutral">
-                  <span className="change-text">Last {analyticsPeriod} days</span>
+                  <span className="change-text">Last {analyticsPeriod >= 9999 ? 'All Time' : `${analyticsPeriod} days`}</span>
                 </div>
               </div>
               <div className="stat-submetrics">
@@ -368,7 +373,7 @@ const BusinessDashboard = memo(function BusinessDashboard({
                   {businessAnalytics?.totals?.booking_clicks?.toLocaleString() || '0'}
                 </div>
                 <div className="stat-change neutral">
-                  <span className="change-text">Last {analyticsPeriod} days</span>
+                  <span className="change-text">Last {analyticsPeriod >= 9999 ? 'All Time' : `${analyticsPeriod} days`}</span>
                 </div>
               </div>
               <div className="stat-submetrics">
@@ -389,7 +394,7 @@ const BusinessDashboard = memo(function BusinessDashboard({
                   {businessAnalytics?.totals?.messages_received?.toLocaleString() || '0'}
                 </div>
                 <div className="stat-change neutral">
-                  <span className="change-text">Last {analyticsPeriod} days</span>
+                  <span className="change-text">Last {analyticsPeriod >= 9999 ? 'All Time' : `${analyticsPeriod} days`}</span>
                 </div>
               </div>
               <div className="stat-submetrics">
@@ -428,10 +433,10 @@ const BusinessDashboard = memo(function BusinessDashboard({
                 <span className="goal-xp">+75 XP</span>
               </div>
               <div className="goal-card">
-                <div className={`goal-status ${businessListingsAll.length >= 10 ? 'complete' : 'empty'}`}>{businessListingsAll.length >= 10 && <Check size={14} />}</div>
+                <div className={`goal-status ${totalListingsCount >= 10 ? 'complete' : 'empty'}`}>{totalListingsCount >= 10 && <Check size={14} />}</div>
                 <div className="goal-content">
                   <span className="goal-title">Have 10 active listings</span>
-                  <div className="goal-progress-bar"><div style={{width: `${Math.min(100, (businessListingsAll.length / 10) * 100)}%`}}></div></div>
+                  <div className="goal-progress-bar"><div style={{width: `${Math.min(100, (totalListingsCount / 10) * 100)}%`}}></div></div>
                 </div>
                 <span className="goal-xp">+150 XP</span>
               </div>
@@ -516,13 +521,13 @@ const BusinessDashboard = memo(function BusinessDashboard({
               <div className="score-tip-card">
                 <div className="tip-header">
                   <div className="tip-score">
-                    <span className="tip-score-val">0</span>
+                    <span className="tip-score-val">{engagementScore}</span>
                     <span className="tip-score-max">/100</span>
                   </div>
                   <span className="tip-label">Engagement</span>
                 </div>
                 <div className="tip-progress">
-                  <div className="tip-progress-fill" style={{width: '0%', background: 'linear-gradient(90deg, #10b981, #34d399)'}}></div>
+                  <div className="tip-progress-fill" style={{width: `${engagementScore}%`, background: 'linear-gradient(90deg, #10b981, #34d399)'}}></div>
                 </div>
                 <p className="tip-description">How often customers interact with your listings</p>
                 <div className="tip-actions">
@@ -544,13 +549,13 @@ const BusinessDashboard = memo(function BusinessDashboard({
               <div className="score-tip-card">
                 <div className="tip-header">
                   <div className="tip-score">
-                    <span className="tip-score-val">0</span>
+                    <span className="tip-score-val">{responseScore}</span>
                     <span className="tip-score-max">/100</span>
                   </div>
                   <span className="tip-label">Response Rate</span>
                 </div>
                 <div className="tip-progress">
-                  <div className="tip-progress-fill" style={{width: '0%', background: 'linear-gradient(90deg, #3b82f6, #60a5fa)'}}></div>
+                  <div className="tip-progress-fill" style={{width: `${responseScore}%`, background: 'linear-gradient(90deg, #3b82f6, #60a5fa)'}}></div>
                 </div>
                 <p className="tip-description">How quickly you respond to reviews & messages</p>
                 <div className="tip-actions">
@@ -572,13 +577,13 @@ const BusinessDashboard = memo(function BusinessDashboard({
               <div className="score-tip-card">
                 <div className="tip-header">
                   <div className="tip-score">
-                    <span className="tip-score-val">0</span>
+                    <span className="tip-score-val">{qualityScore}</span>
                     <span className="tip-score-max">/100</span>
                   </div>
                   <span className="tip-label">Content Quality</span>
                 </div>
                 <div className="tip-progress">
-                  <div className="tip-progress-fill" style={{width: '0%', background: 'linear-gradient(90deg, #f59e0b, #fbbf24)'}}></div>
+                  <div className="tip-progress-fill" style={{width: `${qualityScore}%`, background: 'linear-gradient(90deg, #f59e0b, #fbbf24)'}}></div>
                 </div>
                 <p className="tip-description">Completeness & quality of your profile & events</p>
                 <div className="tip-actions">
@@ -600,13 +605,13 @@ const BusinessDashboard = memo(function BusinessDashboard({
               <div className="score-tip-card">
                 <div className="tip-header">
                   <div className="tip-score">
-                    <span className="tip-score-val">0</span>
+                    <span className="tip-score-val">{profileScore}</span>
                     <span className="tip-score-max">/100</span>
                   </div>
                   <span className="tip-label">Customer Satisfaction</span>
                 </div>
                 <div className="tip-progress">
-                  <div className="tip-progress-fill" style={{width: '0%', background: 'linear-gradient(90deg, #8b5cf6, #a78bfa)'}}></div>
+                  <div className="tip-progress-fill" style={{width: `${profileScore}%`, background: 'linear-gradient(90deg, #8b5cf6, #a78bfa)'}}></div>
                 </div>
                 <p className="tip-description">Based on ratings, reviews & repeat customers</p>
                 <div className="tip-actions">
@@ -695,7 +700,12 @@ const BusinessDashboard = memo(function BusinessDashboard({
             </div>
 
             {(() => {
-              const businessListings = activeBusiness ? dbEvents.filter(e => e.venueId === activeBusiness.id || (e.venueName && activeBusiness.name && e.venueName.toLowerCase() === activeBusiness.name.toLowerCase())).slice(0, 20) : [];
+              const businessEvents = activeBusiness ? dbEvents.filter(e => e.venueId === activeBusiness.id || (e.venueName && activeBusiness.name && e.venueName.toLowerCase() === activeBusiness.name.toLowerCase())).slice(0, 20) : [];
+              const businessDeals = activeBusiness && dbDeals ? dbDeals.filter(d => d.venueName && activeBusiness.name && d.venueName.toLowerCase() === activeBusiness.name.toLowerCase()).slice(0, 10) : [];
+              const businessListings = [
+                ...businessEvents.map(e => ({ ...e, _type: e.eventType === 'class' ? 'Class' : 'Event', _source: 'event' })),
+                ...businessDeals.map(d => ({ ...d, _type: 'Deal', _source: 'deal' })),
+              ];
               return businessListings.length > 0 ? (
                 <div className="listings-table-container">
                   <table className="listings-table">
@@ -711,14 +721,14 @@ const BusinessDashboard = memo(function BusinessDashboard({
                     </thead>
                     <tbody>
                       {businessListings.map((listing) => (
-                        <tr key={listing.id} className="listing-row">
+                        <tr key={`${listing._source}-${listing.id}`} className="listing-row">
                           <td>
                             <div className="listing-name-cell">
                               <span className="listing-name">{listing.title}</span>
                             </div>
                           </td>
                           <td>
-                            <span className={`type-badge ${listing.eventType}`}>{listing.eventType === 'class' ? 'Class' : 'Event'}</span>
+                            <span className={`type-badge ${listing._source === 'deal' ? 'deal' : listing.eventType}`}>{listing._type}</span>
                           </td>
                           <td>
                             <span className="status-badge active">
@@ -726,22 +736,31 @@ const BusinessDashboard = memo(function BusinessDashboard({
                               Active
                             </span>
                           </td>
-                          <td><span className="metric-cell">{listing.start ? new Date(listing.start).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—'}</span></td>
-                          <td><span className="metric-cell">{listing.start ? new Date(listing.start).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '—'}</span></td>
+                          <td><span className="metric-cell">{listing._source === 'deal' ? (listing.validUntil ? new Date(listing.validUntil).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Ongoing') : (listing.start ? new Date(listing.start).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—')}</span></td>
+                          <td><span className="metric-cell">{listing._source === 'deal' ? (listing.discount || '—') : (listing.start ? new Date(listing.start).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '—')}</span></td>
                           <td>
                             <div className="actions-cell">
-                              <button className="action-btn-sm" title="Edit" onClick={() => {
-                                setEditingEvent(listing);
-                                setEditEventForm({ title: listing.title || '', description: listing.description || '', date: listing.start ? `${listing.start.getFullYear()}-${String(listing.start.getMonth()+1).padStart(2,'0')}-${String(listing.start.getDate()).padStart(2,'0')}` : '', startTime: listing.start ? `${String(listing.start.getHours()).padStart(2,'0')}:${String(listing.start.getMinutes()).padStart(2,'0')}` : '', endTime: listing.end ? `${String(listing.end.getHours()).padStart(2,'0')}:${String(listing.end.getMinutes()).padStart(2,'0')}` : '', price: listing.price || '', category: listing.category || '' });
-                                setShowEditEventModal(true);
-                              }}><Edit2 size={14} /></button>
+                              {listing._source === 'event' && (
+                                <button className="action-btn-sm" title="Edit" onClick={() => {
+                                  setEditingEvent(listing);
+                                  const s = listing.start ? (listing.start instanceof Date ? listing.start : new Date(listing.start)) : null;
+                                  const e = listing.end ? (listing.end instanceof Date ? listing.end : new Date(listing.end)) : null;
+                                  setEditEventForm({ title: listing.title || '', description: listing.description || '', date: s ? `${s.getFullYear()}-${String(s.getMonth()+1).padStart(2,'0')}-${String(s.getDate()).padStart(2,'0')}` : '', startTime: s ? `${String(s.getHours()).padStart(2,'0')}:${String(s.getMinutes()).padStart(2,'0')}` : '', endTime: e ? `${String(e.getHours()).padStart(2,'0')}:${String(e.getMinutes()).padStart(2,'0')}` : '', price: listing.price || '', category: listing.category || '' });
+                                  setShowEditEventModal(true);
+                                }}><Edit2 size={14} /></button>
+                              )}
                               <button className="action-btn-sm danger" title="Delete" onClick={async () => {
                                 if (confirm(`Delete "${listing.title}"?`)) {
                                   try {
-                                    const { error } = await supabase.from('events').delete().eq('id', listing.id);
+                                    const table = listing._source === 'deal' ? 'deals' : 'events';
+                                    const { error } = await supabase.from(table).delete().eq('id', listing.id);
                                     if (error) throw error;
                                     showToast(`"${listing.title}" deleted`, 'success');
-                                    setEventsRefreshKey(k => k + 1);
+                                    if (listing._source === 'deal') {
+                                      setDealsRefreshKey(k => k + 1);
+                                    } else {
+                                      setEventsRefreshKey(k => k + 1);
+                                    }
                                   } catch (err) {
                                     console.error('Error deleting listing:', err);
                                     showToast('Failed to delete', 'error');
@@ -758,7 +777,7 @@ const BusinessDashboard = memo(function BusinessDashboard({
               ) : (
                 <div style={{ textAlign: 'center', padding: '32px 16px', color: '#9ca3af' }}>
                   <Calendar size={32} style={{ marginBottom: '8px', opacity: 0.5 }} />
-                  <p style={{ margin: 0, fontSize: '14px' }}>No active listings yet. Add an event or class to get started.</p>
+                  <p style={{ margin: 0, fontSize: '14px' }}>No active listings yet. Add an event, class, or deal to get started.</p>
                 </div>
               );
             })()}
@@ -779,7 +798,7 @@ const BusinessDashboard = memo(function BusinessDashboard({
                 <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>Total Saves</div>
               </div>
               <div style={{ textAlign: 'center', padding: '12px', background: '#fef3c7', borderRadius: '10px' }}>
-                <div style={{ fontSize: '24px', fontWeight: 700, color: '#d97706' }}>{businessListingsAll.length}</div>
+                <div style={{ fontSize: '24px', fontWeight: 700, color: '#d97706' }}>{totalListingsCount}</div>
                 <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>Active Listings</div>
               </div>
             </div>
@@ -875,7 +894,7 @@ const BusinessDashboard = memo(function BusinessDashboard({
                       placeholder="Type your reply..."
                       value={businessReplyInput}
                       onChange={(e) => setBusinessReplyInput(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && sendBusinessReply()}
+                      onKeyDown={(e) => e.key === 'Enter' && businessReplyInput.trim() && sendBusinessReply()}
                     />
                     <button
                       className="send-reply-btn"

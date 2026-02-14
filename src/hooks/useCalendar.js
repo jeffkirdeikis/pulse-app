@@ -13,11 +13,11 @@ import { PACIFIC_TZ } from '../utils/timezoneHelpers';
  * @param {Function} options.getVenueName - (venueId, event) => string
  * @param {Function} options.showToast - Toast display callback
  */
-export function useCalendar({ myCalendar, isAuthenticated, registerForEvent, refreshUserData, getVenueName, showToast, onCalendarAdd }) {
+export function useCalendar({ myCalendar, isAuthenticated, session, registerForEvent, refreshUserData, getVenueName, showToast, onCalendarAdd }) {
   // Generate Google Calendar URL
   const generateGoogleCalendarUrl = useCallback((event) => {
     const startDate = event.start.toISOString().replace(/-|:|\.\d+/g, '');
-    const endDate = event.end.toISOString().replace(/-|:|\.\d+/g, '');
+    const endDate = event.end ? event.end.toISOString().replace(/-|:|\.\d+/g, '') : startDate;
     const title = encodeURIComponent(event.title);
     const details = encodeURIComponent(event.description || '');
     const location = encodeURIComponent(getVenueName(event.venueId, event) + ', Squamish, BC');
@@ -53,12 +53,13 @@ export function useCalendar({ myCalendar, isAuthenticated, registerForEvent, ref
 
   // Remove event from My Calendar
   const removeFromCalendar = useCallback(async (eventId) => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated || !session?.user?.id) return;
     try {
       const { error } = await supabase
         .from('user_calendar')
         .delete()
-        .eq('event_id', eventId);
+        .eq('event_id', eventId)
+        .eq('user_id', session.user.id);
       if (error) throw error;
       showToast('Event removed from My Calendar');
       refreshUserData();
@@ -66,7 +67,7 @@ export function useCalendar({ myCalendar, isAuthenticated, registerForEvent, ref
       console.error('Error removing from calendar:', err);
       showToast('Failed to remove event', 'error');
     }
-  }, [isAuthenticated, refreshUserData, showToast]);
+  }, [isAuthenticated, session?.user?.id, refreshUserData, showToast]);
 
   // Check if event is in My Calendar
   const isInMyCalendar = useCallback((eventId) => {

@@ -481,7 +481,8 @@ const SubmissionModal = memo(function SubmissionModal({
                   disabled={
                     !submissionForm.title || !submissionForm.description || !submissionForm.businessType ||
                     (submissionForm.businessType === 'new' && !submissionForm.businessName) ||
-                    ((submissionType === 'event' || submissionType === 'class') && (!submissionForm.date || !submissionForm.startTime || !submissionForm.endTime || !submissionForm.category))
+                    ((submissionType === 'event' || submissionType === 'class') && (!submissionForm.date || !submissionForm.startTime || !submissionForm.endTime || !submissionForm.category)) ||
+                    (submissionType === 'deal' && !submissionForm.schedule)
                   }
                 >
                   Submit for Review

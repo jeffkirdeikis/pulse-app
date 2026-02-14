@@ -217,7 +217,7 @@ export function useMessaging(user, { showToast, onAuthRequired, activeBusiness, 
 
   // Send reply from business
   const sendBusinessReply = useCallback(async () => {
-    if (!businessReplyInput.trim() || !selectedBusinessConversation) return;
+    if (!businessReplyInput.trim() || !selectedBusinessConversation || !activeBusiness?.id) return;
     setSendingMessage(true);
     try {
       const businessId = activeBusiness?.id;
@@ -248,11 +248,13 @@ export function useMessaging(user, { showToast, onAuthRequired, activeBusiness, 
       if (error) throw error;
 
       showToast?.('Conversation resolved', 'success');
-      // Refresh inbox
+      // Optimistically remove resolved conversation from list
+      setBusinessConversations(prev => prev.filter(c => c.id !== conversationId));
+      setSelectedBusinessConversation(null);
+      // Also refresh from server
       if (activeBusiness?.id) {
         fetchBusinessInbox(activeBusiness.id, businessInboxTab === 'bookings' ? 'booking' : 'general');
       }
-      setSelectedBusinessConversation(null);
     } catch (err) {
       console.error('Error marking resolved:', err);
       showToast?.('Failed to resolve conversation', 'error');

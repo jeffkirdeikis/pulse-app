@@ -18,6 +18,7 @@ const DealDetailModal = memo(function DealDetailModal({
   supabase,
   allDeals,
 }) {
+  const [redeeming, setRedeeming] = React.useState(false);
   if (!deal) return null;
 
   const handleShare = async () => {
@@ -34,7 +35,7 @@ const DealDetailModal = memo(function DealDetailModal({
         showToast('Link copied to clipboard!');
       }
     } catch (err) {
-      showToast('Link copied!');
+      // User cancelled share or share failed — don't show misleading toast
     }
   };
 
@@ -43,21 +44,27 @@ const DealDetailModal = memo(function DealDetailModal({
       onAuthRequired();
       return;
     }
-    const redemptionCode = `PULSE-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-    const { error } = await supabase.from('deal_redemptions').insert({
-      user_id: session.user.id,
-      deal_id: deal.id,
-      business_id: deal.businessId || null,
-      redemption_code: redemptionCode,
-      status: 'pending',
-      savings_amount: deal.savingsPercent || null
-    });
-    if (error) {
-      console.error('Error tracking redemption:', error);
-      showToast('Could not process redemption. Please try again.', 'error');
-      return;
+    if (redeeming) return;
+    setRedeeming(true);
+    try {
+      const redemptionCode = `PULSE-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+      const { error } = await supabase.from('deal_redemptions').insert({
+        user_id: session.user.id,
+        deal_id: deal.id,
+        business_id: deal.businessId || null,
+        redemption_code: redemptionCode,
+        status: 'pending',
+        savings_amount: deal.savingsPercent || null
+      });
+      if (error) {
+        console.error('Error tracking redemption:', error);
+        showToast('Could not process redemption. Please try again.', 'error');
+        return;
+      }
+      showToast(`Redemption code: ${redemptionCode} - Show this to ${getVenueName(deal.venueId, deal)}!`, 'info', 5000);
+    } finally {
+      setRedeeming(false);
     }
-    showToast(`Redemption code: ${redemptionCode} - Show this to ${getVenueName(deal.venueId, deal)}!`, 'info', 5000);
   };
 
   const relatedDeals = getRelatedDeals(deal, allDeals);
@@ -197,7 +204,7 @@ const DealDetailModal = memo(function DealDetailModal({
 
         {/* CTA Section */}
         <div className="deal-cta-section">
-          <button className="deal-cta-btn primary" onClick={handleRedeem}>
+          <button className="deal-cta-btn primary" onClick={handleRedeem} disabled={redeeming}>
             <Ticket size={18} />
             Redeem Deal
           </button>

@@ -67,9 +67,11 @@ const MyCalendarModal = memo(function MyCalendarModal({
                     {events.map(event => (
                       <div key={event.id} className={`calendar-event-card ${event.eventType === 'class' ? 'class' : 'event'}`}>
                         <div className="calendar-event-time">
-                          <span>{event.start.toLocaleString('en-US', { timeZone: PACIFIC_TZ, hour: 'numeric', minute: '2-digit' })}</span>
-                          <span className="time-separator">-</span>
-                          <span>{event.end.toLocaleString('en-US', { timeZone: PACIFIC_TZ, hour: 'numeric', minute: '2-digit' })}</span>
+                          <span>{event.start ? new Date(event.start).toLocaleString('en-US', { timeZone: PACIFIC_TZ, hour: 'numeric', minute: '2-digit' }) : ''}</span>
+                          {event.end && <>
+                            <span className="time-separator">-</span>
+                            <span>{new Date(event.end).toLocaleString('en-US', { timeZone: PACIFIC_TZ, hour: 'numeric', minute: '2-digit' })}</span>
+                          </>}
                         </div>
                         <div className="calendar-event-details">
                           <div className="calendar-event-header">
