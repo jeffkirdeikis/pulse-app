@@ -16,6 +16,7 @@ import { PACIFIC_TZ } from '../utils/timezoneHelpers';
 export function useCalendar({ myCalendar, isAuthenticated, session, registerForEvent, refreshUserData, getVenueName, showToast, onCalendarAdd }) {
   // Generate Google Calendar URL
   const generateGoogleCalendarUrl = useCallback((event) => {
+    if (!event.start) return '';
     const startDate = event.start.toISOString().replace(/-|:|\.\d+/g, '');
     const endDate = event.end ? event.end.toISOString().replace(/-|:|\.\d+/g, '') : startDate;
     const title = encodeURIComponent(event.title);

@@ -112,10 +112,12 @@ export function useBooking({ getVenueName, venues, trackAnalytics, addToCalendar
     setSendingMessage(true);
     try {
       const subject = `Booking Request: ${eventSnapshot.title}`;
+      const dateStr = eventSnapshot.start?.toLocaleDateString('en-US', { timeZone: PACIFIC_TZ, weekday: 'long', month: 'long', day: 'numeric' }) || 'Date TBD';
+      const timeStr = eventSnapshot.start?.toLocaleTimeString('en-US', { timeZone: PACIFIC_TZ, hour: 'numeric', minute: '2-digit' }) || 'Time TBD';
       const message = `Hi, I'd like to book:\n\n` +
         `Class: ${eventSnapshot.title}\n` +
-        `Date: ${eventSnapshot.start.toLocaleDateString('en-US', { timeZone: PACIFIC_TZ, weekday: 'long', month: 'long', day: 'numeric' })}\n` +
-        `Time: ${eventSnapshot.start.toLocaleTimeString('en-US', { timeZone: PACIFIC_TZ, hour: 'numeric', minute: '2-digit' })}\n\n` +
+        `Date: ${dateStr}\n` +
+        `Time: ${timeStr}\n\n` +
         (messageSnapshot ? `Message: ${messageSnapshot}` : '');
 
       const conversationId = await startConversation(business.id, subject, message);
