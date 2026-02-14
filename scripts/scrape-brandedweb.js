@@ -193,6 +193,88 @@ function parseClasses(text, studio) {
   });
 }
 
+/**
+ * Click the "Next" week arrow button in the Brandedweb widget.
+ * Returns true if navigation succeeded (page content changed).
+ */
+async function clickNextWeek(page) {
+  const beforeText = await page.evaluate(() => document.body.innerText);
+
+  const clicked = await page.evaluate(() => {
+    // Primary: MUI IconButton with aria-label="Next"
+    const nextBtn = document.querySelector('button[aria-label="Next"]');
+    if (nextBtn && !nextBtn.disabled) {
+      nextBtn.click();
+      return true;
+    }
+    // Fallback selectors
+    const selectors = [
+      'button[aria-label*="Next"]', 'button[aria-label*="next"]',
+      'button[aria-label*="Forward"]'
+    ];
+    for (const sel of selectors) {
+      const el = document.querySelector(sel);
+      if (el && !el.disabled) { el.click(); return true; }
+    }
+    return false;
+  });
+
+  if (!clicked) return false;
+
+  await new Promise(r => setTimeout(r, 3000));
+
+  // Verify page content actually changed
+  const afterText = await page.evaluate(() => document.body.innerText);
+  return afterText !== beforeText;
+}
+
+/**
+ * Get the list of day tab elements in the Brandedweb widget.
+ * Day tabs are <h6> MUI Typography elements that come in pairs:
+ *   day name ("Today"/"Sun"/"Mon"/...) followed by day number ("14"/"15"/...)
+ * We return the indices of the day-name elements (every other one).
+ */
+async function getDayTabCount(page) {
+  return page.evaluate(() => {
+    const dayNames = ['Today', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const h6s = document.querySelectorAll('h6.MuiTypography-root');
+    let count = 0;
+    for (const h6 of h6s) {
+      const text = h6.textContent.trim();
+      if (dayNames.includes(text)) count++;
+    }
+    return count;
+  });
+}
+
+/**
+ * Click the Nth day tab (0-indexed) in the Brandedweb widget.
+ * Day tabs are <h6> elements with day names: Today, Sun, Mon, Tue, etc.
+ */
+async function clickDayTab(page, dayIndex) {
+  const result = await page.evaluate((idx) => {
+    const dayNames = ['Today', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const h6s = document.querySelectorAll('h6.MuiTypography-root');
+    let dayCount = 0;
+    for (const h6 of h6s) {
+      const text = h6.textContent.trim();
+      if (dayNames.includes(text)) {
+        if (dayCount === idx) {
+          h6.click();
+          return text;
+        }
+        dayCount++;
+      }
+    }
+    return null;
+  }, dayIndex);
+
+  if (result) {
+    await new Promise(r => setTimeout(r, 2000));
+  }
+  return result;
+}
+
 async function scrapeStudio(browser, studio) {
   console.log(`\n📍 ${studio.name}`);
   console.log(`   Widget ID: ${studio.widgetId}`);
@@ -213,103 +295,64 @@ async function scrapeStudio(browser, studio) {
 
     console.log('   Loading schedule page...');
     await page.goto(studio.scheduleUrl, { waitUntil: 'networkidle2', timeout: 60000 });
-    await new Promise(r => setTimeout(r, 3000));
+    await new Promise(r => setTimeout(r, 5000));
 
-    // Brandedweb widgets show a weekly schedule. Navigate week-by-week
-    // using CSS selectors instead of fragile pixel-clicking.
+    // Brandedweb widgets show ONE DAY at a time with a day-tab carousel.
+    // Day tabs are <h6> MUI Typography elements (Today, Sun, Mon, ...).
+    // We must click each day tab to see that day's classes, then advance
+    // to the next week with the "Next" arrow button.
     const weeksNeeded = Math.ceil(DAYS_TO_SCRAPE / 7);
-    let lastPageText = '';
 
     for (let week = 0; week < weeksNeeded; week++) {
       // Navigate to next week (skip for the first week)
       if (week > 0) {
-        // Try CSS selector-based navigation for the "next" button
-        let navigated = false;
-        try {
-          navigated = await page.evaluate(() => {
-            // Brandedweb Mindbody widget navigation selectors
-            const selectors = [
-              'button[aria-label*="Next"]', 'button[aria-label*="next"]',
-              'button[aria-label*="Forward"]', 'button[aria-label*="forward"]',
-              '.next-week', '[class*="next"]', '[class*="forward"]',
-              '.fa-chevron-right', '.fa-arrow-right',
-              'button[class*="arrow-right"]', 'button[class*="right"]',
-              '[data-testid*="next"]', '[data-testid*="forward"]'
-            ];
-            for (const sel of selectors) {
-              const el = document.querySelector(sel);
-              if (el) {
-                el.click();
-                return true;
-              }
-            }
-            // Fallback: try arrow buttons by text content
-            const buttons = document.querySelectorAll('button, a, span');
-            for (const btn of buttons) {
-              const text = btn.textContent.trim();
-              if (text === '>' || text === '›' || text === '→' || text === '▶' || text === 'Next') {
-                btn.click();
-                return true;
-              }
-            }
-            return false;
-          });
-        } catch (navErr) {
-          console.log(`   Navigation error at week ${week + 1}: ${navErr.message}. Stopping.`);
-          break;
-        }
-
+        const navigated = await clickNextWeek(page);
         if (!navigated) {
-          console.log(`   Could not find next-week button at week ${week + 1}. Stopping.`);
+          console.log(`   Could not navigate to week ${week + 1}. Stopping.`);
           break;
         }
-
-        await new Promise(r => setTimeout(r, 3000));
       }
 
-      // Extract page text
-      const pageText = await page.evaluate(() => document.body.innerText);
-
-      // CRITICAL FIX: Detect stale page (navigation didn't change content)
-      if (week > 0 && pageText === lastPageText) {
-        console.log(`   Page content unchanged after navigation at week ${week + 1}. Navigation failed. Stopping.`);
-        break;
-      }
-      lastPageText = pageText;
-
-      // CRITICAL FIX: Verify dates on the page actually changed
-      const datesOnPage = parseDatesFromText(pageText);
-      if (datesOnPage.length === 0 && week > 0) {
-        console.log(`   No date headers found on page at week ${week + 1}. Stopping.`);
+      // Count day tabs available this week
+      const dayCount = await getDayTabCount(page);
+      if (dayCount === 0) {
+        console.log(`   Week ${week + 1}: No day tabs found. Stopping.`);
         break;
       }
 
-      // Parse classes using date headers from the page text (NOT loop counter)
-      const classes = parseClasses(pageText, studio);
+      let weekClasses = 0;
+      let weekDays = 0;
 
-      if (classes.length > 0) {
-        const dates = new Set(classes.map(c => c.date));
-        console.log(`   Week ${week + 1}: ${classes.length} classes across ${dates.size} days`);
-      } else {
-        console.log(`   Week ${week + 1}: 0 classes found`);
-      }
+      // Click each day tab and scrape its classes
+      for (let day = 0; day < dayCount; day++) {
+        const dayName = await clickDayTab(page, day);
+        if (!dayName) continue;
 
-      for (const cls of classes) {
-        // Skip classes outside our date range
-        if (cls.date < todayStr || cls.date > endDateStr) continue;
+        // Extract page text for this day
+        const pageText = await page.evaluate(() => document.body.innerText);
+        const classes = parseClasses(pageText, studio);
 
-        studioClassesFound++;
-        stats.classesFound++;
+        if (classes.length > 0) weekDays++;
+        weekClasses += classes.length;
 
-        const exists = await classExists(cls.title, cls.date, cls.studioName, cls.time);
-        if (exists) continue;
+        for (const cls of classes) {
+          if (cls.date < todayStr || cls.date > endDateStr) continue;
 
-        const success = await insertClass(cls);
-        if (success) {
-          stats.classesAdded++;
-          studioClassesAdded++;
+          studioClassesFound++;
+          stats.classesFound++;
+
+          const exists = await classExists(cls.title, cls.date, cls.studioName, cls.time);
+          if (exists) continue;
+
+          const success = await insertClass(cls);
+          if (success) {
+            stats.classesAdded++;
+            studioClassesAdded++;
+          }
         }
       }
+
+      console.log(`   Week ${week + 1}: ${weekClasses} classes across ${weekDays} days (${dayCount} tabs)`);
     }
 
     // Post-scrape validation: detect and remove duplicated schedules
