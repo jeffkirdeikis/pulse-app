@@ -355,79 +355,6 @@ export default function PulseApp() {
     };
   }, []);
 
-  // Global keyboard shortcuts
-  useEffect(() => {
-    const handleKeydown = (e) => {
-      // Skip if user is typing in an input/textarea/select
-      const tag = e.target.tagName;
-      const isTyping = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.target.isContentEditable;
-
-      if (e.key === 'Escape') {
-        // Close topmost modal (priority order: overlays first, then detail modals, then panels)
-        if (showImageCropper) { setShowImageCropper(false); return; }
-        if (showBookingSheet) { setShowBookingSheet(false); return; }
-        if (showContactSheet) { setShowContactSheet(false); return; }
-        if (showEditEventModal) { setShowEditEventModal(false); setEditingEvent(null); return; }
-        if (showEditVenueModal) { setShowEditVenueModal(false); return; }
-        if (showAddEventModal) { setShowAddEventModal(false); return; }
-        if (showSubmissionModal) { setShowSubmissionModal(false); return; }
-        if (selectedEvent) { setSelectedEvent(null); return; }
-        if (selectedDeal) { setSelectedDeal(null); return; }
-        if (selectedService) { setSelectedService(null); return; }
-        if (showMyCalendarModal) { setShowMyCalendarModal(false); return; }
-        if (showMessagesModal) { setShowMessagesModal(false); return; }
-        if (showAuthModal) { setShowAuthModal(false); return; }
-        if (showClaimBusinessModal) { setShowClaimBusinessModal(false); return; }
-        if (showProfileModal) { setShowProfileModal(false); return; }
-        if (showAdminPanel) { setShowAdminPanel(false); return; }
-        if (showProfileMenu) { setShowProfileMenu(false); return; }
-        if (showNotifications) { setShowNotifications(false); return; }
-        return;
-      }
-
-      if (isTyping) return;
-
-      // "/" to focus search
-      if (e.key === '/') {
-        e.preventDefault();
-        const searchInput = document.querySelector('.search-bar-premium input');
-        if (searchInput) searchInput.focus();
-        return;
-      }
-
-      // 1-5 for tab switching (only in consumer view)
-      if (view === 'consumer') {
-        const tabs = ['classes', 'events', 'deals', 'services', 'wellness'];
-        const num = parseInt(e.key);
-        if (num >= 1 && num <= 5) {
-          setCurrentSection(tabs[num - 1]);
-          window.history.pushState({ section: tabs[num - 1] }, '', `#${tabs[num - 1]}`);
-        }
-      }
-    };
-    window.addEventListener('keydown', handleKeydown);
-    return () => window.removeEventListener('keydown', handleKeydown);
-  }, [view, showImageCropper, showBookingSheet, showContactSheet, showEditEventModal, showEditVenueModal, showAddEventModal, showSubmissionModal, selectedEvent, selectedDeal, selectedService, showMyCalendarModal, showMessagesModal, showAuthModal, showClaimBusinessModal, showProfileModal, showAdminPanel, showProfileMenu, showNotifications]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ESC to exit impersonation mode — only when no modals are open
-  // (the main ESC handler above closes modals first; this fires only when nothing else is open)
-  useEffect(() => {
-    if (!impersonatedBusiness) return;
-    const anyModalOpen = showImageCropper || showBookingSheet || showContactSheet ||
-      showEditEventModal || showEditVenueModal || showAddEventModal || showSubmissionModal ||
-      selectedEvent || selectedDeal || selectedService || showMyCalendarModal ||
-      showMessagesModal || showAuthModal || showClaimBusinessModal || showProfileModal ||
-      showAdminPanel || showProfileMenu || showNotifications;
-    if (anyModalOpen) return; // Don't register ESC-to-exit while modals are open
-    const handleImpersonateEsc = (e) => {
-      if (e.key === 'Escape') {
-        exitImpersonation();
-      }
-    };
-    window.addEventListener('keydown', handleImpersonateEsc);
-    return () => window.removeEventListener('keydown', handleImpersonateEsc);
-  }, [impersonatedBusiness, showImageCropper, showBookingSheet, showContactSheet, showEditEventModal, showEditVenueModal, showAddEventModal, showSubmissionModal, selectedEvent, selectedDeal, selectedService, showMyCalendarModal, showMessagesModal, showAuthModal, showClaimBusinessModal, showProfileModal, showAdminPanel, showProfileMenu, showNotifications]); // eslint-disable-line react-hooks/exhaustive-deps
-
   // Track analytics event
   const trackAnalytics = useCallback(async (eventType, businessId, referenceId = null) => {
     try {
@@ -813,6 +740,75 @@ export default function PulseApp() {
     setSendingMessage,
     showToast,
   });
+
+  // Global keyboard shortcuts — placed after all hooks (useSubmissions,
+  // useMessaging, useBooking) that declare modal state variables.
+  useEffect(() => {
+    const handleKeydown = (e) => {
+      const tag = e.target.tagName;
+      const isTyping = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.target.isContentEditable;
+
+      if (e.key === 'Escape') {
+        if (showImageCropper) { setShowImageCropper(false); return; }
+        if (showBookingSheet) { setShowBookingSheet(false); return; }
+        if (showContactSheet) { setShowContactSheet(false); return; }
+        if (showEditEventModal) { setShowEditEventModal(false); setEditingEvent(null); return; }
+        if (showEditVenueModal) { setShowEditVenueModal(false); return; }
+        if (showAddEventModal) { setShowAddEventModal(false); return; }
+        if (showSubmissionModal) { setShowSubmissionModal(false); return; }
+        if (selectedEvent) { setSelectedEvent(null); return; }
+        if (selectedDeal) { setSelectedDeal(null); return; }
+        if (selectedService) { setSelectedService(null); return; }
+        if (showMyCalendarModal) { setShowMyCalendarModal(false); return; }
+        if (showMessagesModal) { setShowMessagesModal(false); return; }
+        if (showAuthModal) { setShowAuthModal(false); return; }
+        if (showClaimBusinessModal) { setShowClaimBusinessModal(false); return; }
+        if (showProfileModal) { setShowProfileModal(false); return; }
+        if (showAdminPanel) { setShowAdminPanel(false); return; }
+        if (showProfileMenu) { setShowProfileMenu(false); return; }
+        if (showNotifications) { setShowNotifications(false); return; }
+        return;
+      }
+
+      if (isTyping) return;
+
+      if (e.key === '/') {
+        e.preventDefault();
+        const searchInput = document.querySelector('.search-bar-premium input');
+        if (searchInput) searchInput.focus();
+        return;
+      }
+
+      if (view === 'consumer') {
+        const tabs = ['classes', 'events', 'deals', 'services', 'wellness'];
+        const num = parseInt(e.key);
+        if (num >= 1 && num <= 5) {
+          setCurrentSection(tabs[num - 1]);
+          window.history.pushState({ section: tabs[num - 1] }, '', `#${tabs[num - 1]}`);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeydown);
+    return () => window.removeEventListener('keydown', handleKeydown);
+  }, [view, showImageCropper, showBookingSheet, showContactSheet, showEditEventModal, showEditVenueModal, showAddEventModal, showSubmissionModal, selectedEvent, selectedDeal, selectedService, showMyCalendarModal, showMessagesModal, showAuthModal, showClaimBusinessModal, showProfileModal, showAdminPanel, showProfileMenu, showNotifications]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ESC to exit impersonation mode — only when no modals are open
+  useEffect(() => {
+    if (!impersonatedBusiness) return;
+    const anyModalOpen = showImageCropper || showBookingSheet || showContactSheet ||
+      showEditEventModal || showEditVenueModal || showAddEventModal || showSubmissionModal ||
+      selectedEvent || selectedDeal || selectedService || showMyCalendarModal ||
+      showMessagesModal || showAuthModal || showClaimBusinessModal || showProfileModal ||
+      showAdminPanel || showProfileMenu || showNotifications;
+    if (anyModalOpen) return;
+    const handleImpersonateEsc = (e) => {
+      if (e.key === 'Escape') {
+        exitImpersonation();
+      }
+    };
+    window.addEventListener('keydown', handleImpersonateEsc);
+    return () => window.removeEventListener('keydown', handleImpersonateEsc);
+  }, [impersonatedBusiness, showImageCropper, showBookingSheet, showContactSheet, showEditEventModal, showEditVenueModal, showAddEventModal, showSubmissionModal, selectedEvent, selectedDeal, selectedService, showMyCalendarModal, showMessagesModal, showAuthModal, showClaimBusinessModal, showProfileModal, showAdminPanel, showProfileMenu, showNotifications]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Get available time slots from DB events only, filtered by active day filter
   const getAvailableTimeSlots = useCallback(() => {
