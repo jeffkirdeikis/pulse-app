@@ -19,6 +19,7 @@ export function getPacificDateStr() {
 
 /** Create a Date object for a Pacific date + time (from DB fields) */
 export function pacificDate(dateStr, timeStr) {
+  if (!dateStr) return null;
   const [year, month, day] = dateStr.split('-').map(Number);
   const [hours, minutes] = (timeStr || '09:00').split(':').map(Number);
   const fakeLocal = new Date(year, month - 1, day, hours, minutes, 0, 0);
