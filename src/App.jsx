@@ -1861,39 +1861,6 @@ export default function PulseApp() {
           )}
           </AnimatePresence>
 
-          {/* Claim Business Modal - Premium Purple Theme */}
-          <AnimatePresence>
-          {showClaimBusinessModal && (
-            <motion.div key="claim-biz" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} style={{ position: 'fixed', inset: 0, zIndex: 1000 }}>
-            <ClaimBusinessModal
-              claimSearchQuery={claimSearchQuery}
-              setClaimSearchQuery={setClaimSearchQuery}
-              claimSelectedBusiness={claimSelectedBusiness}
-              setClaimSelectedBusiness={setClaimSelectedBusiness}
-              claimFormData={claimFormData}
-              setClaimFormData={setClaimFormData}
-              claimSubmitting={claimSubmitting}
-              claimVerificationStep={claimVerificationStep}
-              claimVerificationCode={claimVerificationCode}
-              setClaimVerificationCode={setClaimVerificationCode}
-              claimVerifying={claimVerifying}
-              claimVerificationMethod={claimVerificationMethod}
-              setClaimVerificationMethod={setClaimVerificationMethod}
-              claimDocuments={claimDocuments}
-              setClaimDocuments={setClaimDocuments}
-              handleVerifyClaimCode={handleVerifyClaimCode}
-              handleResendClaimCode={handleResendClaimCode}
-              setClaimVerificationStep={setClaimVerificationStep}
-              session={session}
-              services={services}
-              claimResendCooldown={claimResendCooldown}
-              onClose={() => { setShowClaimBusinessModal(false); setClaimFormData({ businessName: '', ownerName: '', email: '', phone: '', role: 'owner', address: '' }); setClaimVerificationStep('form'); setClaimVerificationCode(''); setClaimId(null); setClaimResendCooldown(0); if (claimCooldownTimerRef.current) { clearInterval(claimCooldownTimerRef.current); claimCooldownTimerRef.current = null; } setClaimDocuments([]); setClaimVerificationMethod('email'); setClaimSelectedBusiness(null); setClaimSearchQuery(''); }}
-              setShowAuthModal={setShowAuthModal}
-              handleClaimBusiness={handleClaimBusiness}
-            />
-            </motion.div>
-          )}
-          </AnimatePresence>
 
           {/* My Calendar Modal - Premium */}
           <AnimatePresence>
@@ -2262,6 +2229,40 @@ export default function PulseApp() {
           setSelectedEvent={setSelectedEvent}
         />
       )}
+
+      {/* Claim Business Modal - Global (works from any view: consumer, business, admin) */}
+      <AnimatePresence>
+      {showClaimBusinessModal && (
+        <motion.div key="claim-biz" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} style={{ position: 'fixed', inset: 0, zIndex: 1000 }}>
+        <ClaimBusinessModal
+          claimSearchQuery={claimSearchQuery}
+          setClaimSearchQuery={setClaimSearchQuery}
+          claimSelectedBusiness={claimSelectedBusiness}
+          setClaimSelectedBusiness={setClaimSelectedBusiness}
+          claimFormData={claimFormData}
+          setClaimFormData={setClaimFormData}
+          claimSubmitting={claimSubmitting}
+          claimVerificationStep={claimVerificationStep}
+          claimVerificationCode={claimVerificationCode}
+          setClaimVerificationCode={setClaimVerificationCode}
+          claimVerifying={claimVerifying}
+          claimVerificationMethod={claimVerificationMethod}
+          setClaimVerificationMethod={setClaimVerificationMethod}
+          claimDocuments={claimDocuments}
+          setClaimDocuments={setClaimDocuments}
+          handleVerifyClaimCode={handleVerifyClaimCode}
+          handleResendClaimCode={handleResendClaimCode}
+          setClaimVerificationStep={setClaimVerificationStep}
+          session={session}
+          services={services}
+          claimResendCooldown={claimResendCooldown}
+          onClose={() => { setShowClaimBusinessModal(false); setClaimFormData({ businessName: '', ownerName: '', email: '', phone: '', role: 'owner', address: '' }); setClaimVerificationStep('form'); setClaimVerificationCode(''); setClaimId(null); setClaimResendCooldown(0); if (claimCooldownTimerRef.current) { clearInterval(claimCooldownTimerRef.current); claimCooldownTimerRef.current = null; } setClaimDocuments([]); setClaimVerificationMethod('email'); setClaimSelectedBusiness(null); setClaimSearchQuery(''); }}
+          setShowAuthModal={setShowAuthModal}
+          handleClaimBusiness={handleClaimBusiness}
+        />
+        </motion.div>
+      )}
+      </AnimatePresence>
 
       {/* Edit Venue Modal - Global (works from any view) */}
       <AnimatePresence>
