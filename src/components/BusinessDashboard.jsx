@@ -255,12 +255,12 @@ const BusinessDashboard = memo(function BusinessDashboard({
               <div className="pulse-score-ring">
                 <svg viewBox="0 0 120 120">
                   <circle cx="60" cy="60" r="52" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="10" />
-                  <circle cx="60" cy="60" r="52" fill="none" stroke="url(#pulseGradient)" strokeWidth="10"
+                  <circle cx="60" cy="60" r="52" fill="none" stroke="url(#pulseGradientBiz)" strokeWidth="10"
                     strokeDasharray={`${pulseScore / 100 * 327} 327`}
                     strokeLinecap="round"
                     transform="rotate(-90 60 60)" />
                   <defs>
-                    <linearGradient id="pulseGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <linearGradient id="pulseGradientBiz" x1="0%" y1="0%" x2="100%" y2="0%">
                       <stop offset="0%" stopColor="#fbbf24" />
                       <stop offset="100%" stopColor="#f59e0b" />
                     </linearGradient>

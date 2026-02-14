@@ -421,7 +421,7 @@ export default function PulseApp() {
   }, [impersonatedBusiness, showImageCropper, showBookingSheet, showContactSheet, showEditEventModal, showEditVenueModal, showAddEventModal, showSubmissionModal, selectedEvent, selectedDeal, selectedService, showMyCalendarModal, showMessagesModal, showAuthModal, showClaimBusinessModal, showProfileModal, showAdminPanel, showProfileMenu, showNotifications]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Track analytics event
-  const trackAnalytics = async (eventType, businessId, referenceId = null) => {
+  const trackAnalytics = useCallback(async (eventType, businessId, referenceId = null) => {
     try {
       await supabase.from('business_analytics').insert({
         business_id: businessId,
@@ -432,7 +432,7 @@ export default function PulseApp() {
     } catch (err) {
       console.error('Analytics tracking error:', err);
     }
-  };
+  }, [user?.id]);
 
   // Track detail modal views for business analytics
   useEffect(() => {
@@ -447,14 +447,14 @@ export default function PulseApp() {
     if (selectedService?.businessId) trackAnalytics('profile_view', selectedService.businessId, selectedService.id);
   }, [selectedService?.id]);
 
-  const getVenueName = (venueId, event) => {
+  const getVenueName = useCallback((venueId, event) => {
     if (event?.venueName) return event.venueName;
     if (venueId) {
       const venue = REAL_DATA.venues.find(v => v.id === venueId);
       if (venue?.name) return venue.name;
     }
     return event?.venue_name || event?.title || '';
-  };
+  }, []);
   const isVerified = (venueId) => REAL_DATA.venues.find(v => v.id === venueId)?.verified || false;
 
   // Business Analytics State
