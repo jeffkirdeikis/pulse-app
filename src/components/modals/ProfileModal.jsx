@@ -545,23 +545,21 @@ const ProfileModal = memo(function ProfileModal({
                       <div className="biz-metric-card">
                         <div className="metric-icon teal"><Percent size={20} /></div>
                         <div className="metric-data">
-                          <span className="metric-value">0</span>
+                          <span className="metric-value">{userStats.dealsRedeemed}</span>
                           <span className="metric-label">Deals Redeemed</span>
                         </div>
-                        <div className="metric-trend up">
-                          <TrendingUp size={14} />
-                          <span>+45%</span>
+                        <div className="metric-trend neutral">
+                          <span>—</span>
                         </div>
                       </div>
                       <div className="biz-metric-card">
                         <div className="metric-icon pink"><Calendar size={20} /></div>
                         <div className="metric-data">
-                          <span className="metric-value">34</span>
+                          <span className="metric-value">{userStats.eventsAttended}</span>
                           <span className="metric-label">Event RSVPs</span>
                         </div>
-                        <div className="metric-trend up">
-                          <TrendingUp size={14} />
-                          <span>+28%</span>
+                        <div className="metric-trend neutral">
+                          <span>—</span>
                         </div>
                       </div>
                     </div>

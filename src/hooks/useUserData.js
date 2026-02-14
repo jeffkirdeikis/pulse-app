@@ -281,28 +281,18 @@ export function useUserData() {
         }
       }
 
-      // Fetch saved items
-      const { data: savedData } = await supabase
-        .rpc('get_user_saved_items', { p_user_id: userId });
-      if (savedData) {
-        setSavedItems(savedData);
-      }
+      // Fetch saved items, calendar, claimed businesses, and leaderboard in parallel
+      const [savedResult, calendarResult, claimsResult, leaderboardResult] = await Promise.all([
+        supabase.rpc('get_user_saved_items', { p_user_id: userId }),
+        supabase.rpc('get_user_calendar', { p_user_id: userId }),
+        supabase.from('business_claims').select('*').eq('user_id', userId).eq('status', 'verified'),
+        supabase.rpc('get_leaderboard', { p_limit: 100 }),
+      ]);
 
-      // Fetch calendar
-      const { data: calendarData } = await supabase
-        .rpc('get_user_calendar', { p_user_id: userId });
-      if (calendarData) {
-        setMyCalendar(calendarData);
-      }
-
-      // Fetch claimed businesses (only verified claims grant dashboard access)
-      const { data: claimsData } = await supabase
-        .from('business_claims')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('status', 'verified');
-      if (claimsData) {
-        setUserClaimedBusinesses(claimsData.filter(c => c.business_id).map(c => ({
+      if (savedResult.data) setSavedItems(savedResult.data);
+      if (calendarResult.data) setMyCalendar(calendarResult.data);
+      if (claimsResult.data) {
+        setUserClaimedBusinesses(claimsResult.data.filter(c => c.business_id).map(c => ({
           id: c.business_id,
           claimId: c.id,
           name: c.business_name,
@@ -311,15 +301,12 @@ export function useUserData() {
           category: c.business_category
         })));
       }
-
-      // Fetch leaderboard rank
-      const { data: leaderboard } = await supabase.rpc('get_leaderboard', { p_limit: 100 });
-      if (leaderboard) {
-        const userRank = leaderboard.findIndex(u => u.user_id === userId) + 1;
+      if (leaderboardResult.data) {
+        const userRank = leaderboardResult.data.findIndex(u => u.user_id === userId) + 1;
         setUserStats(prev => ({
           ...prev,
-          communityRank: userRank || leaderboard.length + 1,
-          totalMembers: leaderboard.length
+          communityRank: userRank || leaderboardResult.data.length + 1,
+          totalMembers: leaderboardResult.data.length
         }));
       }
 

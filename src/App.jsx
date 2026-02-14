@@ -682,7 +682,7 @@ export default function PulseApp() {
     sendingMessage, setSendingMessage,
     sendingBusinessReply,
     showContactSheet, setShowContactSheet,
-    contactBusiness, contactSubject, setContactSubject,
+    contactBusiness, setContactBusiness, contactSubject, setContactSubject,
     contactMessage, setContactMessage,
     businessInboxTab, setBusinessInboxTab,
     businessConversations, businessConversationsLoading,
@@ -1500,8 +1500,8 @@ export default function PulseApp() {
       <a href="#main-content" className="skip-to-content" style={{position:'absolute',left:'-9999px',top:'auto',width:'1px',height:'1px',overflow:'hidden',zIndex:9999}} onFocus={(e)=>{e.target.style.position='fixed';e.target.style.left='50%';e.target.style.top='8px';e.target.style.transform='translateX(-50%)';e.target.style.width='auto';e.target.style.height='auto';e.target.style.overflow='visible';e.target.style.background='#1f2937';e.target.style.color='#fff';e.target.style.padding='8px 16px';e.target.style.borderRadius='8px';e.target.style.fontSize='14px';e.target.style.fontWeight='600';e.target.style.textDecoration='none';}} onBlur={(e)=>{e.target.style.position='absolute';e.target.style.left='-9999px';e.target.style.width='1px';e.target.style.height='1px';e.target.style.overflow='hidden';}}>Skip to content</a>
       {(user.isAdmin || userClaimedBusinesses.length > 0) && (
         <div className="view-switcher">
-          <button tabIndex={-1} className={view === 'consumer' ? 'active' : ''} onClick={() => { if (impersonatedBusiness) setImpersonatedBusiness(null); setView('consumer'); }}>Consumer</button>
-          <button tabIndex={-1} className={view === 'business' ? 'active' : ''} onClick={() => { if (impersonatedBusiness) setImpersonatedBusiness(null); setView('business'); }}>Business</button>
+          <button tabIndex={-1} className={view === 'consumer' ? 'active' : ''} onClick={() => { if (impersonatedBusiness) { setImpersonatedBusiness(null); setBusinessAnalytics(null); clearBusinessInbox(); setPreviousAdminState(null); } setView('consumer'); }}>Consumer</button>
+          <button tabIndex={-1} className={view === 'business' ? 'active' : ''} onClick={() => { if (impersonatedBusiness) { setImpersonatedBusiness(null); setBusinessAnalytics(null); clearBusinessInbox(); setPreviousAdminState(null); } setView('business'); }}>Business</button>
           {user.isAdmin && <button tabIndex={-1} className={view === 'admin' ? 'active' : ''} onClick={() => { if (impersonatedBusiness) { exitImpersonation(); } else { setView('admin'); } }}>Admin</button>}
         </div>
       )}

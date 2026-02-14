@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 /**
  * Hook that applies IntersectionObserver-based fade-in animations to card elements.
@@ -11,7 +11,15 @@ import { useEffect } from 'react';
  * @param {boolean} options.checkInitial - Whether to check if cards are already visible on mount (default: true)
  */
 export function useCardAnimation(cardRefs, visibleClass, deps = [], { checkInitial = true } = {}) {
+  const observerRef = useRef(null);
+
   useEffect(() => {
+    // Clean up previous observer
+    if (observerRef.current) {
+      observerRef.current.disconnect();
+      observerRef.current = null;
+    }
+
     const timer = setTimeout(() => {
       const observer = new IntersectionObserver(
         (entries) => {
@@ -27,6 +35,8 @@ export function useCardAnimation(cardRefs, visibleClass, deps = [], { checkIniti
         }
       );
 
+      observerRef.current = observer;
+
       cardRefs.current.forEach((card) => {
         if (card) {
           observer.observe(card);
@@ -38,14 +48,14 @@ export function useCardAnimation(cardRefs, visibleClass, deps = [], { checkIniti
           }
         }
       });
-
-      return () => {
-        cardRefs.current.forEach((card) => {
-          if (card) observer.unobserve(card);
-        });
-      };
     }, 100);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+        observerRef.current = null;
+      }
+    };
   }, deps); // eslint-disable-line react-hooks/exhaustive-deps
 }

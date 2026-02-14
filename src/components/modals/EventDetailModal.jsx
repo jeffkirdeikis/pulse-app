@@ -69,6 +69,7 @@ const EventDetailModal = memo(function EventDetailModal({
         drag="y"
         dragConstraints={{ top: 0, bottom: 0 }}
         dragElastic={{ top: 0, bottom: 0.6 }}
+        onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
         style={{ y: dragY, opacity: modalOpacity, scale: modalScale }}
       >
