@@ -119,7 +119,11 @@ export default function PulseApp() {
 
   const markNotificationRead = useCallback(async (notifId) => {
     setNotifications(prev => prev.map(n => n.id === notifId ? { ...n, is_read: true } : n));
-    await supabase.from('pulse_user_notifications').update({ is_read: true }).eq('id', notifId);
+    const { error } = await supabase.from('pulse_user_notifications').update({ is_read: true }).eq('id', notifId);
+    if (error) {
+      // Revert optimistic update on failure
+      setNotifications(prev => prev.map(n => n.id === notifId ? { ...n, is_read: false } : n));
+    }
   }, []);
 
   // User data from Supabase (replaces all hardcoded dummy data)

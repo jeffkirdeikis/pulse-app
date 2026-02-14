@@ -387,7 +387,12 @@ const ProfileModal = memo(function ProfileModal({
                       className="saved-item-remove"
                       onClick={async () => {
                         if (session?.user) {
-                          await toggleSaveItem(item.type, item.itemId, item.name);
+                          try {
+                            const result = await toggleSaveItem(item.type, item.itemId, item.name);
+                            if (result?.error) showToast?.('Failed to remove item', 'error');
+                          } catch {
+                            showToast?.('Failed to remove item', 'error');
+                          }
                         } else {
                           setLocalSavedItems(prev => prev.filter(s => s.itemId !== item.itemId));
                         }
