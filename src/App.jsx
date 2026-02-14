@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowUp, ArrowUpDown, Bookmark, Calendar, Check, X, Plus, CheckCircle, Moon, Percent, Sparkles, Sun, Sunset, LayoutList, MapPin, List } from 'lucide-react';
+import { ArrowUp, Calendar, Check, X, Plus, CheckCircle, Moon, Percent, Sparkles, Sun, Sunset, LayoutList, List } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import { useUserData } from './hooks/useUserData';
 import { useCardAnimation } from './hooks/useCardAnimation';
@@ -1162,37 +1162,7 @@ export default function PulseApp() {
     }
 
     let events = filteredEvents;
-    // Apply saved-only filter when active
-    if (showSavedOnly) {
-      events = events.filter(e => isItemSavedLocal(e.eventType === 'class' ? 'class' : 'event', e.id));
-    }
-    // Apply custom sort
-    if (sortBy === 'price') {
-      events = [...events].sort((a, b) => {
-        const priceA = a.price?.toLowerCase() === 'free' ? 0 : parseFloat(a.price?.replace(/[^0-9.]/g, '')) || 999;
-        const priceB = b.price?.toLowerCase() === 'free' ? 0 : parseFloat(b.price?.replace(/[^0-9.]/g, '')) || 999;
-        return priceA - priceB || a.start - b.start;
-      });
-    } else if (sortBy === 'duration') {
-      events = [...events].sort((a, b) => {
-        const durA = a.end && a.start ? (a.end - a.start) : Infinity;
-        const durB = b.end && b.start ? (b.end - b.start) : Infinity;
-        return durA - durB || a.start - b.start;
-      });
-    }
-    // 'soonest' is the default sort from filterEventsUtil
     if (events.length === 0) {
-      // Special empty state for saved-only mode
-      if (showSavedOnly) {
-        return (
-          <div className="empty-state">
-            <div className="empty-state-icon"><Bookmark size={40} stroke="#9ca3af" /></div>
-            <p className="empty-state-message">No saved {currentSection} yet.</p>
-            <p className="empty-state-sub">Tap the star on any {currentSection === 'classes' ? 'class' : 'event'} to save it here.</p>
-            <button className="empty-state-btn" onClick={() => setShowSavedOnly(false)}>Show All {currentSection === 'classes' ? 'Classes' : 'Events'}</button>
-          </div>
-        );
-      }
       // Contextual empty message based on active filter
       const isSpecificDate = /^\d{4}-\d{2}-\d{2}$/.test(filters.day);
       let emptyMessage = `No ${currentSection} found matching your filters.`;
@@ -1262,41 +1232,6 @@ export default function PulseApp() {
     // Paginate: only render up to visibleEventCount events
     const paginatedEvents = events.slice(0, visibleEventCount);
     const hasMore = events.length > visibleEventCount;
-
-    // Venue-grouped view for classes and events
-    if (groupByVenue && (currentSection === 'classes' || currentSection === 'events')) {
-      const venueGroups = {};
-      paginatedEvents.forEach(e => {
-        const venue = getVenueName(e.venueId, e);
-        if (!venueGroups[venue]) venueGroups[venue] = [];
-        venueGroups[venue].push(e);
-      });
-      const sortedVenues = Object.keys(venueGroups).sort((a, b) => venueGroups[b].length - venueGroups[a].length);
-      let venueGlobalIdx = 0;
-      return (
-        <>
-          {sortedVenues.map(venue => (
-            <div key={venue} className="venue-group">
-              <div className="venue-group-header">
-                <span className="venue-group-name">{venue}</span>
-                <span className="venue-group-count">{venueGroups[venue].length}</span>
-              </div>
-              {venueGroups[venue].map(event => {
-                const idx = venueGlobalIdx++;
-                return <EventCard key={event.id} event={event} index={idx} ref={(el) => eventCardRefs.current[idx] = el} venues={REAL_DATA.venues} isItemSavedLocal={isItemSavedLocal} toggleSave={toggleSave} getVenueName={getVenueName} onSelect={setSelectedEvent} onBookClick={handleBookClick} onPrefetch={prefetchEvent} addToCalendar={addToCalendar} isInMyCalendar={isInMyCalendar} showToast={showToast} searchQuery={searchQuery} compact={compactMode} />;
-              })}
-            </div>
-          ))}
-          {hasMore && (
-            <div ref={loadMoreRef} style={{ textAlign: 'center', padding: '24px 0', minHeight: '1px' }}>
-              <div className="infinite-scroll-loader">
-                <div className="loader-dot" /><div className="loader-dot" /><div className="loader-dot" />
-              </div>
-            </div>
-          )}
-        </>
-      );
-    }
 
     const groupedEvents = groupEventsByDate(paginatedEvents);
     const dateKeys = Object.keys(groupedEvents).sort((a, b) => new Date(a) - new Date(b));
@@ -1606,9 +1541,7 @@ export default function PulseApp() {
                     }).length;
                   } else {
                     if (eventsLoading) return <motion.span key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>Loading...</motion.span>;
-                    count = showSavedOnly
-                      ? filteredEvents.filter(e => isItemSavedLocal(e.eventType === 'class' ? 'class' : 'event', e.id)).length
-                      : filteredEvents.length;
+                    count = filteredEvents.length;
                   }
                   const text = `${count} ${count === 1 ? label : label + (label === 'class' ? 'es' : label === 'business' ? 'es' : 's')}`;
                   return (
@@ -1628,47 +1561,12 @@ export default function PulseApp() {
               <div className="results-bar-actions">
                 {(currentSection === 'classes' || currentSection === 'events') && (
                   <button
-                    className={`group-toggle-btn saved-toggle ${showSavedOnly ? 'active' : ''}`}
-                    onClick={() => setShowSavedOnly(!showSavedOnly)}
-                    aria-label={showSavedOnly ? 'Show all' : 'Show saved only'}
-                    title={showSavedOnly ? 'Show all' : 'Show saved only'}
-                  >
-                    <Bookmark size={16} fill={showSavedOnly ? 'currentColor' : 'none'} />
-                  </button>
-                )}
-                {(currentSection === 'classes' || currentSection === 'events') && (
-                  <button
-                    className={`group-toggle-btn sort-btn ${sortBy !== 'soonest' ? 'active' : ''}`}
-                    onClick={() => {
-                      setSortBy(s => s === 'soonest' ? 'price' : s === 'price' ? 'duration' : 'soonest');
-                      document.querySelector('.results-bar')?.scrollIntoView({ behavior: 'smooth' });
-                    }}
-                    aria-label={`Sort: ${sortBy}`}
-                    title={`Sort: ${sortBy === 'soonest' ? 'Soonest first' : sortBy === 'price' ? 'Price: low to high' : 'Shortest first'}`}
-                  >
-                    <ArrowUpDown size={14} />
-                    <span>{sortBy === 'soonest' ? 'Soonest' : sortBy === 'price' ? 'Price' : 'Duration'}</span>
-                  </button>
-                )}
-                {(currentSection === 'classes' || currentSection === 'events') && (
-                  <button
                     className={`group-toggle-btn ${compactMode ? 'active' : ''}`}
                     onClick={() => setCompactMode(!compactMode)}
                     aria-label={compactMode ? 'Card view' : 'Compact view'}
                     title={compactMode ? 'Card view' : 'Compact view'}
                   >
                     {compactMode ? <LayoutList size={16} /> : <List size={16} />}
-                  </button>
-                )}
-                {(currentSection === 'classes' || currentSection === 'events') && (
-                  <button
-                    className={`group-toggle-btn ${groupByVenue ? 'active' : ''}`}
-                    onClick={() => setGroupByVenue(!groupByVenue)}
-                    aria-label={groupByVenue ? 'Sort by time' : 'Group by venue'}
-                    title={groupByVenue ? 'Sort by time' : 'Group by venue'}
-                  >
-                    {groupByVenue ? <LayoutList size={16} /> : <MapPin size={16} />}
-                    <span>{groupByVenue ? 'By Time' : 'By Venue'}</span>
                   </button>
                 )}
               </div>
