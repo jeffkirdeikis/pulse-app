@@ -1196,9 +1196,11 @@ export default function PulseApp() {
     friday.setHours(0, 0, 0, 0);
     const monday = new Date(friday);
     monday.setDate(friday.getDate() + 3);
+    const isWeekend = dayOfWeek === 5 || dayOfWeek === 6 || dayOfWeek === 0;
+    const startCutoff = isWeekend ? now : friday;
     return dbEvents.filter(e =>
       (currentSection === 'classes' ? e.eventType === 'class' : currentSection === 'events' ? e.eventType === 'event' : true) &&
-      e.start >= friday && e.start < monday
+      e.start >= startCutoff && e.start < monday
     ).length;
   }, [dbEvents, currentSection]);
 
