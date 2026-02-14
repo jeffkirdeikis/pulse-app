@@ -1904,43 +1904,6 @@ export default function PulseApp() {
           )}
           </AnimatePresence>
 
-          {/* Submission Modal - Add Event/Class/Deal */}
-          <AnimatePresence>
-          {showSubmissionModal && (
-            <motion.div key="submission" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} style={{ position: 'fixed', inset: 0, zIndex: 1000 }}>
-            <SubmissionModal
-              submissionStep={submissionStep}
-              submissionType={submissionType}
-              submissionForm={submissionForm}
-              setSubmissionForm={setSubmissionForm}
-              showImageCropper={showImageCropper}
-              cropperImage={cropperImage}
-              cropPosition={cropPosition}
-              setCropPosition={setCropPosition}
-              cropZoom={cropZoom}
-              setCropZoom={setCropZoom}
-              cropperType={cropperType}
-              userClaimedBusinesses={userClaimedBusinesses}
-              user={user}
-              onClose={closeSubmissionModal}
-              setSubmissionStep={setSubmissionStep}
-              setSubmissionType={setSubmissionType}
-              setShowImageCropper={setShowImageCropper}
-              setCropperImage={setCropperImage}
-              setCropperType={setCropperType}
-              selectSubmissionType={selectSubmissionType}
-              selectBusinessType={selectBusinessType}
-              removeImage={removeImage}
-              handleImageSelect={handleImageSelect}
-              handleCropComplete={handleCropComplete}
-              submitForApproval={submitForApproval}
-              submitting={submitting}
-              getSelectedBusinessInfo={getSelectedBusinessInfo}
-              showToast={showToast}
-            />
-            </motion.div>
-          )}
-          </AnimatePresence>
 
           {/* Premium Profile Modal */}
           <AnimatePresence>
@@ -2259,6 +2222,44 @@ export default function PulseApp() {
           onClose={() => { setShowClaimBusinessModal(false); setClaimFormData({ businessName: '', ownerName: '', email: '', phone: '', role: 'owner', address: '' }); setClaimVerificationStep('form'); setClaimVerificationCode(''); setClaimId(null); setClaimResendCooldown(0); if (claimCooldownTimerRef.current) { clearInterval(claimCooldownTimerRef.current); claimCooldownTimerRef.current = null; } setClaimDocuments([]); setClaimVerificationMethod('email'); setClaimSelectedBusiness(null); setClaimSearchQuery(''); }}
           setShowAuthModal={setShowAuthModal}
           handleClaimBusiness={handleClaimBusiness}
+        />
+        </motion.div>
+      )}
+      </AnimatePresence>
+
+      {/* Submission Modal - Global (works from consumer + business views) */}
+      <AnimatePresence>
+      {showSubmissionModal && (
+        <motion.div key="submission" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} style={{ position: 'fixed', inset: 0, zIndex: 1000 }}>
+        <SubmissionModal
+          submissionStep={submissionStep}
+          submissionType={submissionType}
+          submissionForm={submissionForm}
+          setSubmissionForm={setSubmissionForm}
+          showImageCropper={showImageCropper}
+          cropperImage={cropperImage}
+          cropPosition={cropPosition}
+          setCropPosition={setCropPosition}
+          cropZoom={cropZoom}
+          setCropZoom={setCropZoom}
+          cropperType={cropperType}
+          userClaimedBusinesses={userClaimedBusinesses}
+          user={user}
+          onClose={closeSubmissionModal}
+          setSubmissionStep={setSubmissionStep}
+          setSubmissionType={setSubmissionType}
+          setShowImageCropper={setShowImageCropper}
+          setCropperImage={setCropperImage}
+          setCropperType={setCropperType}
+          selectSubmissionType={selectSubmissionType}
+          selectBusinessType={selectBusinessType}
+          removeImage={removeImage}
+          handleImageSelect={handleImageSelect}
+          handleCropComplete={handleCropComplete}
+          submitForApproval={submitForApproval}
+          submitting={submitting}
+          getSelectedBusinessInfo={getSelectedBusinessInfo}
+          showToast={showToast}
         />
         </motion.div>
       )}
