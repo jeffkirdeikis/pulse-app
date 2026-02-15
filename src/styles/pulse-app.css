@@ -7330,6 +7330,10 @@
             transform: translateX(50%);
             z-index: 999;
           }
+          /* Prevent toggle from overlapping last cards */
+          .consumer-view {
+            padding-bottom: 80px;
+          }
         }
 
         /* ========== MODAL DRAG HANDLE ========== */

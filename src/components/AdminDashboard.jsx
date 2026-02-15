@@ -9,6 +9,7 @@ import { getPacificDateStr } from '../utils/timezoneHelpers';
 // Content Review sub-component for verifying events, classes & deals
 function ContentReviewSection({ unverifiedContent, handleVerifyContent, handleRemoveContent, handleBulkVerifyContent, onEditEvent, onPreviewEvent }) {
   const [reviewTab, setReviewTab] = useState('events');
+  const [adminVenueLimit, setAdminVenueLimit] = useState(50);
   const events = unverifiedContent?.events || [];
   const deals = unverifiedContent?.deals || [];
   const classes = events.filter(e => e.event_type === 'class');
@@ -532,19 +533,20 @@ const AdminDashboard = memo(function AdminDashboard({
         </div>
 
         <div className="venues-grid-admin">
-          {services
-            .filter(s => !adminSearchQuery || s.name?.toLowerCase().includes(adminSearchQuery.toLowerCase()) || (s.category && s.category.toLowerCase().includes(adminSearchQuery.toLowerCase())))
-            .filter(s => !adminCategoryFilter || s.category === adminCategoryFilter)
-            .filter(s => {
-              if (!adminStatusFilter) return true;
-              const classCount = dbEvents.filter(e => e.venueId === s.id).length;
-              if (adminStatusFilter === 'has_classes') return classCount > 0;
-              if (adminStatusFilter === 'no_classes') return classCount === 0;
-              if (adminStatusFilter === 'has_website') return !!s.website;
-              if (adminStatusFilter === 'no_website') return !s.website;
-              return true;
-            })
-            .slice(0, (adminSearchQuery || adminCategoryFilter || adminStatusFilter) ? 100 : 50).map((venue, idx) => {
+          {(() => {
+            const filtered = services
+              .filter(s => !adminSearchQuery || s.name?.toLowerCase().includes(adminSearchQuery.toLowerCase()) || (s.category && s.category.toLowerCase().includes(adminSearchQuery.toLowerCase())))
+              .filter(s => !adminCategoryFilter || s.category === adminCategoryFilter)
+              .filter(s => {
+                if (!adminStatusFilter) return true;
+                const classCount = dbEvents.filter(e => e.venueId === s.id).length;
+                if (adminStatusFilter === 'has_classes') return classCount > 0;
+                if (adminStatusFilter === 'no_classes') return classCount === 0;
+                if (adminStatusFilter === 'has_website') return !!s.website;
+                if (adminStatusFilter === 'no_website') return !s.website;
+                return true;
+              });
+            return filtered.slice(0, adminVenueLimit).map((venue, idx) => {
             const classCount = dbEvents.filter(e => e.venueId === venue.id).length;
             return (
               <div key={venue.id} className="venue-card-admin" ref={(el) => venueCardRefs.current[idx] = el}>
@@ -602,8 +604,33 @@ const AdminDashboard = memo(function AdminDashboard({
                 </div>
               </div>
             );
-          })}
+          });
+          })()}
         </div>
+        {(() => {
+          const filtered = services
+            .filter(s => !adminSearchQuery || s.name?.toLowerCase().includes(adminSearchQuery.toLowerCase()) || (s.category && s.category.toLowerCase().includes(adminSearchQuery.toLowerCase())))
+            .filter(s => !adminCategoryFilter || s.category === adminCategoryFilter)
+            .filter(s => {
+              if (!adminStatusFilter) return true;
+              const classCount = dbEvents.filter(e => e.venueId === s.id).length;
+              if (adminStatusFilter === 'has_classes') return classCount > 0;
+              if (adminStatusFilter === 'no_classes') return classCount === 0;
+              if (adminStatusFilter === 'has_website') return !!s.website;
+              if (adminStatusFilter === 'no_website') return !s.website;
+              return true;
+            });
+          return filtered.length > adminVenueLimit ? (
+            <div style={{ textAlign: 'center', padding: '16px 0' }}>
+              <button
+                onClick={() => setAdminVenueLimit(prev => prev + 50)}
+                style={{ background: '#2563eb', color: '#fff', border: 'none', padding: '10px 24px', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}
+              >
+                Load More ({filtered.length - adminVenueLimit} remaining)
+              </button>
+            </div>
+          ) : null;
+        })()}
       </div>
 
       {/* Quick Add Section */}

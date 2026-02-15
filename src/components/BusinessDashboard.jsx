@@ -244,7 +244,7 @@ const BusinessDashboard = memo(function BusinessDashboard({
             <button className="pulse-share-btn" title="Share your Pulse Score" aria-label="Share your Pulse Score" onClick={async () => {
               const shareText = `${activeBusiness?.name} has a Pulse Score of ${pulseScore}/100 on Pulse Squamish! ${earnedBadgeCount} badges earned. Check them out!`;
               if (navigator.share) {
-                try { await navigator.share({ title: `${activeBusiness?.name} - Pulse Score`, text: shareText, url: `https://pulse-app.ca/squamish#services` }); } catch {}
+                try { await navigator.share({ title: `${activeBusiness?.name} - Pulse Score`, text: shareText, url: `https://pulse-app.ca/squamish#services` }); } catch { /* user cancelled share dialog */ }
               } else {
                 try {
                   await navigator.clipboard.writeText(shareText);

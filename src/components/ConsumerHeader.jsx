@@ -128,7 +128,7 @@ const ConsumerHeader = React.memo(function ConsumerHeader({
         <div className="header-container-premium">
           <div className="logo-area-premium">
             <div className="pulse-logo-premium">
-              <svg className="pulse-icon-premium" viewBox="0 0 100 120" fill="none">
+              <svg className="pulse-icon-premium" viewBox="0 0 100 120" fill="none" aria-hidden="true">
                 <defs>
                   <linearGradient id="pulseGradient" x1="0%" y1="0%" x2="100%" y2="100%">
                     <stop offset="0%" style={{stopColor: '#60a5fa'}} />
