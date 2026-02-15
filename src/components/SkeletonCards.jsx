@@ -14,7 +14,8 @@ const SkeletonCard = () => (
 );
 
 const SkeletonCards = ({ count = 6 }) => (
-  <div>
+  <div role="status" aria-label="Loading content">
+    <span className="sr-only" style={{ position: 'absolute', width: '1px', height: '1px', padding: 0, margin: '-1px', overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', borderWidth: 0 }}>Loading...</span>
     {Array.from({ length: count }, (_, i) => (
       <SkeletonCard key={i} />
     ))}

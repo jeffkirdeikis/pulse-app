@@ -48,10 +48,13 @@ const MessagesModal = memo(function MessagesModal({
                   <div
                     key={conv.id}
                     className={`conversation-item ${conv.unread_count > 0 ? 'unread' : ''}`}
+                    role="button"
+                    tabIndex={0}
                     onClick={() => {
                       setCurrentConversation(conv);
                       fetchMessages(conv.id);
                     }}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setCurrentConversation(conv); fetchMessages(conv.id); } }}
                   >
                     <div className="conv-avatar">
                       {conv.business_name?.charAt(0) || 'B'}

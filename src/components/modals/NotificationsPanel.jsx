@@ -98,10 +98,13 @@ const NotificationsPanel = memo(function NotificationsPanel({
                 <div
                   key={notif.id}
                   className={`notif-item ${notif.is_read ? '' : 'unread'}`}
+                  role="button"
+                  tabIndex={0}
                   onClick={() => {
                     if (!notif.is_read) onMarkRead(notif.id);
                     if (onNotificationClick) onNotificationClick(notif);
                   }}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (!notif.is_read) onMarkRead(notif.id); if (onNotificationClick) onNotificationClick(notif); } }}
                 >
                   <div className="notif-icon" style={{ background: `${color}15`, color }}>
                     <Icon size={18} />

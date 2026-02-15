@@ -143,19 +143,19 @@ const AuthModal = memo(function AuthModal({ onClose, onSuccess }) {
           <form onSubmit={authMode === 'signin' ? handleEmailSignIn : handleEmailSignUp} className="auth-form" noValidate>
             {authMode === 'signup' && (
               <div className="auth-form-group">
-                <label>Full Name</label>
-                <input type="text" placeholder="Your name" value={authName} onChange={(e) => { setAuthName(e.target.value); if (fieldErrors.name) setFieldErrors(fe => ({...fe, name: ''})); }} aria-invalid={!!fieldErrors.name} maxLength={100} />
+                <label htmlFor="auth-name">Full Name</label>
+                <input id="auth-name" type="text" placeholder="Your name" value={authName} onChange={(e) => { setAuthName(e.target.value); if (fieldErrors.name) setFieldErrors(fe => ({...fe, name: ''})); }} aria-invalid={!!fieldErrors.name} maxLength={100} />
                 {fieldErrors.name && <span className="auth-field-error" role="alert" style={{color:'#dc2626',fontSize:'12px',marginTop:'4px',display:'block'}}>{fieldErrors.name}</span>}
               </div>
             )}
             <div className="auth-form-group">
-              <label>Email</label>
-              <input type="email" placeholder="you@example.com" value={authEmail} onChange={(e) => { setAuthEmail(e.target.value); if (fieldErrors.email) setFieldErrors(fe => ({...fe, email: ''})); }} aria-invalid={!!fieldErrors.email} maxLength={254} />
+              <label htmlFor="auth-email">Email</label>
+              <input id="auth-email" type="email" placeholder="you@example.com" value={authEmail} onChange={(e) => { setAuthEmail(e.target.value); if (fieldErrors.email) setFieldErrors(fe => ({...fe, email: ''})); }} aria-invalid={!!fieldErrors.email} maxLength={254} />
               {fieldErrors.email && <span className="auth-field-error" role="alert" style={{color:'#dc2626',fontSize:'12px',marginTop:'4px',display:'block'}}>{fieldErrors.email}</span>}
             </div>
             <div className="auth-form-group">
-              <label>Password</label>
-              <input type="password" placeholder={authMode === 'signup' ? 'Create a password (min 6 chars)' : 'Your password'} value={authPassword} onChange={(e) => { setAuthPassword(e.target.value); if (fieldErrors.password) setFieldErrors(fe => ({...fe, password: ''})); }} aria-invalid={!!fieldErrors.password} maxLength={128} />
+              <label htmlFor="auth-password">Password</label>
+              <input id="auth-password" type="password" placeholder={authMode === 'signup' ? 'Create a password (min 6 chars)' : 'Your password'} value={authPassword} onChange={(e) => { setAuthPassword(e.target.value); if (fieldErrors.password) setFieldErrors(fe => ({...fe, password: ''})); }} aria-invalid={!!fieldErrors.password} maxLength={128} />
               {fieldErrors.password && <span className="auth-field-error" role="alert" style={{color:'#dc2626',fontSize:'12px',marginTop:'4px',display:'block'}}>{fieldErrors.password}</span>}
             </div>
             {TURNSTILE_SITE_KEY && (

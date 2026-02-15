@@ -113,13 +113,16 @@ export default function PulseApp() {
     if (!userId) return;
     setNotificationsLoading(true);
     try {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('pulse_user_notifications')
         .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
         .limit(50);
-      setNotifications(data || []);
+      if (!error) {
+        setNotifications(data || []);
+      }
+      // On error, keep existing notifications instead of wiping them
     } catch (e) { /* silent */ }
     setNotificationsLoading(false);
   }, []);
@@ -208,16 +211,24 @@ export default function PulseApp() {
   const markAllNotificationsRead = useCallback(async () => {
     const userId = session?.user?.id;
     if (!userId) return;
-    setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
-    await supabase.from('pulse_user_notifications').update({ is_read: true }).eq('user_id', userId).eq('is_read', false);
-  }, [session]);
+    const prev = notifications;
+    setNotifications(p => p.map(n => ({ ...n, is_read: true })));
+    const { error } = await supabase.from('pulse_user_notifications').update({ is_read: true }).eq('user_id', userId).eq('is_read', false);
+    if (error) {
+      setNotifications(prev); // Revert on failure
+    }
+  }, [session, notifications]);
 
   const clearAllNotifications = useCallback(async () => {
     const userId = session?.user?.id;
     if (!userId) return;
+    const prev = notifications;
     setNotifications([]);
-    await supabase.from('pulse_user_notifications').delete().eq('user_id', userId);
-  }, [session]);
+    const { error } = await supabase.from('pulse_user_notifications').delete().eq('user_id', userId);
+    if (error) {
+      setNotifications(prev); // Revert on failure
+    }
+  }, [session, notifications]);
 
   const createNotification = useCallback(async (type, title, body, data = null) => {
     const userId = session?.user?.id;
