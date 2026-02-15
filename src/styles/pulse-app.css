@@ -3171,12 +3171,12 @@
           transition: opacity 0s;
         }
         
-        .verified-badge-premium {
+        .modal-header-premium {
           text-align: center;
           padding: 32px 32px 24px 32px;
           border-bottom: 1px solid #e5e7eb;
         }
-        
+
         .modal-icon {
           color: #3b82f6;
           margin-bottom: 16px;
@@ -6722,20 +6722,6 @@
           flex-shrink: 0;
         }
 
-
-        .verified-badge-premium {
-          width: 32px;
-          height: 32px;
-          background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: white;
-          box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
-          flex-shrink: 0;
-        }
-
         /* Modal and Utility Classes */
         .empty-state { text-align: center; padding: 40px 20px; }
         .empty-state p { color: #6b7280; margin-bottom: 16px; }
@@ -9357,7 +9343,8 @@
           max-height: 90vh;
           background: #fff;
           border-radius: 28px;
-          overflow: hidden;
+          overflow: hidden auto;
+          -webkit-overflow-scrolling: touch;
           display: flex;
           flex-direction: column;
           animation: modalSlideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1);

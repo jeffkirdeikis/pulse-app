@@ -276,9 +276,9 @@ const AdminDashboard = memo(function AdminDashboard({
             <Calendar size={24} />
           </div>
           <div className="stat-content">
-            <div className="stat-number">{Math.round(dbEvents.length / 7)}</div>
-            <div className="stat-label">Weekly Classes</div>
-            <div className="stat-change">{dbEvents.length} total instances</div>
+            <div className="stat-number">{(() => { const classes = dbEvents.filter(e => e.eventType === 'class'); const uniqueTitles = new Set(classes.map(e => e.title)); return uniqueTitles.size; })()}</div>
+            <div className="stat-label">Unique Classes</div>
+            <div className="stat-change">{dbEvents.filter(e => e.eventType === 'class').length} scheduled instances</div>
           </div>
         </div>
 

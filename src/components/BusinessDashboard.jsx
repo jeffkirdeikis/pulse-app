@@ -5,6 +5,7 @@ import {
   Plus, Send, Share2, Sparkles, Star, Ticket, Trash2, TrendingUp, Users, X, Zap
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { getPacificNow } from '../utils/timezoneHelpers';
 
 const BusinessDashboard = memo(function BusinessDashboard({
   user,
@@ -75,7 +76,7 @@ const BusinessDashboard = memo(function BusinessDashboard({
   const pulseScore = Math.round((profileScore + engagementScore + responseScore + qualityScore) / 4);
 
   // === Computed: Weekly Goals ===
-  const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
+  const weekAgo = getPacificNow(); weekAgo.setDate(weekAgo.getDate() - 7);
   const eventsThisWeek = businessListingsAll.filter(e => e.createdAt && new Date(e.createdAt) >= weekAgo).length;
   const goalPosted = eventsThisWeek > 0;
   const goalViews = businessAnalytics?.totals?.profile_views || 0;

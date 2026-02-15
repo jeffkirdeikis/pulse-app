@@ -102,7 +102,7 @@ const DealsGrid = React.memo(function DealsGrid({
 
             <div className="deal-card-header-new">
               <div className="deal-title-section">
-                <h3>{generateSmartDealTitle(deal, getVenueName(deal.venueId, deal))}</h3>
+                <h3 title={generateSmartDealTitle(deal, getVenueName(deal.venueId, deal))}>{generateSmartDealTitle(deal, getVenueName(deal.venueId, deal))}</h3>
                 {deal.verified && (
                   <div
                     className="verified-badge-premium"
@@ -121,7 +121,7 @@ const DealsGrid = React.memo(function DealsGrid({
                   <div className="detail-icon venue-icon">
                     <MapPin size={16} />
                   </div>
-                  <span className="detail-text">{getVenueName(deal.venueId, deal)}</span>
+                  <span className="detail-text" title={getVenueName(deal.venueId, deal)}>{getVenueName(deal.venueId, deal)}</span>
                 </div>
               </div>
 

@@ -112,8 +112,8 @@ const EventCard = React.forwardRef(({ event, venues, isItemSavedLocal, toggleSav
       >
         <div className="compact-time">{timeStr}</div>
         <div className="compact-info">
-          <span className="compact-title">{searchQuery ? highlightMatch(event.title, searchQuery) : event.title}</span>
-          <span className="compact-venue">{searchQuery ? highlightMatch(venueName, searchQuery) : venueName}</span>
+          <span className="compact-title" title={event.title}>{searchQuery ? highlightMatch(event.title, searchQuery) : event.title}</span>
+          <span className="compact-venue" title={venueName}>{searchQuery ? highlightMatch(venueName, searchQuery) : venueName}</span>
         </div>
         {duration && <span className="compact-duration">{duration}</span>}
         {timeBadge && <span className={`compact-badge ${timeBadge.className}`}>{timeBadge.label.split(' ')[0]}</span>}
@@ -149,7 +149,7 @@ const EventCard = React.forwardRef(({ event, venues, isItemSavedLocal, toggleSav
 
       <div className="event-card-header">
         <div className="event-title-section">
-          <h3>{searchQuery ? highlightMatch(event.title, searchQuery) : event.title}</h3>
+          <h3 title={event.title}>{searchQuery ? highlightMatch(event.title, searchQuery) : event.title}</h3>
           {venues.find(v => v.id === event.venueId)?.verified && (
             <div
               className="verified-badge-premium-inline"
@@ -187,7 +187,7 @@ const EventCard = React.forwardRef(({ event, venues, isItemSavedLocal, toggleSav
             <div className="venue-avatar" style={{ background: categoryColor || '#6b7280' }}>
               {(getVenueName(event.venueId, event) || '?').charAt(0).toUpperCase()}
             </div>
-            <span className="detail-text">{searchQuery ? highlightMatch(getVenueName(event.venueId, event), searchQuery) : getVenueName(event.venueId, event)}</span>
+            <span className="detail-text" title={getVenueName(event.venueId, event)}>{searchQuery ? highlightMatch(getVenueName(event.venueId, event), searchQuery) : getVenueName(event.venueId, event)}</span>
             <ChevronRight size={14} className="venue-chevron" />
           </div>
         </div>

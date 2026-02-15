@@ -188,7 +188,7 @@ const ServicesGrid = React.memo(function ServicesGrid({
               >
                 <div className="service-card-header-new">
                   <div className="service-title-section">
-                    <h3>{service.name}</h3>
+                    <h3 title={service.name}>{service.name}</h3>
                   </div>
                   {service.rating && (
                     <div className="service-rating-badge">

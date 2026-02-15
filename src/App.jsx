@@ -65,7 +65,21 @@ export default function PulseApp() {
   const serviceCardRefs = useRef([]);
   const classCardRefs = useRef([]);
   const venueCardRefs = useRef([]);
-  const loadMoreRef = useRef(null);
+  const loadMoreObserverRef = useRef(null);
+  const loadMoreCallbackRef = useCallback((el) => {
+    if (loadMoreObserverRef.current) {
+      loadMoreObserverRef.current.disconnect();
+      loadMoreObserverRef.current = null;
+    }
+    if (!el) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setVisibleEventCount(c => c + 50);
+      }
+    }, { rootMargin: '200px' });
+    observer.observe(el);
+    loadMoreObserverRef.current = observer;
+  }, []);
   const claimCooldownTimerRef = useRef(null);
   const savingInProgressRef = useRef(new Set());
   const [installPromptEvent, setInstallPromptEvent] = useState(null);
@@ -881,6 +895,39 @@ export default function PulseApp() {
         const dayAfter = new Date(tomorrow);
         dayAfter.setDate(tomorrow.getDate() + 1);
         return e.start >= tomorrow && e.start < dayAfter;
+      } else if (filters.day === 'happeningNow') {
+        const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000);
+        return e.start >= twoHoursAgo && e.start <= now;
+      } else if (filters.day === 'thisWeek') {
+        const dayOfWeek = now.getDay();
+        const daysUntilSunday = dayOfWeek === 0 ? 7 : 7 - dayOfWeek;
+        const sunday = new Date(now);
+        sunday.setDate(now.getDate() + daysUntilSunday);
+        sunday.setHours(23, 59, 59, 999);
+        return e.start >= now && e.start <= sunday;
+      } else if (filters.day === 'thisWeekend') {
+        const dayOfWeek = now.getDay();
+        const friday = new Date(now);
+        const isWeekend = dayOfWeek === 5 || dayOfWeek === 6 || dayOfWeek === 0;
+        if (isWeekend) {
+          const daysBack = dayOfWeek === 0 ? 2 : dayOfWeek - 5;
+          friday.setDate(now.getDate() - daysBack);
+        } else {
+          friday.setDate(now.getDate() + (5 - dayOfWeek));
+        }
+        friday.setHours(0, 0, 0, 0);
+        const monday = new Date(friday);
+        monday.setDate(friday.getDate() + 3);
+        const startCutoff = isWeekend ? now : friday;
+        return e.start >= startCutoff && e.start < monday;
+      } else if (filters.day === 'nextWeek') {
+        const nextMonday = new Date(now);
+        const daysUntilNextMonday = (8 - now.getDay()) % 7 || 7;
+        nextMonday.setDate(now.getDate() + daysUntilNextMonday);
+        nextMonday.setHours(0, 0, 0, 0);
+        const followingSunday = new Date(nextMonday);
+        followingSunday.setDate(nextMonday.getDate() + 7);
+        return e.start >= nextMonday && e.start < followingSunday;
       }
       return e.start >= now;
     });
@@ -1421,7 +1468,7 @@ export default function PulseApp() {
       <>
         {renderedDays}
         {hasMore && (
-          <div ref={loadMoreRef} style={{ textAlign: 'center', padding: '24px 0', minHeight: '1px' }}>
+          <div ref={loadMoreCallbackRef} style={{ textAlign: 'center', padding: '24px 0', minHeight: '1px' }}>
             <div className="infinite-scroll-loader">
               <div className="loader-dot" /><div className="loader-dot" /><div className="loader-dot" />
             </div>
@@ -1569,18 +1616,6 @@ export default function PulseApp() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
-  // Infinite scroll — auto-load more events when sentinel comes into view
-  useEffect(() => {
-    const el = loadMoreRef.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) {
-        setVisibleEventCount(c => c + 50);
-      }
-    }, { rootMargin: '200px' });
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [currentSection, filters.day, filters.category, filters.time, filters.price, filters.age]);
 
   return (
     <div className="pulse-app">

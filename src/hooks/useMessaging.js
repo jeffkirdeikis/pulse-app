@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 
 /**
@@ -22,6 +22,7 @@ export function useMessaging(user, { showToast, onAuthRequired, activeBusiness, 
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [messageInput, setMessageInput] = useState('');
   const [sendingMessage, setSendingMessage] = useState(false);
+  const sendingMessageRef = useRef(false);
   const [sendingBusinessReply, setSendingBusinessReply] = useState(false);
 
   // Contact sheet state
@@ -86,7 +87,8 @@ export function useMessaging(user, { showToast, onAuthRequired, activeBusiness, 
 
   // Send a message in current conversation
   const sendMessage = useCallback(async () => {
-    if (!messageInput.trim() || !currentConversation || sendingMessage || !user?.id) return;
+    if (!messageInput.trim() || !currentConversation || sendingMessageRef.current || !user?.id) return;
+    sendingMessageRef.current = true;
     setSendingMessage(true);
     try {
       // Rate limit: 20 messages per 10 minutes
@@ -115,9 +117,10 @@ export function useMessaging(user, { showToast, onAuthRequired, activeBusiness, 
       console.error('Error sending message:', err);
       showToast?.('Failed to send message. Please try again.', 'error');
     } finally {
+      sendingMessageRef.current = false;
       setSendingMessage(false);
     }
-  }, [messageInput, currentConversation, sendingMessage, user?.id, fetchMessages, showToast]);
+  }, [messageInput, currentConversation, user?.id, fetchMessages, showToast]);
 
   // Start a new conversation with a business
   const startConversation = useCallback(async (businessId, subject, initialMessage) => {
