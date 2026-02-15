@@ -81,13 +81,16 @@ export function useUserData() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (import.meta.env.DEV) console.log('[Auth] Auth state changed:', event, 'Session:', session ? 'exists' : 'null');
+      if (event === 'TOKEN_REFRESHED' && import.meta.env.DEV) {
+        console.log('[Auth] Token refreshed successfully');
+      }
       if (session?.user) {
         if (import.meta.env.DEV) console.log('[Auth] User from session:', session.user.id, session.user.email);
       }
       setSession(session);
       if (session?.user) {
         fetchUserData(session.user.id, session.user);
-      } else {
+      } else if (event === 'SIGNED_OUT' || !session) {
         resetUserData();
       }
     });
@@ -406,9 +409,13 @@ export function useUserData() {
   // Update avatar
   const updateAvatar = async (file) => {
     if (!session?.user) return { error: 'Not authenticated' };
+    if (!file.type.startsWith('image/') || file.type === 'image/svg+xml') {
+      return { error: 'Only image files (PNG, JPG, GIF, WebP) are allowed' };
+    }
 
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${session.user.id}/avatar.${fileExt}`;
+    const fileExt = file.name.split('.').pop().toLowerCase().replace(/[^a-z0-9]/g, '');
+    const safeExt = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExt) ? fileExt : 'png';
+    const fileName = `${session.user.id}/avatar.${safeExt}`;
 
     const { error: uploadError } = await supabase.storage
       .from('avatars')
@@ -434,9 +441,13 @@ export function useUserData() {
   // Update cover photo
   const updateCoverPhoto = async (file) => {
     if (!session?.user) return { error: 'Not authenticated' };
+    if (!file.type.startsWith('image/') || file.type === 'image/svg+xml') {
+      return { error: 'Only image files (PNG, JPG, GIF, WebP) are allowed' };
+    }
 
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${session.user.id}/cover.${fileExt}`;
+    const fileExt = file.name.split('.').pop().toLowerCase().replace(/[^a-z0-9]/g, '');
+    const safeExt = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExt) ? fileExt : 'png';
+    const fileName = `${session.user.id}/cover.${safeExt}`;
 
     const { error: uploadError } = await supabase.storage
       .from('avatars')

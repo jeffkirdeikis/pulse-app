@@ -188,22 +188,24 @@ const SubmissionModal = memo(function SubmissionModal({
                   <>
                     <div className="form-group full">
                       <label>Business / Organization Name *</label>
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         placeholder="e.g., Breathe Fitness Studio"
                         value={submissionForm.businessName}
                         onChange={(e) => setSubmissionForm(prev => ({ ...prev, businessName: e.target.value }))}
                         className="form-input"
+                        maxLength={200}
                       />
                     </div>
                     <div className="form-group full">
                       <label>Business Address</label>
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         placeholder="e.g., 1234 Main St, Squamish"
                         value={submissionForm.businessAddress}
                         onChange={(e) => setSubmissionForm(prev => ({ ...prev, businessAddress: e.target.value }))}
                         className="form-input"
+                        maxLength={300}
                       />
                     </div>
                   </>
@@ -276,23 +278,25 @@ const SubmissionModal = memo(function SubmissionModal({
                 {/* Title */}
                 <div className="form-group full">
                   <label>{submissionType === 'deal' ? 'Deal Title' : submissionType === 'class' ? 'Class Name' : 'Event Title'} *</label>
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     placeholder={submissionType === 'deal' ? 'e.g., Happy Hour 50% Off Apps' : submissionType === 'class' ? 'e.g., Hot Yoga Flow' : 'e.g., Live Music Night'}
                     value={submissionForm.title}
                     onChange={(e) => setSubmissionForm(prev => ({ ...prev, title: e.target.value }))}
                     className="form-input"
+                    maxLength={200}
                   />
                 </div>
 
                 <div className="form-group full">
                   <label>Description *</label>
-                  <textarea 
+                  <textarea
                     placeholder="Tell people what to expect..."
                     value={submissionForm.description}
                     onChange={(e) => setSubmissionForm(prev => ({ ...prev, description: e.target.value }))}
                     className="form-input textarea"
                     rows={3}
+                    maxLength={5000}
                   />
                 </div>
 
@@ -301,11 +305,12 @@ const SubmissionModal = memo(function SubmissionModal({
                   <>
                     <div className="form-group">
                       <label>Date *</label>
-                      <input 
-                        type="date" 
+                      <input
+                        type="date"
                         value={submissionForm.date}
                         onChange={(e) => setSubmissionForm(prev => ({ ...prev, date: e.target.value }))}
                         className="form-input"
+                        min={new Date().toISOString().split('T')[0]}
                       />
                     </div>
                     <div className="form-group half">
@@ -341,12 +346,13 @@ const SubmissionModal = memo(function SubmissionModal({
                     </div>
                     <div className="form-group">
                       <label>Price</label>
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         placeholder="e.g., $25 or Free"
                         value={submissionForm.price}
                         onChange={(e) => setSubmissionForm(prev => ({ ...prev, price: e.target.value }))}
                         className="form-input"
+                        maxLength={50}
                       />
                     </div>
                     <div className="form-group">
@@ -443,6 +449,7 @@ const SubmissionModal = memo(function SubmissionModal({
                         value={submissionForm.validUntil}
                         onChange={(e) => setSubmissionForm(prev => ({ ...prev, validUntil: e.target.value }))}
                         className="form-input"
+                        min={new Date().toISOString().split('T')[0]}
                       />
                     </div>
                     <div className="form-group full">
@@ -453,6 +460,7 @@ const SubmissionModal = memo(function SubmissionModal({
                         value={submissionForm.schedule}
                         onChange={(e) => setSubmissionForm(prev => ({ ...prev, schedule: e.target.value }))}
                         className="form-input"
+                        maxLength={200}
                       />
                     </div>
                     <div className="form-group full">
@@ -463,6 +471,7 @@ const SubmissionModal = memo(function SubmissionModal({
                         onChange={(e) => setSubmissionForm(prev => ({ ...prev, terms: e.target.value }))}
                         className="form-input textarea"
                         rows={2}
+                        maxLength={2000}
                       />
                     </div>
                   </>

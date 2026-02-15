@@ -203,6 +203,8 @@
         .contact-bottom-sheet {
           width: 100%;
           max-height: 80vh;
+          overflow-y: auto;
+          -webkit-overflow-scrolling: touch;
           background: white;
           border-radius: 24px 24px 0 0;
           padding: 24px;
@@ -13916,7 +13918,7 @@
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.35);
-  z-index: 9998;
+  z-index: 998;
   animation: feedbackFadeIn 0.2s ease;
 }
 
@@ -13924,7 +13926,7 @@
   position: fixed;
   bottom: 24px;
   right: 24px;
-  z-index: 9999;
+  z-index: 999;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -13955,7 +13957,7 @@
   position: fixed;
   bottom: 24px;
   right: 24px;
-  z-index: 9999;
+  z-index: 999;
   width: 380px;
   max-width: calc(100vw - 32px);
   background: white;

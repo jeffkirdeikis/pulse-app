@@ -182,6 +182,7 @@ const FeedbackWidget = memo(function FeedbackWidget() {
                   onChange={e => setMessage(e.target.value)}
                   placeholder={currentType?.placeholder}
                   maxLength={5000}
+                  aria-label="Feedback message"
                 />
 
                 {/* Screenshot (bug only) */}
@@ -192,7 +193,7 @@ const FeedbackWidget = memo(function FeedbackWidget() {
                       <div className="feedback-screenshot-preview">
                         <img src={screenshot.preview} alt="preview" />
                         <span className="feedback-screenshot-name">{screenshot.name}</span>
-                        <button onClick={() => { setScreenshot(null); setScreenshotFile(null); }} className="feedback-screenshot-remove">
+                        <button onClick={() => { setScreenshot(null); setScreenshotFile(null); }} className="feedback-screenshot-remove" aria-label="Remove screenshot">
                           <X size={14} />
                         </button>
                       </div>
@@ -212,6 +213,7 @@ const FeedbackWidget = memo(function FeedbackWidget() {
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   placeholder="Email (optional — so we can follow up)"
+                  aria-label="Email address (optional)"
                 />
 
                 {/* Context badge */}

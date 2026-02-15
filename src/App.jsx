@@ -53,6 +53,12 @@ export default function PulseApp() {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [selectedDeal, setSelectedDeal] = useState(null);
   const [selectedService, setSelectedService] = useState(null);
+  // Refresh current time every 5 minutes so filters stay fresh for long-idle sessions
+  const [currentTime, setCurrentTime] = useState(() => getPacificNow());
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(getPacificNow()), 5 * 60 * 1000);
+    return () => clearInterval(timer);
+  }, []);
   const toastTimeoutRef = useRef(null);
   const dealCardRefs = useRef([]);
   const eventCardRefs = useRef([]);
@@ -176,7 +182,8 @@ export default function PulseApp() {
     // Initialize from localStorage for persistence without login
     try {
       const saved = localStorage.getItem('pulse_local_saves');
-      return saved ? JSON.parse(saved) : [];
+      const parsed = saved ? JSON.parse(saved) : [];
+      return Array.isArray(parsed) ? parsed : [];
     } catch {
       return [];
     }
@@ -816,6 +823,21 @@ export default function PulseApp() {
     return () => window.removeEventListener('keydown', handleImpersonateEsc);
   }, [impersonatedBusiness, showImageCropper, showBookingSheet, showContactSheet, showEditEventModal, showEditVenueModal, showAddEventModal, showSubmissionModal, selectedEvent, selectedDeal, selectedService, showMyCalendarModal, showMessagesModal, showAuthModal, showClaimBusinessModal, showProfileModal, showAdminPanel, showProfileMenu, showNotifications]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Lock body scroll when any modal is open (prevents background scrolling on mobile)
+  useEffect(() => {
+    const anyModalOpen = showImageCropper || showBookingSheet || showContactSheet ||
+      showEditEventModal || showEditVenueModal || showAddEventModal || showSubmissionModal ||
+      selectedEvent || selectedDeal || selectedService || showMyCalendarModal ||
+      showMessagesModal || showAuthModal || showClaimBusinessModal || showProfileModal ||
+      showAdminPanel;
+    if (anyModalOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [showImageCropper, showBookingSheet, showContactSheet, showEditEventModal, showEditVenueModal, showAddEventModal, showSubmissionModal, selectedEvent, selectedDeal, selectedService, showMyCalendarModal, showMessagesModal, showAuthModal, showClaimBusinessModal, showProfileModal, showAdminPanel]);
+
   // Get available time slots from DB events only, filtered by active day filter
   const getAvailableTimeSlots = useCallback(() => {
     const slots = new Set();
@@ -1136,13 +1158,13 @@ export default function PulseApp() {
     setVisibleEventCount(50);
   }, [currentSection, filters, searchQuery, kidsAgeRange]);
 
-  // Memoized filter — only recomputes when inputs change (Bug #20: called twice per render)
+  // Memoized filter — only recomputes when inputs change. Uses currentTime (refreshes every 5min) to avoid stale filters.
   const filteredEvents = useMemo(() => {
     return filterEventsUtil(
       dbEvents,
-      { currentSection, filters, searchQuery, kidsAgeRange, getVenueName, now: getPacificNow() }
+      { currentSection, filters, searchQuery, kidsAgeRange, getVenueName, now: currentTime }
     );
-  }, [dbEvents, currentSection, filters, searchQuery, kidsAgeRange]);
+  }, [dbEvents, currentSection, filters, searchQuery, kidsAgeRange, currentTime]);
 
   // Build search suggestions from venue names and event titles
   const searchSuggestions = useMemo(() => {

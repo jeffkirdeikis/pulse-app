@@ -22,16 +22,16 @@ const EditEventModal = memo(function EditEventModal({
     <div className="modal-body-premium">
       <div className="form-group">
         <label>Title</label>
-        <input type="text" value={editEventForm.title} onChange={(e) => setEditEventForm(prev => ({ ...prev, title: e.target.value }))} />
+        <input type="text" value={editEventForm.title} onChange={(e) => setEditEventForm(prev => ({ ...prev, title: e.target.value }))} maxLength={200} />
       </div>
       <div className="form-group">
         <label>Description</label>
-        <textarea rows={3} value={editEventForm.description} onChange={(e) => setEditEventForm(prev => ({ ...prev, description: e.target.value }))} />
+        <textarea rows={3} value={editEventForm.description} onChange={(e) => setEditEventForm(prev => ({ ...prev, description: e.target.value }))} maxLength={5000} />
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
         <div className="form-group">
           <label>Date</label>
-          <input type="date" value={editEventForm.date} onChange={(e) => setEditEventForm(prev => ({ ...prev, date: e.target.value }))} />
+          <input type="date" value={editEventForm.date} onChange={(e) => setEditEventForm(prev => ({ ...prev, date: e.target.value }))} min={new Date().toISOString().split('T')[0]} />
         </div>
         <div className="form-group">
           <label>Start Time</label>
@@ -45,11 +45,11 @@ const EditEventModal = memo(function EditEventModal({
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
         <div className="form-group">
           <label>Price</label>
-          <input type="text" placeholder="Free or $20" value={editEventForm.price} onChange={(e) => setEditEventForm(prev => ({ ...prev, price: e.target.value }))} />
+          <input type="text" placeholder="Free or $20" value={editEventForm.price} onChange={(e) => setEditEventForm(prev => ({ ...prev, price: e.target.value }))} maxLength={50} />
         </div>
         <div className="form-group">
           <label>Category</label>
-          <input type="text" value={editEventForm.category} onChange={(e) => setEditEventForm(prev => ({ ...prev, category: e.target.value }))} />
+          <input type="text" value={editEventForm.category} onChange={(e) => setEditEventForm(prev => ({ ...prev, category: e.target.value }))} maxLength={50} />
         </div>
       </div>
     </div>

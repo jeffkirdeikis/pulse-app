@@ -18,8 +18,8 @@ const MessagesModal = memo(function MessagesModal({
   return (
     <div className="modal-overlay messages-modal-overlay" role="dialog" aria-modal="true" aria-label="Messages" onClick={() => onClose()}>
       <div className="messages-modal" onClick={(e) => e.stopPropagation()}>
-        <button className="close-btn messages-close" onClick={() => { onClose(); setCurrentConversation(null); }}>
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+        <button className="close-btn messages-close" onClick={() => { onClose(); setCurrentConversation(null); }} aria-label="Close">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
             <path d="M1 1L13 13M1 13L13 1" stroke="#374151" strokeWidth="2" strokeLinecap="round"/>
           </svg>
         </button>

@@ -72,8 +72,8 @@ const DealDetailModal = memo(function DealDetailModal({
   return (
     <div className="modal-overlay deal-modal-overlay" role="dialog" aria-modal="true" aria-label="Deal details" onClick={onClose}>
       <div className="deal-detail-modal" onClick={(e) => e.stopPropagation()}>
-        <button className="close-btn deal-close" onClick={onClose}>
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{display: 'block'}}>
+        <button className="close-btn deal-close" onClick={onClose} aria-label="Close">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{display: 'block'}} aria-hidden="true">
             <path d="M1 1L13 13M1 13L13 1" stroke="#374151" strokeWidth="2" strokeLinecap="round"/>
           </svg>
         </button>

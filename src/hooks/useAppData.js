@@ -179,7 +179,9 @@ export function useAppData() {
           const fixedEndTime = `${String(endHours).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}`;
           endDate = pacificDate(event.start_date, fixedEndTime);
         } else {
-          endDate = pacificDate(event.start_date, `${String(hours + 1).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`);
+          const endHour = hours >= 23 ? 23 : hours + 1;
+          const endMin = hours >= 23 ? 59 : minutes;
+          endDate = pacificDate(event.start_date, `${String(endHour).padStart(2, '0')}:${String(endMin).padStart(2, '0')}`);
         }
 
         return {
@@ -237,7 +239,7 @@ export function useAppData() {
       const mappedDeals = data.map(deal => ({
         id: deal.id,
         title: deal.title,
-        venueId: null,
+        venueId: deal.business_id || null,
         venueName: deal.business_name || 'Local Business',
         venueAddress: deal.business_address || 'Squamish, BC',
         category: deal.category || 'Other',

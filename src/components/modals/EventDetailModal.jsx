@@ -77,8 +77,8 @@ const EventDetailModal = memo(function EventDetailModal({
         <div className="modal-drag-handle" aria-hidden="true">
           <div className="drag-handle-bar" />
         </div>
-        <button className="close-btn event-close" onClick={onClose}>
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+        <button className="close-btn event-close" onClick={onClose} aria-label="Close">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
             <path d="M1 1L13 13M1 13L13 1" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
           </svg>
         </button>

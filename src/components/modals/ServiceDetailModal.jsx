@@ -38,7 +38,7 @@ const ServiceDetailModal = memo(function ServiceDetailModal({
   return (
     <div className="modal-overlay service-modal-overlay" role="dialog" aria-modal="true" aria-label="Service details" onClick={handleClose}>
       <div className="service-detail-modal" onClick={(e) => e.stopPropagation()}>
-        <button className="close-btn service-close" onClick={handleClose}><X size={24} /></button>
+        <button className="close-btn service-close" onClick={handleClose} aria-label="Close"><X size={24} /></button>
 
         {/* Hero Section */}
         <div className="service-hero">

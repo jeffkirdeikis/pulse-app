@@ -166,12 +166,12 @@ const ConsumerHeader = React.memo(function ConsumerHeader({
               </button>
             ) : (
               <>
-                <button className="header-btn-icon messages-btn" onClick={openMessages}>
+                <button className="header-btn-icon messages-btn" onClick={openMessages} aria-label="Messages">
                   <div style={{ color: '#374151', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <MessageCircle size={22} strokeWidth={2} />
                   </div>
                 </button>
-                <button className="header-btn-icon notification-btn" onClick={onOpenNotifications} style={{ position: 'relative' }}>
+                <button className="header-btn-icon notification-btn" onClick={onOpenNotifications} style={{ position: 'relative' }} aria-label="Notifications">
                   <div style={{ color: '#374151', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <Bell size={22} strokeWidth={2} />
                   </div>
