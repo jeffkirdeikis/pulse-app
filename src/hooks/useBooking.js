@@ -19,8 +19,6 @@ export function useBooking({ getVenueName, venues, trackAnalytics, addToCalendar
   const [showBookingSheet, setShowBookingSheet] = useState(false);
   const [bookingEvent, setBookingEvent] = useState(null);
   const [bookingStep, setBookingStep] = useState('iframe');
-  const [, setIframeLoaded] = useState(false);
-  const [, setIframeFailed] = useState(false);
   const [showBookingConfirmation, setShowBookingConfirmation] = useState(false);
   const [bookingRequestMessage, setBookingRequestMessage] = useState('');
 
@@ -47,8 +45,6 @@ export function useBooking({ getVenueName, venues, trackAnalytics, addToCalendar
     trackAnalytics('booking_click', business.id, event.id);
 
     setBookingEvent(event);
-    setIframeLoaded(false);
-    setIframeFailed(false);
     setBookingRequestMessage('');
 
     const hasBookingUrl = business.booking_url;

@@ -107,12 +107,12 @@ export default function PulseApp() {
   const [notificationsLoading, setNotificationsLoading] = useState(false);
 
   // Helper function to show toast messages
-  const showToast = useCallback((message, type = 'info') => {
+  const showToast = useCallback((message, type = 'info', duration = 3000) => {
     if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
     setCalendarToastMessage(message);
     setCalendarToastType(type);
     setShowCalendarToast(true);
-    toastTimeoutRef.current = setTimeout(() => setShowCalendarToast(false), 3000);
+    toastTimeoutRef.current = setTimeout(() => setShowCalendarToast(false), duration);
   }, []);
 
   // Track view count on events/deals tables for business analytics
@@ -225,24 +225,24 @@ export default function PulseApp() {
   const markAllNotificationsRead = useCallback(async () => {
     const userId = session?.user?.id;
     if (!userId) return;
-    const prev = notifications;
-    setNotifications(p => p.map(n => ({ ...n, is_read: true })));
+    let prevSnapshot;
+    setNotifications(p => { prevSnapshot = [...p]; return p.map(n => ({ ...n, is_read: true })); });
     const { error } = await supabase.from('pulse_user_notifications').update({ is_read: true }).eq('user_id', userId).eq('is_read', false);
     if (error) {
-      setNotifications(prev); // Revert on failure
+      setNotifications(prevSnapshot);
     }
-  }, [session, notifications]);
+  }, [session]);
 
   const clearAllNotifications = useCallback(async () => {
     const userId = session?.user?.id;
     if (!userId) return;
-    const prev = notifications;
-    setNotifications([]);
+    let prevSnapshot;
+    setNotifications(p => { prevSnapshot = [...p]; return []; });
     const { error } = await supabase.from('pulse_user_notifications').delete().eq('user_id', userId);
     if (error) {
-      setNotifications(prev); // Revert on failure
+      setNotifications(prevSnapshot);
     }
-  }, [session, notifications]);
+  }, [session]);
 
   const createNotification = useCallback(async (type, title, body, data = null) => {
     const userId = session?.user?.id;
@@ -678,7 +678,7 @@ export default function PulseApp() {
       events = events.filter(e => e.eventType === 'event');
     }
     // Apply day filter so category options reflect visible date range
-    const now = getPacificNow();
+    const now = currentTime;
     const todayMidnight = new Date(now);
     todayMidnight.setHours(0, 0, 0, 0);
     if (filters.day === 'anytime') {
@@ -729,7 +729,7 @@ export default function PulseApp() {
     // Only include categories with >0 matching events (Bug #7-9: empty dropdown options)
     const cats = Object.keys(catCounts).filter(c => catCounts[c] > 0).sort();
     return ['All', ...cats];
-  }, [dbEvents, currentSection, filters.day]);
+  }, [dbEvents, currentSection, filters.day, currentTime]);
 
   // Helper to close Add Event modal
   const closeAddEventModal = () => {
@@ -875,7 +875,7 @@ export default function PulseApp() {
     }
 
     // Filter time slots by the active day filter so they're relevant
-    const now = getPacificNow();
+    const now = currentTime;
     const todayMidnight = new Date(now);
     todayMidnight.setHours(0, 0, 0, 0);
 
@@ -945,7 +945,7 @@ export default function PulseApp() {
       const [bHour, bMin] = b.split(':').map(Number);
       return (aHour * 60 + aMin) - (bHour * 60 + bMin);
     });
-  }, [dbEvents, currentSection, filters.day]);
+  }, [dbEvents, currentSection, filters.day, currentTime]);
 
   // Check if any events/classes are free (for data-driven price filter) — DB only
   const hasFreeItems = dbEvents.some(e => e.price?.toLowerCase() === 'free');
@@ -1237,7 +1237,7 @@ export default function PulseApp() {
   // Count events per day for date picker chips (next 14 days)
   const dateEventCounts = useMemo(() => {
     const counts = {};
-    const now = getPacificNow();
+    const now = currentTime;
     // Filter to current section only
     const sectionEvents = dbEvents.filter(e =>
       currentSection === 'classes' ? e.eventType === 'class' :
@@ -1251,30 +1251,30 @@ export default function PulseApp() {
       counts[key] = (counts[key] || 0) + 1;
     });
     return counts;
-  }, [dbEvents, currentSection]);
+  }, [dbEvents, currentSection, currentTime]);
 
   // Count events happening right now (started within last 2 hours)
   const happeningNowCount = useMemo(() => {
-    const now = getPacificNow();
+    const now = currentTime;
     const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000);
     return dbEvents.filter(e =>
       (currentSection === 'classes' ? e.eventType === 'class' : currentSection === 'events' ? e.eventType === 'event' : true) &&
       e.start >= twoHoursAgo && e.start <= now
     ).length;
-  }, [dbEvents, currentSection]);
+  }, [dbEvents, currentSection, currentTime]);
 
   // Count free events (upcoming)
   const freeCount = useMemo(() => {
-    const now = getPacificNow();
+    const now = currentTime;
     return dbEvents.filter(e =>
       (currentSection === 'classes' ? e.eventType === 'class' : currentSection === 'events' ? e.eventType === 'event' : true) &&
       e.start >= now && e.price?.toLowerCase() === 'free'
     ).length;
-  }, [dbEvents, currentSection]);
+  }, [dbEvents, currentSection, currentTime]);
 
   // Count weekend events
   const weekendCount = useMemo(() => {
-    const now = getPacificNow();
+    const now = currentTime;
     const dayOfWeek = now.getDay();
     const friday = new Date(now);
     if (dayOfWeek === 5 || dayOfWeek === 6 || dayOfWeek === 0) {
@@ -1292,7 +1292,7 @@ export default function PulseApp() {
       (currentSection === 'classes' ? e.eventType === 'class' : currentSection === 'events' ? e.eventType === 'event' : true) &&
       e.start >= startCutoff && e.start < monday
     ).length;
-  }, [dbEvents, currentSection]);
+  }, [dbEvents, currentSection, currentTime]);
 
   // Group events by date for infinite scroll with dividers
   const groupEventsByDate = (events) => {
@@ -1349,7 +1349,7 @@ export default function PulseApp() {
       for (const [key, val] of Object.entries(activeFilters)) {
         if (!val) continue;
         const tryFilters = { ...filters, [key]: 'all' };
-        const tryEvents = filterEventsUtil(dbEvents, { currentSection, filters: tryFilters, searchQuery, kidsAgeRange, getVenueName, now: getPacificNow() });
+        const tryEvents = filterEventsUtil(dbEvents, { currentSection, filters: tryFilters, searchQuery, kidsAgeRange, getVenueName, now: currentTime });
         if (tryEvents.length > 0) {
           const label = filterLabels[key]?.[val] || val;
           suggestions.push({ label: `Remove "${label}" filter`, count: tryEvents.length, action: () => setFilters({ ...filters, [key]: 'all' }) });
@@ -1391,7 +1391,7 @@ export default function PulseApp() {
 
     const groupedEvents = groupEventsByDate(paginatedEvents);
     const dateKeys = Object.keys(groupedEvents).sort((a, b) => new Date(a) - new Date(b));
-    const now = getPacificNow();
+    const now = currentTime;
     const today = new Date(now);
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);

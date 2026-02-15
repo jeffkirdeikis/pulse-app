@@ -180,7 +180,7 @@ const ConsumerHeader = React.memo(function ConsumerHeader({
                   )}
                 </button>
                 <div className="profile-btn" role="button" tabIndex={0} aria-label="Profile menu" onClick={() => setShowProfileMenu(!showProfileMenu)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setShowProfileMenu(!showProfileMenu); } }}>
-                  <div className="profile-avatar">{user.avatar ? <img src={user.avatar} alt="" onError={(e) => { e.target.style.display = 'none'; }} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (user.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'U')}</div>
+                  <div className="profile-avatar">{user.avatar ? <img src={user.avatar} alt="" onError={(e) => { e.target.style.display = 'none'; }} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (user.name?.trim() ? user.name.trim().split(/\s+/).filter(Boolean).map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'U' : 'U')}</div>
                 </div>
               </>
             )}

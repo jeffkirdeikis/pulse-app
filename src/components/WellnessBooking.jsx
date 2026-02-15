@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   ArrowLeft, Calendar, Clock, Filter, Heart, Star, MapPin, ExternalLink,
   Bell, BellOff, ChevronRight, ChevronLeft, X, Users, DollarSign,
@@ -118,7 +118,7 @@ export default function WellnessBooking({
 
   const dateScrollRef = useRef(null);
   const selectedDateRef = useRef(null);
-  const dates = getDateRange();
+  const dates = useMemo(() => getDateRange(), []);
 
   // Fetch providers
   const fetchProviders = useCallback(async () => {
@@ -942,16 +942,6 @@ function AlertSetupModal({ provider, days, setDays, timeRange, setTimeRange, onS
     </div>
   );
 }
-
-function formatTimeSince(date) {
-  const mins = Math.floor((Date.now() - date.getTime()) / 60000);
-  if (mins < 1) return 'Just now';
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  return `${Math.floor(hrs / 24)}d ago`;
-}
-
 
 // ============================================
 // STYLES

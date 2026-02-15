@@ -23,7 +23,7 @@ const ProfileMenu = React.memo(function ProfileMenu({
     <div className="profile-menu-overlay" onClick={onClose}>
       <div className="profile-menu-dropdown" onClick={(e) => e.stopPropagation()}>
         <div className="profile-menu-header">
-          <div className="profile-avatar large">{user.avatar ? <img src={user.avatar} alt="" /> : (user.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'U')}</div>
+          <div className="profile-avatar large">{user.avatar ? <img src={user.avatar} alt="" /> : (user.name?.trim() ? user.name.trim().split(/\s+/).filter(Boolean).map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'U' : 'U')}</div>
           <div className="profile-menu-info">
             <h3>{user.name || 'Guest'}</h3>
             <p>{user.email || 'Not signed in'}</p>

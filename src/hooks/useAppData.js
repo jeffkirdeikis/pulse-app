@@ -153,14 +153,14 @@ export function useAppData() {
       const data = allData;
 
       const mappedEvents = data.map(event => {
+        const timeUnknown = !event.start_time;
         let startTimeStr = event.start_time || '09:00';
         let [hours, minutes] = startTimeStr.split(':').map(Number);
 
-        // Fix suspicious times: classes at midnight or 1-5 AM are likely data errors
-        if (hours === 0 || (hours >= 1 && hours <= 5)) {
+        // Fix suspicious times: midnight through 4 AM are likely scraper errors
+        // Allow 5 AM+ as legitimate early morning classes (sunrise yoga, etc.)
+        if (hours >= 0 && hours <= 4) {
           hours = 9;
-          minutes = 0;
-        } else if (minutes === 26) {
           minutes = 0;
         }
 
@@ -170,10 +170,9 @@ export function useAppData() {
         let endDate;
         if (event.end_time) {
           let [endHours, endMinutes] = event.end_time.split(':').map(Number);
-          if (endHours >= 1 && endHours <= 5) {
+          // Same correction for end time: midnight through 4 AM
+          if (endHours >= 0 && endHours <= 4) {
             endHours = 10;
-            endMinutes = 0;
-          } else if (endMinutes === 26) {
             endMinutes = 0;
           }
           const fixedEndTime = `${String(endHours).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}`;
@@ -205,7 +204,8 @@ export function useAppData() {
           image: event.image_url,
           viewCount: event.view_count || 0,
           createdAt: event.created_at || null,
-          businessId: event.business_id || event.venue_id || null
+          businessId: event.business_id || event.venue_id || null,
+          timeUnknown
         };
       });
 
