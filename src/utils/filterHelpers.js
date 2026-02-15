@@ -72,11 +72,11 @@ export function filterEvents(allEvents, { currentSection, filters, searchQuery, 
     const startCutoff = isWeekend ? now : friday;
     filtered = filtered.filter(e => e.start >= startCutoff && e.start < monday);
   } else if (filters.day === 'thisWeek') {
-    // Current week: from now until end of Sunday
-    // On Sunday (dayOfWeek=0), (7-0)%7=0 → end of today, not +7 days
+    // Current week: from now until end of next Sunday
     const dayOfWeek = now.getDay(); // 0=Sun
+    const daysUntilSunday = dayOfWeek === 0 ? 7 : 7 - dayOfWeek; // On Sunday, show through NEXT Sunday
     const sunday = new Date(now);
-    sunday.setDate(now.getDate() + ((7 - dayOfWeek) % 7));
+    sunday.setDate(now.getDate() + daysUntilSunday);
     sunday.setHours(23, 59, 59, 999);
     filtered = filtered.filter(e => e.start >= now && e.start <= sunday);
   } else if (filters.day === 'nextWeek') {

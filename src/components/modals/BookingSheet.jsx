@@ -46,12 +46,13 @@ const BookingSheet = memo(function BookingSheet({
         {/* External booking view - for businesses with booking URLs */}
         {bookingStep === 'iframe' && (() => {
           const business = getBusinessForEvent(bookingEvent);
-          const bookingUrl = business?.booking_url;
+          const rawUrl = business?.booking_url;
+          const bookingUrl = rawUrl && (() => { try { const u = new URL(rawUrl.startsWith('http') ? rawUrl : `https://${rawUrl}`); return ['http:', 'https:'].includes(u.protocol) ? u.href : null; } catch { return null; } })();
 
           return (
             <div className="external-booking-container">
               <a
-                href={bookingUrl}
+                href={bookingUrl || '#'}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="open-booking-btn"

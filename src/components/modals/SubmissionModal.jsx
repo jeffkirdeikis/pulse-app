@@ -481,8 +481,8 @@ const SubmissionModal = memo(function SubmissionModal({
                   onClick={submitForApproval}
                   disabled={
                     submitting ||
-                    !submissionForm.title || !submissionForm.description || !submissionForm.businessType ||
-                    (submissionForm.businessType === 'new' && !submissionForm.businessName) ||
+                    !submissionForm.title?.trim() || !submissionForm.description?.trim() || !submissionForm.businessType ||
+                    (submissionForm.businessType === 'new' && !submissionForm.businessName?.trim()) ||
                     ((submissionType === 'event' || submissionType === 'class') && (!submissionForm.date || !submissionForm.startTime || !submissionForm.endTime || !submissionForm.category)) ||
                     (submissionType === 'deal' && !submissionForm.schedule)
                   }

@@ -31,20 +31,23 @@ export function useCalendar({ myCalendar, isAuthenticated, session, registerForE
     const isAlreadyInCalendar = myCalendar.some(e => e.eventId === event.id || e.id === event.id);
 
     if (!isAlreadyInCalendar && isAuthenticated) {
-      await registerForEvent({
-        id: event.id,
-        eventType: event.eventType || 'event',
-        title: event.title,
-        date: event.start && !isNaN(event.start.getTime()) ? event.start.toISOString().split('T')[0] : event.date,
-        time: event.start && !isNaN(event.start.getTime()) ? event.start.toLocaleTimeString('en-US', { timeZone: PACIFIC_TZ, hour: 'numeric', minute: '2-digit' }) : event.time,
-        venue: getVenueName(event.venueId, event),
-        address: event.location || event.address || '',
-        ...event
-      });
-      showToast(`"${event.title}" added to My Calendar!`);
-      if (onCalendarAdd) onCalendarAdd();
-      // Only open Google Calendar on successful add
-      window.open(generateGoogleCalendarUrl(event), '_blank');
+      try {
+        await registerForEvent({
+          id: event.id,
+          eventType: event.eventType || 'event',
+          title: event.title,
+          date: event.start && !isNaN(event.start.getTime()) ? event.start.toISOString().split('T')[0] : event.date,
+          time: event.start && !isNaN(event.start.getTime()) ? event.start.toLocaleTimeString('en-US', { timeZone: PACIFIC_TZ, hour: 'numeric', minute: '2-digit' }) : event.time,
+          venue: getVenueName(event.venueId, event),
+          address: event.location || event.address || '',
+          ...event
+        });
+        showToast(`"${event.title}" added to My Calendar!`);
+        if (onCalendarAdd) onCalendarAdd();
+        window.open(generateGoogleCalendarUrl(event), '_blank');
+      } catch {
+        showToast('Failed to add to calendar. Please try again.', 'error');
+      }
     } else if (isAlreadyInCalendar) {
       showToast(`"${event.title}" is already in your calendar`);
     } else {
