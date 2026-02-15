@@ -6,6 +6,7 @@ import {
   Users, X, Zap
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 const ProfileModal = memo(function ProfileModal({
   user,
@@ -45,9 +46,10 @@ const ProfileModal = memo(function ProfileModal({
   showToast,
   toggleSaveItem,
 }) {
+  const focusTrapRef = useFocusTrap();
   return (
     <div className="modal-overlay profile-modal-overlay" role="dialog" aria-modal="true" aria-label="Profile" onClick={() => onClose()}>
-      <div className="profile-modal" onClick={(e) => e.stopPropagation()}>
+      <div className="profile-modal" ref={focusTrapRef} onClick={(e) => e.stopPropagation()}>
         <button className="close-btn profile-close" onClick={() => onClose()}><X size={24} /></button>
 
         {/* Hidden file inputs for profile images */}

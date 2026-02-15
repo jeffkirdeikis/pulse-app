@@ -2,6 +2,7 @@ import React, { memo } from 'react';
 import {
   Building, Check, Info, Percent, Plus, Sparkles, Users, X, Zap
 } from 'lucide-react';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 const SubmissionModal = memo(function SubmissionModal({
   submissionStep,
@@ -33,9 +34,10 @@ const SubmissionModal = memo(function SubmissionModal({
   getSelectedBusinessInfo,
   showToast,
 }) {
+  const focusTrapRef = useFocusTrap();
   return (
     <div className="modal-overlay submission-modal-overlay" role="dialog" aria-modal="true" aria-label="Submit event" onClick={onClose}>
-      <div className="submission-modal" onClick={(e) => e.stopPropagation()}>
+      <div className="submission-modal" ref={focusTrapRef} onClick={(e) => e.stopPropagation()}>
         <button className="close-btn submission-close" onClick={onClose}><X size={24} /></button>
 
         {/* Step 1: Select Type */}

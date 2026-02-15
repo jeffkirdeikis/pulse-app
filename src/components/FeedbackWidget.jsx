@@ -101,6 +101,10 @@ const FeedbackWidget = memo(function FeedbackWidget() {
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (!file.type.startsWith('image/') || file.type === 'image/svg+xml') {
+      setError('Only image files (PNG, JPG, GIF, WebP) are allowed');
+      return;
+    }
     if (file.size > 5 * 1024 * 1024) {
       setError('Screenshot must be under 5MB');
       return;

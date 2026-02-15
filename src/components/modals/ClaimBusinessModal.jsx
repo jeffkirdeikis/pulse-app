@@ -1,5 +1,6 @@
 import React, { memo, useRef } from 'react';
 import { AlertCircle, Building, CheckCircle, FileText, Mail, RefreshCw, Upload, X } from 'lucide-react';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 const MAX_FILES = 3;
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -32,6 +33,7 @@ const ClaimBusinessModal = memo(function ClaimBusinessModal({
   handleClaimBusiness,
 }) {
   const fileInputRef = useRef(null);
+  const focusTrapRef = useFocusTrap();
 
   const maskedEmail = claimFormData.email
     ? claimFormData.email.replace(/^(.)(.*)(@.*)$/, (_, first, middle, domain) => first + '*'.repeat(Math.min(middle.length, 5)) + domain)
@@ -60,7 +62,7 @@ const ClaimBusinessModal = memo(function ClaimBusinessModal({
 
   return (
     <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Claim business" onClick={onClose}>
-      <div className="claim-modal-premium" onClick={(e) => e.stopPropagation()}>
+      <div className="claim-modal-premium" ref={focusTrapRef} onClick={(e) => e.stopPropagation()}>
         <button className="claim-modal-close" onClick={onClose}><X size={24} /></button>
 
         {/* Purple Gradient Header */}

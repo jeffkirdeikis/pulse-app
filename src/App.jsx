@@ -61,6 +61,7 @@ export default function PulseApp() {
   const venueCardRefs = useRef([]);
   const loadMoreRef = useRef(null);
   const claimCooldownTimerRef = useRef(null);
+  const savingInProgressRef = useRef(new Set());
   const [installPromptEvent, setInstallPromptEvent] = useState(null);
   const [showInstallBanner, setShowInstallBanner] = useState(false);
   const [showBackToTop, setShowBackToTop] = useState(false);
@@ -1417,6 +1418,9 @@ export default function PulseApp() {
   const toggleSave = useCallback(async (id, type, name = '', data = {}) => {
     const itemKey = `${type}-${id}`;
 
+    // Prevent concurrent save operations on the same item
+    if (savingInProgressRef.current.has(itemKey)) return;
+
     if (!isAuthenticated) {
       // Use local storage when not logged in
       setLocalSavedItems(prev => {
@@ -1434,6 +1438,9 @@ export default function PulseApp() {
       });
       return;
     }
+
+    // Lock to prevent rapid-click race condition
+    savingInProgressRef.current.add(itemKey);
 
     // Optimistic update for logged-in users — use functional updater to avoid stale closure
     let wasIncluded = false;
@@ -1466,6 +1473,8 @@ export default function PulseApp() {
         return prev;
       });
       showToast('Failed to save. Please try again.', 'error');
+    } finally {
+      savingInProgressRef.current.delete(itemKey);
     }
   }, [isAuthenticated, toggleSaveItem, showToast, createSaveNotification]);
 

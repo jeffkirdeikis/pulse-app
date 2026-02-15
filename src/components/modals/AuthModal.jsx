@@ -2,6 +2,7 @@ import React, { memo, useState, useRef } from 'react';
 import { AlertCircle, Mail, MapPin, X } from 'lucide-react';
 import { Turnstile } from '@marsidev/react-turnstile';
 import { supabase } from '../../lib/supabase';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 import LegalModal from './LegalModal';
 
 const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY;
@@ -17,6 +18,7 @@ const AuthModal = memo(function AuthModal({ onClose, onSuccess }) {
   const [captchaToken, setCaptchaToken] = useState('');
   const [legalModal, setLegalModal] = useState(null);
   const turnstileRef = useRef(null);
+  const focusTrapRef = useFocusTrap();
 
   const handleClose = () => {
     setAuthError('');
@@ -115,7 +117,7 @@ const AuthModal = memo(function AuthModal({ onClose, onSuccess }) {
 
   return (
     <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Sign in" onClick={handleClose}>
-      <div className="auth-modal" onClick={(e) => e.stopPropagation()}>
+      <div className="auth-modal" ref={focusTrapRef} onClick={(e) => e.stopPropagation()}>
         <button className="auth-modal-close" onClick={handleClose}><X size={24} /></button>
         <div className="auth-modal-header">
           <div className="auth-logo">
