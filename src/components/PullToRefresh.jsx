@@ -64,8 +64,8 @@ const PullToRefresh = ({ onRefresh, children }) => {
   const containerRef = useRef(null);
 
   const handleTouchStart = useCallback((e) => {
-    // Only activate when scrolled to top
-    if (containerRef.current && containerRef.current.scrollTop > 0) return;
+    // Only activate when page is scrolled to top (window is the scroll container)
+    if (window.scrollY > 0 || document.documentElement.scrollTop > 0) return;
     if (refreshing) return;
     startY.current = e.touches[0].clientY;
     currentY.current = startY.current;

@@ -109,6 +109,7 @@ function ContentReviewSection({ unverifiedContent, handleVerifyContent, handleRe
                   <button
                     onClick={() => onPreviewEvent(item)}
                     title="Preview"
+                    aria-label="Preview event"
                     style={{
                       width: '36px', height: '36px', borderRadius: '8px', border: '1px solid #e5e7eb', cursor: 'pointer',
                       background: '#fff', color: '#6b7280', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -121,6 +122,7 @@ function ContentReviewSection({ unverifiedContent, handleVerifyContent, handleRe
                   <button
                     onClick={() => onEditEvent(item)}
                     title="Edit"
+                    aria-label="Edit event"
                     style={{
                       width: '36px', height: '36px', borderRadius: '8px', border: '1px solid #e5e7eb', cursor: 'pointer',
                       background: '#fff', color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -132,6 +134,7 @@ function ContentReviewSection({ unverifiedContent, handleVerifyContent, handleRe
                 <button
                   onClick={() => handleVerifyContent(activeType, item.id)}
                   title="Verify"
+                  aria-label="Verify content"
                   style={{
                     width: '36px', height: '36px', borderRadius: '8px', border: 'none', cursor: 'pointer',
                     background: '#d1fae5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -142,6 +145,7 @@ function ContentReviewSection({ unverifiedContent, handleVerifyContent, handleRe
                 <button
                   onClick={() => handleRemoveContent(activeType, item.id, item.title)}
                   title="Remove"
+                  aria-label="Remove content"
                   style={{
                     width: '36px', height: '36px', borderRadius: '8px', border: '1px solid #fecaca', cursor: 'pointer',
                     background: '#fff', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -572,7 +576,7 @@ const AdminDashboard = memo(function AdminDashboard({
                 </div>
                 {/* Stats will be populated from real analytics data */}
                 <div className="venue-card-actions">
-                  <button className="action-btn-mini" onClick={() => {
+                  <button className="action-btn-mini" aria-label="Edit venue" onClick={() => {
                     setEditingVenue(venue);
                     setEditVenueForm({
                       name: venue.name || '',
@@ -584,8 +588,8 @@ const AdminDashboard = memo(function AdminDashboard({
                     });
                     setShowEditVenueModal(true);
                   }}><Edit2 size={14} /></button>
-                  <button className="action-btn-mini impersonate" title="View as this business" onClick={() => enterImpersonation(venue)}><Eye size={14} /></button>
-                  <button className="action-btn-mini danger" onClick={async () => {
+                  <button className="action-btn-mini impersonate" title="View as this business" aria-label="View as this business" onClick={() => enterImpersonation(venue)}><Eye size={14} /></button>
+                  <button className="action-btn-mini danger" aria-label="Deactivate venue" onClick={async () => {
                     if (confirm(`Deactivate ${venue.name}? This will hide it from the directory. It can be reactivated later.`)) {
                       try {
                         const { error } = await supabase
@@ -593,11 +597,11 @@ const AdminDashboard = memo(function AdminDashboard({
                           .update({ status: 'inactive' })
                           .eq('id', venue.id);
                         if (error) throw error;
-                        showToast(`${venue.name} deleted`, 'success');
+                        showToast(`${venue.name} deactivated`, 'success');
                         await fetchServices(true);
                       } catch (err) {
-                        console.error('Error deleting:', err);
-                        showToast('Failed to delete business', 'error');
+                        console.error('Error deactivating:', err);
+                        showToast('Failed to deactivate business', 'error');
                       }
                     }
                   }}><Trash2 size={14} /></button>

@@ -222,11 +222,15 @@ export default function PulseApp() {
   const { subscribeToPush } = usePushNotifications(session?.user?.id);
 
   // Notification functions that need session
+  const notificationsRef = useRef([]);
+  // Keep ref in sync for snapshot-based rollback
+  useEffect(() => { notificationsRef.current = notifications; }, [notifications]);
+
   const markAllNotificationsRead = useCallback(async () => {
     const userId = session?.user?.id;
     if (!userId) return;
-    let prevSnapshot;
-    setNotifications(p => { prevSnapshot = [...p]; return p.map(n => ({ ...n, is_read: true })); });
+    const prevSnapshot = [...notificationsRef.current];
+    setNotifications(p => p.map(n => ({ ...n, is_read: true })));
     const { error } = await supabase.from('pulse_user_notifications').update({ is_read: true }).eq('user_id', userId).eq('is_read', false);
     if (error) {
       setNotifications(prevSnapshot);
@@ -236,8 +240,8 @@ export default function PulseApp() {
   const clearAllNotifications = useCallback(async () => {
     const userId = session?.user?.id;
     if (!userId) return;
-    let prevSnapshot;
-    setNotifications(p => { prevSnapshot = [...p]; return []; });
+    const prevSnapshot = [...notificationsRef.current];
+    setNotifications([]);
     const { error } = await supabase.from('pulse_user_notifications').delete().eq('user_id', userId);
     if (error) {
       setNotifications(prevSnapshot);
@@ -434,23 +438,27 @@ export default function PulseApp() {
   const [businessAnalytics, setBusinessAnalytics] = useState(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [analyticsPeriod, setAnalyticsPeriod] = useState(30); // days
+  const analyticsRequestRef = useRef(0);
 
-  // Fetch business analytics
+  // Fetch business analytics (request ID prevents stale responses from racing)
   const fetchBusinessAnalytics = async (businessId, days = 30) => {
     if (!businessId) return;
+    const requestId = ++analyticsRequestRef.current;
     setAnalyticsLoading(true);
     try {
       const { data, error } = await supabase.rpc('get_business_analytics_summary', {
         p_business_id: businessId,
         p_days: days
       });
+      if (requestId !== analyticsRequestRef.current) return; // stale response
       if (error) throw error;
       setBusinessAnalytics(data);
     } catch (err) {
+      if (requestId !== analyticsRequestRef.current) return;
       console.error('Error fetching analytics:', err);
       setBusinessAnalytics(null);
     } finally {
-      setAnalyticsLoading(false);
+      if (requestId === analyticsRequestRef.current) setAnalyticsLoading(false);
     }
   };
 
@@ -2076,10 +2084,12 @@ export default function PulseApp() {
                 setShowNotifications(false);
                 if (notif.data?.eventId) {
                   const evt = dbEvents.find(e => e.id === notif.data.eventId);
-                  if (evt) setSelectedEvent(evt);
+                  if (evt) { setSelectedEvent(evt); }
+                  else { showToast('This event is no longer available'); }
                 } else if (notif.data?.dealId) {
                   const deal = dbDeals.find(d => d.id === notif.data.dealId);
-                  if (deal) setSelectedDeal(deal);
+                  if (deal) { setSelectedDeal(deal); }
+                  else { showToast('This deal is no longer available'); }
                 }
               }}
             />

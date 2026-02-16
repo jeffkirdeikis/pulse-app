@@ -35,7 +35,7 @@ const BookingSheet = memo(function BookingSheet({
             <div className="event-title-row">{bookingEvent.title}</div>
             <div className="sheet-event-info">
               <Calendar size={14} />
-              <span>{bookingEvent.start?.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) || 'Date TBD'}</span>
+              <span>{bookingEvent.start?.toLocaleDateString('en-US', { timeZone: PACIFIC_TZ, weekday: 'short', month: 'short', day: 'numeric' }) || 'Date TBD'}</span>
               <span className="dot">•</span>
               <Clock size={14} />
               <span>{bookingEvent.start?.toLocaleTimeString('en-US', { timeZone: PACIFIC_TZ, hour: 'numeric', minute: '2-digit' }) || 'Time TBD'}</span>

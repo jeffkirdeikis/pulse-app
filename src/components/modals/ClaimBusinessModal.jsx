@@ -280,7 +280,7 @@ const ClaimBusinessModal = memo(function ClaimBusinessModal({
                   {claimDocuments.length > 0 && (
                     <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       {claimDocuments.map((file, i) => (
-                        <div key={i} style={{
+                        <div key={`${file.name}-${file.size}`} style={{
                           display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px',
                           background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px',
                         }}>

@@ -183,6 +183,11 @@ const BusinessDashboard = memo(function BusinessDashboard({
                     onChange={async (e) => {
                       const file = e.target.files?.[0];
                       if (!file || !activeBusiness?.id) return;
+                      if (!file.type.startsWith('image/') || file.type === 'image/svg+xml') {
+                        showToast('Only image files (PNG, JPG, GIF, WebP) are allowed', 'error');
+                        e.target.value = '';
+                        return;
+                      }
                       try {
                         const fileExt = file.name.split('.').pop();
                         const fileName = `business-logos/${activeBusiness.id}/logo.${fileExt}`;
