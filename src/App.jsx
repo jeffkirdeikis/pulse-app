@@ -1408,21 +1408,18 @@ export default function PulseApp() {
     return filteredDeals.filter(d => dealCategoryFilter === 'All' || normalizeDealCategory(d.category) === dealCategoryFilter).length;
   }, [filteredDeals, dealCategoryFilter]);
 
-  // Group events by date for infinite scroll with dividers
-  const groupEventsByDate = (events) => {
+  // Memoize paginated events and grouping for infinite scroll with dividers
+  const paginatedEvents = useMemo(() => filteredEvents.slice(0, visibleEventCount), [filteredEvents, visibleEventCount]);
+  const groupedEvents = useMemo(() => {
     const grouped = {};
-    
-    events.forEach(event => {
+    paginatedEvents.forEach(event => {
       if (!event.start) return;
       const dateKey = event.start.toDateString();
-      if (!grouped[dateKey]) {
-        grouped[dateKey] = [];
-      }
+      if (!grouped[dateKey]) grouped[dateKey] = [];
       grouped[dateKey].push(event);
     });
-    
     return grouped;
-  };
+  }, [paginatedEvents]);
 
   // Render events with date dividers
   const renderEventsWithDividers = () => {
@@ -1499,11 +1496,7 @@ export default function PulseApp() {
       );
     }
 
-    // Paginate: only render up to visibleEventCount events
-    const paginatedEvents = events.slice(0, visibleEventCount);
     const hasMore = events.length > visibleEventCount;
-
-    const groupedEvents = groupEventsByDate(paginatedEvents);
     const dateKeys = Object.keys(groupedEvents).sort((a, b) => new Date(a) - new Date(b));
     const now = currentTime;
     const today = new Date(now);
