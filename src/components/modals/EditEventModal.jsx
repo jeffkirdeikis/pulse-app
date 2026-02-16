@@ -31,7 +31,7 @@ const EditEventModal = memo(function EditEventModal({
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
         <div className="form-group">
           <label>Date</label>
-          <input type="date" value={editEventForm.date} onChange={(e) => setEditEventForm(prev => ({ ...prev, date: e.target.value }))} min={new Date().toISOString().split('T')[0]} />
+          <input type="date" value={editEventForm.date} onChange={(e) => setEditEventForm(prev => ({ ...prev, date: e.target.value }))} min={new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Los_Angeles' })).toISOString().split('T')[0]} />
         </div>
         <div className="form-group">
           <label>Start Time</label>

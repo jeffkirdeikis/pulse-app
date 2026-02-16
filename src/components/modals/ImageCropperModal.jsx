@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import React, { memo, useRef, useEffect, useCallback } from 'react';
 
 const ImageCropperModal = memo(function ImageCropperModal({
   cropperImage,
@@ -10,6 +10,23 @@ const ImageCropperModal = memo(function ImageCropperModal({
   onClose,
   handleCropComplete,
 }) {
+  const frameRef = useRef(null);
+  const cropZoomRef = useRef(cropZoom);
+  useEffect(() => { cropZoomRef.current = cropZoom; }, [cropZoom]);
+
+  // Attach wheel listener with { passive: false } to allow preventDefault in Chrome
+  useEffect(() => {
+    const el = frameRef.current;
+    if (!el) return;
+    const handleWheel = (e) => {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? -0.05 : 0.05;
+      const newZoom = Math.max(1, Math.min(3, cropZoomRef.current + delta));
+      setCropZoom(newZoom);
+    };
+    el.addEventListener('wheel', handleWheel, { passive: false });
+    return () => el.removeEventListener('wheel', handleWheel);
+  }, [setCropZoom]);
   if (!cropperImage) return null;
   return (
 <div className="cropper-overlay-global" onClick={() => { onClose(); }}>
@@ -101,12 +118,7 @@ const ImageCropperModal = memo(function ImageCropperModal({
               });
             }
           }}
-          onWheel={(e) => {
-            e.preventDefault();
-            const delta = e.deltaY > 0 ? -0.05 : 0.05;
-            const newZoom = Math.max(1, Math.min(3, cropZoom + delta));
-            setCropZoom(newZoom);
-          }}
+          ref={frameRef}
         >
           <img 
             src={cropperImage} 

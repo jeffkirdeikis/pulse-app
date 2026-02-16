@@ -60,6 +60,7 @@ export default function PulseApp() {
     return () => clearInterval(timer);
   }, []);
   const toastTimeoutRef = useRef(null);
+  const openModalRef = useRef({}); // Tracks modal states for popstate handler (avoids stale closure)
   const dealCardRefs = useRef([]);
   const eventCardRefs = useRef([]);
   const serviceCardRefs = useRef([]);
@@ -143,9 +144,13 @@ export default function PulseApp() {
 
   const markNotificationRead = useCallback(async (notifId) => {
     setNotifications(prev => prev.map(n => n.id === notifId ? { ...n, is_read: true } : n));
-    const { error } = await supabase.from('pulse_user_notifications').update({ is_read: true }).eq('id', notifId);
-    if (error) {
-      // Revert optimistic update on failure
+    try {
+      const { error } = await supabase.from('pulse_user_notifications').update({ is_read: true }).eq('id', notifId);
+      if (error) {
+        // Revert optimistic update on failure
+        setNotifications(prev => prev.map(n => n.id === notifId ? { ...n, is_read: false } : n));
+      }
+    } catch {
       setNotifications(prev => prev.map(n => n.id === notifId ? { ...n, is_read: false } : n));
     }
   }, []);
@@ -358,6 +363,23 @@ export default function PulseApp() {
     }
   }, [user?.isAdmin, user?.isGuest]);
 
+  // Keep openModalRef in sync with modal states (for popstate handler which runs in stale closure)
+  useEffect(() => {
+    openModalRef.current = {
+      showImageCropper, showBookingSheet, showContactSheet,
+      showEditEventModal, showEditVenueModal, selectedEvent,
+      selectedDeal, selectedService, showSubmissionModal,
+      showMyCalendarModal, showMessagesModal, showProfileModal,
+      showClaimBusinessModal, showAuthModal, showAdminPanel,
+      showNotifications, showProfileMenu,
+    };
+  }, [showImageCropper, showBookingSheet, showContactSheet,
+    showEditEventModal, showEditVenueModal, selectedEvent,
+    selectedDeal, selectedService, showSubmissionModal,
+    showMyCalendarModal, showMessagesModal, showProfileModal,
+    showClaimBusinessModal, showAuthModal, showAdminPanel,
+    showNotifications, showProfileMenu]);
+
   // Browser history management for tab navigation
   useEffect(() => {
     const hash = window.location.hash.replace('#', '');
@@ -379,24 +401,25 @@ export default function PulseApp() {
     }
     const handlePopState = (e) => {
       // Close any open modals on back button (critical for mobile UX)
-      // Close in priority order (topmost overlay first)
-      if (showImageCropper) { setShowImageCropper(false); return; }
-      if (showBookingSheet) { setShowBookingSheet(false); return; }
-      if (showContactSheet) { setShowContactSheet(false); return; }
-      if (showEditEventModal) { setShowEditEventModal(false); setEditingEvent(null); return; }
-      if (showEditVenueModal) { setShowEditVenueModal(false); return; }
-      if (selectedEvent) { setSelectedEvent(null); return; }
-      if (selectedDeal) { setSelectedDeal(null); return; }
-      if (selectedService) { setSelectedService(null); return; }
-      if (showSubmissionModal) { setShowSubmissionModal(false); return; }
-      if (showMyCalendarModal) { setShowMyCalendarModal(false); return; }
-      if (showMessagesModal) { setShowMessagesModal(false); setCurrentConversation(null); return; }
-      if (showProfileModal) { setShowProfileModal(false); return; }
-      if (showClaimBusinessModal) { setShowClaimBusinessModal(false); return; }
-      if (showAuthModal) { setShowAuthModal(false); return; }
-      if (showAdminPanel) { setShowAdminPanel(false); return; }
-      if (showNotifications) { setShowNotifications(false); return; }
-      if (showProfileMenu) { setShowProfileMenu(false); return; }
+      // Read from ref to avoid stale closure (this handler is created once on mount)
+      const m = openModalRef.current;
+      if (m.showImageCropper) { setShowImageCropper(false); return; }
+      if (m.showBookingSheet) { setShowBookingSheet(false); return; }
+      if (m.showContactSheet) { setShowContactSheet(false); return; }
+      if (m.showEditEventModal) { setShowEditEventModal(false); setEditingEvent(null); return; }
+      if (m.showEditVenueModal) { setShowEditVenueModal(false); return; }
+      if (m.selectedEvent) { setSelectedEvent(null); return; }
+      if (m.selectedDeal) { setSelectedDeal(null); return; }
+      if (m.selectedService) { setSelectedService(null); return; }
+      if (m.showSubmissionModal) { setShowSubmissionModal(false); return; }
+      if (m.showMyCalendarModal) { setShowMyCalendarModal(false); return; }
+      if (m.showMessagesModal) { setShowMessagesModal(false); setCurrentConversation(null); return; }
+      if (m.showProfileModal) { setShowProfileModal(false); return; }
+      if (m.showClaimBusinessModal) { setShowClaimBusinessModal(false); return; }
+      if (m.showAuthModal) { setShowAuthModal(false); return; }
+      if (m.showAdminPanel) { setShowAdminPanel(false); return; }
+      if (m.showNotifications) { setShowNotifications(false); return; }
+      if (m.showProfileMenu) { setShowProfileMenu(false); return; }
 
       const section = e.state?.section || window.location.hash.replace('#', '') || 'classes';
       if (validSections.includes(section)) {
@@ -719,8 +742,9 @@ export default function PulseApp() {
       events = events.filter(e => e.start >= tomorrow && e.start < dayAfter);
     } else if (filters.day === 'thisWeek') {
       const dayOfWeek = now.getDay();
+      const daysUntilSunday = dayOfWeek === 0 ? 7 : 7 - dayOfWeek;
       const sunday = new Date(now);
-      sunday.setDate(now.getDate() + ((7 - dayOfWeek) % 7));
+      sunday.setDate(now.getDate() + daysUntilSunday);
       sunday.setHours(23, 59, 59, 999);
       events = events.filter(e => e.start >= now && e.start <= sunday);
     } else if (filters.day === 'thisWeekend') {
@@ -875,14 +899,14 @@ export default function PulseApp() {
       showEditEventModal || showEditVenueModal || showAddEventModal || showSubmissionModal ||
       selectedEvent || selectedDeal || selectedService || showMyCalendarModal ||
       showMessagesModal || showAuthModal || showClaimBusinessModal || showProfileModal ||
-      showAdminPanel;
+      showAdminPanel || showNotifications || showProfileMenu;
     if (anyModalOpen) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = '';
     }
     return () => { document.body.style.overflow = ''; };
-  }, [showImageCropper, showBookingSheet, showContactSheet, showEditEventModal, showEditVenueModal, showAddEventModal, showSubmissionModal, selectedEvent, selectedDeal, selectedService, showMyCalendarModal, showMessagesModal, showAuthModal, showClaimBusinessModal, showProfileModal, showAdminPanel]);
+  }, [showImageCropper, showBookingSheet, showContactSheet, showEditEventModal, showEditVenueModal, showAddEventModal, showSubmissionModal, selectedEvent, selectedDeal, selectedService, showMyCalendarModal, showMessagesModal, showAuthModal, showClaimBusinessModal, showProfileModal, showAdminPanel, showNotifications, showProfileMenu]);
 
   // Get available time slots from DB events only, filtered by active day filter
   const getAvailableTimeSlots = useCallback(() => {

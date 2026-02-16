@@ -20,10 +20,16 @@ const FeedbackWidget = memo(function FeedbackWidget() {
   const [error, setError] = useState('');
   const [fabPulse, setFabPulse] = useState(true);
   const fileRef = useRef(null);
+  const successTimerRef = useRef(null);
 
   useEffect(() => {
     const t = setTimeout(() => setFabPulse(false), 4000);
     return () => clearTimeout(t);
+  }, []);
+
+  // Cleanup success timer on unmount
+  useEffect(() => {
+    return () => { if (successTimerRef.current) clearTimeout(successTimerRef.current); };
   }, []);
 
   const currentType = TYPES.find(t => t.id === selectedType);
@@ -81,7 +87,7 @@ const FeedbackWidget = memo(function FeedbackWidget() {
       }).catch(() => {}); // Don't block on email failure
 
       setSubmitted(true);
-      setTimeout(() => {
+      successTimerRef.current = setTimeout(() => {
         setSubmitted(false);
         setIsOpen(false);
         setMessage('');

@@ -5,7 +5,7 @@ import React, { useState, useRef, useEffect } from 'react';
  * Shows a tiny blurred placeholder, then crossfades to full image on load.
  * Uses IntersectionObserver for lazy loading.
  */
-const ProgressiveImage = ({ src, alt, className, style, ...props }) => {
+const ProgressiveImage = React.memo(({ src, alt, className, style, ...props }) => {
   const [loaded, setLoaded] = useState(false);
   const [inView, setInView] = useState(false);
   const containerRef = useRef(null);
@@ -34,23 +34,22 @@ const ProgressiveImage = ({ src, alt, className, style, ...props }) => {
       className={`progressive-image-container ${className || ''}`}
       style={{ position: 'relative', overflow: 'hidden', ...style }}
     >
-      {/* Blurred placeholder */}
-      {src && (
-        <div
-          className="progressive-image-placeholder"
-          style={{
-            position: 'absolute',
-            inset: 0,
-            backgroundImage: `url(${src})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            filter: 'blur(20px)',
-            transform: 'scale(1.1)',
-            opacity: loaded ? 0 : 1,
-            transition: 'opacity 0.4s ease',
-          }}
-        />
-      )}
+      {/* Blurred placeholder — only load background image when in viewport to preserve lazy loading */}
+      <div
+        className="progressive-image-placeholder"
+        style={{
+          position: 'absolute',
+          inset: 0,
+          backgroundImage: inView && src ? `url(${src})` : 'none',
+          backgroundColor: '#e5e7eb',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          filter: inView ? 'blur(20px)' : 'none',
+          transform: inView ? 'scale(1.1)' : 'none',
+          opacity: loaded ? 0 : 1,
+          transition: 'opacity 0.4s ease',
+        }}
+      />
 
       {/* Full image (only loads when in viewport) */}
       {inView && src && (
@@ -71,6 +70,6 @@ const ProgressiveImage = ({ src, alt, className, style, ...props }) => {
       )}
     </div>
   );
-};
+});
 
 export default ProgressiveImage;
