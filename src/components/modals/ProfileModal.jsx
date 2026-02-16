@@ -891,24 +891,25 @@ const ProfileModal = memo(function ProfileModal({
               <div className="settings-section">
                 <button
                   className="save-profile-btn"
-                  onClick={async () => {
-                    const { error } = await updateProfile({
-                      name: user.name,
-                      phone: user.phone,
-                      bio: user.bio,
-                      location: user.location,
-                      interests: user.interests,
-                      socialLinks: user.socialLinks,
-                      notifications: user.notifications,
-                      privacy: user.privacy
-                    });
-                    if (error) {
-                      setCalendarToastMessage('Error saving profile. Please try again.');
-                    } else {
-                      setCalendarToastMessage('Profile saved successfully!');
+                  onClick={async (e) => {
+                    const btn = e.currentTarget;
+                    if (btn.disabled) return;
+                    btn.disabled = true;
+                    try {
+                      const { error } = await updateProfile({
+                        name: user.name,
+                        phone: user.phone,
+                        bio: user.bio,
+                        location: user.location,
+                        interests: user.interests,
+                        socialLinks: user.socialLinks,
+                        notifications: user.notifications,
+                        privacy: user.privacy
+                      });
+                      showToast?.(error ? 'Error saving profile. Please try again.' : 'Profile saved successfully!', error ? 'error' : 'success');
+                    } finally {
+                      btn.disabled = false;
                     }
-                    setShowCalendarToast(true);
-                    setTimeout(() => setShowCalendarToast(false), 3000);
                   }}
                   style={{
                     width: '100%',

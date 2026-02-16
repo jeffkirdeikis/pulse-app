@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { getPacificDateStr, pacificDate } from '../utils/timezoneHelpers';
 
@@ -58,6 +58,18 @@ export function useAppData() {
 
   // Cache timestamps to prevent duplicate API requests within 30s
   const fetchTimestamps = useRef({ services: 0, events: 0, deals: 0 });
+
+  // Force-refresh: resets cache timestamp so the next fetch always hits the API.
+  // Use for pull-to-refresh / admin approval. Visibility-change uses the normal
+  // refresh key increment which still respects the 30s cache TTL.
+  const forceRefreshEvents = useCallback(() => {
+    fetchTimestamps.current.events = 0;
+    setEventsRefreshKey(k => k + 1);
+  }, []);
+  const forceRefreshDeals = useCallback(() => {
+    fetchTimestamps.current.deals = 0;
+    setDealsRefreshKey(k => k + 1);
+  }, []);
 
   // Fetch services from Supabase
   const fetchServices = async (force = false) => {
@@ -119,9 +131,7 @@ export function useAppData() {
   useEffect(() => {
     async function fetchEvents() {
       const now = Date.now();
-      // eventsRefreshKey > 0 means user-initiated refresh (pull-to-refresh, tab switch) — bypass cache
-      const isForced = eventsRefreshKey > 0;
-      if (!isForced && now - fetchTimestamps.current.events < CACHE_TTL && dbEvents.length > 0) return;
+      if (now - fetchTimestamps.current.events < CACHE_TTL && dbEvents.length > 0) return;
       fetchTimestamps.current.events = now;
 
       setEventsLoading(true);
@@ -230,9 +240,7 @@ export function useAppData() {
   useEffect(() => {
     async function fetchDeals() {
       const now = Date.now();
-      // dealsRefreshKey > 0 means user-initiated refresh — bypass cache
-      const isForced = dealsRefreshKey > 0;
-      if (!isForced && now - fetchTimestamps.current.deals < CACHE_TTL && dbDeals.length > 0) return;
+      if (now - fetchTimestamps.current.deals < CACHE_TTL && dbDeals.length > 0) return;
       fetchTimestamps.current.deals = now;
 
       setDealsLoading(true);
@@ -286,7 +294,7 @@ export function useAppData() {
 
   return {
     services, servicesLoading, fetchServices,
-    dbEvents, eventsLoading, eventsRefreshKey, setEventsRefreshKey,
-    dbDeals, dealsLoading, dealsRefreshKey, setDealsRefreshKey,
+    dbEvents, eventsLoading, eventsRefreshKey, setEventsRefreshKey, forceRefreshEvents,
+    dbDeals, dealsLoading, dealsRefreshKey, setDealsRefreshKey, forceRefreshDeals,
   };
 }

@@ -220,8 +220,8 @@ export default function PulseApp() {
   // App data from Supabase (services, events, deals with caching)
   const {
     services, servicesLoading, fetchServices,
-    dbEvents, eventsLoading, eventsRefreshKey, setEventsRefreshKey,
-    dbDeals, dealsLoading, dealsRefreshKey, setDealsRefreshKey,
+    dbEvents, eventsLoading, eventsRefreshKey, setEventsRefreshKey, forceRefreshEvents,
+    dbDeals, dealsLoading, dealsRefreshKey, setDealsRefreshKey, forceRefreshDeals,
   } = useAppData();
 
   // Route prefetching for instant detail navigation
@@ -305,15 +305,14 @@ export default function PulseApp() {
     if (currentSection === 'services' || currentSection === 'wellness') {
       await fetchServices(true);
     } else if (currentSection === 'deals') {
-      setDealsRefreshKey(k => k + 1);
-      // Wait a moment for the data to load
+      forceRefreshDeals();
       await new Promise(r => setTimeout(r, 800));
     } else {
       // classes or events
-      setEventsRefreshKey(k => k + 1);
+      forceRefreshEvents();
       await new Promise(r => setTimeout(r, 800));
     }
-  }, [currentSection, fetchServices, setDealsRefreshKey, setEventsRefreshKey]);
+  }, [currentSection, fetchServices, forceRefreshDeals, forceRefreshEvents]);
 
   // Fetch admin stats, pending claims, and unverified content
   const fetchAdminClaims = useCallback(async () => {
@@ -594,8 +593,8 @@ export default function PulseApp() {
     updateAvatar,
     updateCoverPhoto,
     onDataRefresh: () => {
-      setEventsRefreshKey(k => k + 1);
-      setDealsRefreshKey(k => k + 1);
+      forceRefreshEvents();
+      forceRefreshDeals();
     },
   });
 
@@ -2212,8 +2211,8 @@ export default function PulseApp() {
           setEditingVenue={setEditingVenue}
           setEditVenueForm={setEditVenueForm}
           setShowEditVenueModal={setShowEditVenueModal}
-          setEventsRefreshKey={setEventsRefreshKey}
-          setDealsRefreshKey={setDealsRefreshKey}
+          setEventsRefreshKey={forceRefreshEvents}
+          setDealsRefreshKey={forceRefreshDeals}
           fetchServices={fetchServices}
           showToast={showToast}
           exitImpersonation={exitImpersonation}
@@ -2361,7 +2360,7 @@ export default function PulseApp() {
           setEditEventForm={setEditEventForm}
           onClose={() => { setShowEditEventModal(false); setEditingEvent(null); }}
           showToast={showToast}
-          setEventsRefreshKey={setEventsRefreshKey}
+          setEventsRefreshKey={forceRefreshEvents}
         />
         </motion.div>
       )}

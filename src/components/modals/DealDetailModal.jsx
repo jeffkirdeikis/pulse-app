@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import React, { memo, useRef } from 'react';
 import {
   Check, ChevronRight, Clock, Building, Info, MapPin,
   Navigation, Share2, Star, Ticket
@@ -19,6 +19,7 @@ const DealDetailModal = memo(function DealDetailModal({
   allDeals,
 }) {
   const [redeeming, setRedeeming] = React.useState(false);
+  const redeemingRef = useRef(false);
   if (!deal) return null;
 
   const handleShare = async () => {
@@ -44,7 +45,8 @@ const DealDetailModal = memo(function DealDetailModal({
       onAuthRequired();
       return;
     }
-    if (redeeming) return;
+    if (redeemingRef.current) return;
+    redeemingRef.current = true;
     setRedeeming(true);
     try {
       const redemptionCode = `PULSE-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
@@ -63,6 +65,7 @@ const DealDetailModal = memo(function DealDetailModal({
       }
       showToast(`Redemption code: ${redemptionCode} - Show this to ${getVenueName(deal.venueId, deal)}!`, 'info', 5000);
     } finally {
+      redeemingRef.current = false;
       setRedeeming(false);
     }
   };

@@ -42,10 +42,10 @@ const DealsGrid = React.memo(function DealsGrid({
     'Other': '\uD83C\uDF1F',
   };
 
-  const filteredDeals = deals.filter(deal => {
+  const filteredDeals = useMemo(() => deals.filter(deal => {
     if (dealCategoryFilter === 'All') return true;
     return normalizeDealCategory(deal.category) === dealCategoryFilter;
-  });
+  }), [deals, dealCategoryFilter]);
 
   const handlePrefetch = useCallback((dealId) => {
     if (onPrefetch) onPrefetch(dealId);

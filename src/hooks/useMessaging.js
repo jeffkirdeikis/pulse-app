@@ -268,11 +268,13 @@ export function useMessaging(user, { showToast, onAuthRequired, activeBusiness, 
 
   // Mark conversation as resolved
   const markConversationResolved = useCallback(async (conversationId) => {
+    if (!activeBusiness?.id) return;
     try {
       const { error } = await supabase
         .from('conversations')
         .update({ status: 'resolved' })
-        .eq('id', conversationId);
+        .eq('id', conversationId)
+        .eq('business_id', activeBusiness.id);
       if (error) throw error;
 
       showToast?.('Conversation resolved', 'success');
