@@ -209,6 +209,7 @@ const ServicesGrid = React.memo(function ServicesGrid({
                     </div>
                   </div>
 
+                  {service.address && (
                   <a
                     href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(service.name + ' ' + service.address)}`}
                     target="_blank"
@@ -223,6 +224,7 @@ const ServicesGrid = React.memo(function ServicesGrid({
                       <span className="detail-text detail-link">{service.address}</span>
                     </div>
                   </a>
+                  )}
                 </div>
 
                 {/* Social Proof Banner with Arrow */}

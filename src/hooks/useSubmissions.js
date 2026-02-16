@@ -122,9 +122,12 @@ export function useSubmissions(user, { showToast, userClaimedBusinesses, updateA
         setCropZoom(1);
         setShowImageCropper(true);
       };
+      reader.onerror = () => {
+        showToast?.('Failed to read file. Please try a different image.', 'error');
+      };
       reader.readAsDataURL(file);
     }
-  }, []);
+  }, [showToast]);
 
   // Handle crop completion
   const handleCropComplete = useCallback(async () => {
@@ -135,30 +138,34 @@ export function useSubmissions(user, { showToast, userClaimedBusinesses, updateA
       type: cropperType
     };
 
-    if (cropperType === 'square') {
-      setSubmissionForm(prev => ({
-        ...prev,
-        squareImage: cropData,
-        squareImagePreview: cropperImage
-      }));
-    } else if (cropperType === 'banner') {
-      setSubmissionForm(prev => ({
-        ...prev,
-        bannerImage: cropData,
-        bannerImagePreview: cropperImage
-      }));
-    } else if (cropperType === 'profileAvatar') {
-      const response = await fetch(cropperImage);
-      const blob = await response.blob();
-      const file = new File([blob], 'avatar.jpg', { type: 'image/jpeg' });
-      const { error } = await updateAvatar?.(file);
-      showToast?.(error ? 'Error uploading avatar. Please try again.' : 'Profile photo updated!');
-    } else if (cropperType === 'profileCover') {
-      const response = await fetch(cropperImage);
-      const blob = await response.blob();
-      const file = new File([blob], 'cover.jpg', { type: 'image/jpeg' });
-      const { error } = await updateCoverPhoto?.(file);
-      showToast?.(error ? 'Error uploading cover photo. Please try again.' : 'Cover photo updated!');
+    try {
+      if (cropperType === 'square') {
+        setSubmissionForm(prev => ({
+          ...prev,
+          squareImage: cropData,
+          squareImagePreview: cropperImage
+        }));
+      } else if (cropperType === 'banner') {
+        setSubmissionForm(prev => ({
+          ...prev,
+          bannerImage: cropData,
+          bannerImagePreview: cropperImage
+        }));
+      } else if (cropperType === 'profileAvatar') {
+        const response = await fetch(cropperImage);
+        const blob = await response.blob();
+        const file = new File([blob], 'avatar.jpg', { type: 'image/jpeg' });
+        const { error } = await updateAvatar?.(file);
+        showToast?.(error ? 'Error uploading avatar. Please try again.' : 'Profile photo updated!');
+      } else if (cropperType === 'profileCover') {
+        const response = await fetch(cropperImage);
+        const blob = await response.blob();
+        const file = new File([blob], 'cover.jpg', { type: 'image/jpeg' });
+        const { error } = await updateCoverPhoto?.(file);
+        showToast?.(error ? 'Error uploading cover photo. Please try again.' : 'Cover photo updated!');
+      }
+    } catch {
+      showToast?.('Failed to process image. Please try again.', 'error');
     }
 
     setShowImageCropper(false);
@@ -385,7 +392,7 @@ export function useSubmissions(user, { showToast, userClaimedBusinesses, updateA
     } catch (err) {
       console.error('Failed to load submissions:', err);
     }
-  }, []);
+  }, [user?.id]);
 
   // Close image cropper
   const closeImageCropper = useCallback(() => {

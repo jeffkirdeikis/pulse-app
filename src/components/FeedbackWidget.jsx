@@ -118,6 +118,7 @@ const FeedbackWidget = memo(function FeedbackWidget() {
     setScreenshotFile(file);
     const reader = new FileReader();
     reader.onload = (ev) => setScreenshot({ name: file.name, preview: ev.target.result });
+    reader.onerror = () => setError('Failed to read file. Please try a different image.');
     reader.readAsDataURL(file);
   };
 

@@ -55,8 +55,8 @@ const EditEventModal = memo(function EditEventModal({
     </div>
     <div className="modal-actions-premium">
       <button className="btn-secondary" onClick={() => { onClose(); }}>Cancel</button>
-      <button className="btn-primary-gradient" disabled={saving || !editEventForm.title?.trim()} onClick={async () => {
-        if (saving || !editEventForm.title?.trim()) return;
+      <button className="btn-primary-gradient" disabled={saving || !editEventForm.title?.trim() || !editEventForm.date} onClick={async () => {
+        if (saving || !editEventForm.title?.trim() || !editEventForm.date) return;
         setSaving(true);
         try {
           const updateData = {

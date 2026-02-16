@@ -2139,7 +2139,7 @@ export default function PulseApp() {
               messageInput={messageInput}
               setMessageInput={setMessageInput}
               sendingMessage={sendingMessage}
-              onClose={() => { setShowMessagesModal(false); setCurrentConversation(null); }}
+              onClose={() => { setShowMessagesModal(false); setCurrentConversation(null); setMessageInput(''); }}
               fetchMessages={fetchMessages}
               sendMessage={sendMessage}
             />

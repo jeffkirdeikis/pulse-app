@@ -80,7 +80,7 @@ const ProfileModal = memo(function ProfileModal({
             <div className="profile-avatar-wrapper">
               <div className="profile-avatar-large">
                 {user.avatar ? <img src={user.avatar} alt="" /> : (user.name?.trim() ? user.name.trim().split(/\s+/).filter(Boolean).map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'U' : 'U')}
-                <button className="avatar-edit-btn" onClick={() => document.getElementById('profile-avatar-input').click()}>
+                <button className="avatar-edit-btn" aria-label="Change profile photo" onClick={() => document.getElementById('profile-avatar-input').click()}>
                   <Camera size={14} />
                 </button>
               </div>
