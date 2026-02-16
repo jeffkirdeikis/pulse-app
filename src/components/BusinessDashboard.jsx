@@ -213,7 +213,7 @@ const BusinessDashboard = memo(function BusinessDashboard({
                   />
                   <div className="venue-avatar">
                     {activeBusiness.logo_url
-                      ? <img src={activeBusiness.logo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+                      ? <img src={activeBusiness.logo_url} alt={`${activeBusiness.name || 'Business'} logo`} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
                       : <span className="venue-initial">{activeBusiness.name?.charAt(0) || '?'}</span>
                     }
                   </div>

@@ -28,8 +28,9 @@ const EditVenueModal = memo(function EditVenueModal({
     <div className="claim-modal-body">
       <div className="claim-form-grid">
         <div className="claim-form-group full">
-          <label>Business Name</label>
+          <label htmlFor="edit-venue-name">Business Name</label>
           <input
+            id="edit-venue-name"
             type="text"
             placeholder="Business name"
             value={editVenueForm.name}
@@ -37,8 +38,9 @@ const EditVenueModal = memo(function EditVenueModal({
           />
         </div>
         <div className="claim-form-group full">
-          <label>Address</label>
+          <label htmlFor="edit-venue-address">Address</label>
           <input
+            id="edit-venue-address"
             type="text"
             placeholder="Street address"
             value={editVenueForm.address}
@@ -46,8 +48,9 @@ const EditVenueModal = memo(function EditVenueModal({
           />
         </div>
         <div className="claim-form-group">
-          <label>Phone</label>
+          <label htmlFor="edit-venue-phone">Phone</label>
           <input
+            id="edit-venue-phone"
             type="tel"
             placeholder="(604) 555-1234"
             value={editVenueForm.phone}
@@ -55,8 +58,9 @@ const EditVenueModal = memo(function EditVenueModal({
           />
         </div>
         <div className="claim-form-group">
-          <label>Email</label>
+          <label htmlFor="edit-venue-email">Email</label>
           <input
+            id="edit-venue-email"
             type="email"
             placeholder="contact@business.com"
             value={editVenueForm.email}
@@ -64,8 +68,9 @@ const EditVenueModal = memo(function EditVenueModal({
           />
         </div>
         <div className="claim-form-group">
-          <label>Website</label>
+          <label htmlFor="edit-venue-website">Website</label>
           <input
+            id="edit-venue-website"
             type="url"
             placeholder="https://..."
             value={editVenueForm.website}
@@ -73,8 +78,9 @@ const EditVenueModal = memo(function EditVenueModal({
           />
         </div>
         <div className="claim-form-group">
-          <label>Category</label>
+          <label htmlFor="edit-venue-category">Category</label>
           <input
+            id="edit-venue-category"
             type="text"
             placeholder="e.g., Fitness, Restaurant"
             value={editVenueForm.category}
