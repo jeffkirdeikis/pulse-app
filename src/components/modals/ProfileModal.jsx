@@ -271,9 +271,9 @@ const ProfileModal = memo(function ProfileModal({
                         {!achievement.earned && (
                           <div className="achievement-progress">
                             <div className="progress-bar">
-                              <div className="progress-fill" style={{ width: `${(achievement.progress / achievement.target) * 100}%`, background: achievement.color }}></div>
+                              <div className="progress-fill" style={{ width: `${achievement.target ? Math.min(((achievement.progress || 0) / achievement.target) * 100, 100) : 0}%`, background: achievement.color }}></div>
                             </div>
-                            <span className="progress-text">{achievement.progress} / {achievement.target}</span>
+                            <span className="progress-text">{achievement.progress || 0} / {achievement.target || '?'}</span>
                           </div>
                         )}
                         {achievement.earned && (

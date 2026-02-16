@@ -187,6 +187,10 @@ export function useSubmissions(user, { showToast, userClaimedBusinesses, updateA
   // Submit for admin approval
   const submitForApproval = useCallback(async () => {
     if (submitting) return;
+    if (!user?.id) {
+      showToast?.('Please sign in to submit', 'error');
+      return;
+    }
     setSubmitting(true);
     const selectedBusiness = getSelectedBusinessInfo();
     try {

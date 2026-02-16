@@ -72,7 +72,7 @@ const DealsGrid = React.memo(function DealsGrid({
         </div>
       </div>
 
-      {dealsLoading && <SkeletonCards count={6} />}
+      {dealsLoading ? <SkeletonCards count={6} /> :
       <div className="deals-grid">
         <AnimatePresence>
         {filteredDeals.map((deal, index) => (
@@ -156,7 +156,7 @@ const DealsGrid = React.memo(function DealsGrid({
           </motion.div>
         ))}
         </AnimatePresence>
-      </div>
+      </div>}
 
       {/* Deals empty state */}
       {!dealsLoading && filteredDeals.length === 0 && (

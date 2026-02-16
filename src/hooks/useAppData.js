@@ -74,6 +74,8 @@ export function useAppData() {
 
     if (error) {
       console.error('Error fetching services:', error);
+      // Reset cache timestamp so a retry is possible immediately
+      fetchTimestamps.current.services = 0;
       setServicesLoading(false);
       return;
     }
@@ -141,6 +143,8 @@ export function useAppData() {
 
         if (error) {
           console.error('Error fetching events:', error);
+          // Reset cache timestamp so a retry is possible immediately
+          fetchTimestamps.current.events = 0;
           setEventsLoading(false);
           return;
         }
@@ -232,6 +236,8 @@ export function useAppData() {
 
       if (error) {
         console.error('Error fetching deals:', error);
+        // Reset cache timestamp so a retry is possible immediately
+        fetchTimestamps.current.deals = 0;
         setDealsLoading(false);
         return;
       }

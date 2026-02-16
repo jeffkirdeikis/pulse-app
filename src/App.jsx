@@ -379,11 +379,24 @@ export default function PulseApp() {
     }
     const handlePopState = (e) => {
       // Close any open modals on back button (critical for mobile UX)
-      setSelectedEvent(null);
-      setSelectedDeal(null);
-      setSelectedService(null);
-      setShowBookingSheet(false);
-      setShowContactSheet(false);
+      // Close in priority order (topmost overlay first)
+      if (showImageCropper) { setShowImageCropper(false); return; }
+      if (showBookingSheet) { setShowBookingSheet(false); return; }
+      if (showContactSheet) { setShowContactSheet(false); return; }
+      if (showEditEventModal) { setShowEditEventModal(false); setEditingEvent(null); return; }
+      if (showEditVenueModal) { setShowEditVenueModal(false); return; }
+      if (selectedEvent) { setSelectedEvent(null); return; }
+      if (selectedDeal) { setSelectedDeal(null); return; }
+      if (selectedService) { setSelectedService(null); return; }
+      if (showSubmissionModal) { setShowSubmissionModal(false); return; }
+      if (showMyCalendarModal) { setShowMyCalendarModal(false); return; }
+      if (showMessagesModal) { setShowMessagesModal(false); setCurrentConversation(null); return; }
+      if (showProfileModal) { setShowProfileModal(false); return; }
+      if (showClaimBusinessModal) { setShowClaimBusinessModal(false); return; }
+      if (showAuthModal) { setShowAuthModal(false); return; }
+      if (showAdminPanel) { setShowAdminPanel(false); return; }
+      if (showNotifications) { setShowNotifications(false); return; }
+      if (showProfileMenu) { setShowProfileMenu(false); return; }
 
       const section = e.state?.section || window.location.hash.replace('#', '') || 'classes';
       if (validSections.includes(section)) {
@@ -806,9 +819,9 @@ export default function PulseApp() {
         if (selectedDeal) { setSelectedDeal(null); return; }
         if (selectedService) { setSelectedService(null); return; }
         if (showMyCalendarModal) { setShowMyCalendarModal(false); return; }
-        if (showMessagesModal) { setShowMessagesModal(false); return; }
+        if (showMessagesModal) { setShowMessagesModal(false); setCurrentConversation(null); return; }
         if (showAuthModal) { setShowAuthModal(false); return; }
-        if (showClaimBusinessModal) { setShowClaimBusinessModal(false); return; }
+        if (showClaimBusinessModal) { setShowClaimBusinessModal(false); setClaimFormData({ businessName: '', ownerName: '', email: '', phone: '', role: 'owner', address: '' }); setClaimVerificationStep('form'); setClaimVerificationCode(''); setClaimId(null); setClaimResendCooldown(0); if (claimCooldownTimerRef.current) { clearInterval(claimCooldownTimerRef.current); claimCooldownTimerRef.current = null; } setClaimDocuments([]); setClaimVerificationMethod('email'); setClaimSelectedBusiness(null); setClaimSearchQuery(''); return; }
         if (showProfileModal) { setShowProfileModal(false); return; }
         if (showAdminPanel) { setShowAdminPanel(false); return; }
         if (showProfileMenu) { setShowProfileMenu(false); return; }
