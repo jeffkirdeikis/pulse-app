@@ -16,6 +16,7 @@ const AdminPanelModal = memo(function AdminPanelModal({
 }) {
   const [feedbackItems, setFeedbackItems] = useState([]);
   const [feedbackLoading, setFeedbackLoading] = useState(false);
+  const [processingId, setProcessingId] = useState(null);
 
   useEffect(() => {
     if (adminTab === 'feedback') {
@@ -142,18 +143,29 @@ const AdminPanelModal = memo(function AdminPanelModal({
                     <span>{submission.submittedBy?.email || ''}</span>
                   </div>
                   <div className="admin-actions">
-                    <button 
+                    <button
                       className="admin-btn approve"
-                      onClick={() => approveSubmission(submission.id)}
+                      disabled={processingId === submission.id}
+                      onClick={async () => {
+                        if (processingId) return;
+                        setProcessingId(submission.id);
+                        try { await approveSubmission(submission.id); }
+                        finally { setProcessingId(null); }
+                      }}
                     >
                       <Check size={16} />
-                      Approve
+                      {processingId === submission.id ? 'Processing...' : 'Approve'}
                     </button>
-                    <button 
+                    <button
                       className="admin-btn reject"
-                      onClick={() => {
+                      disabled={processingId === submission.id}
+                      onClick={async () => {
                         const reason = prompt('Rejection reason:', 'Does not meet guidelines');
-                        if (reason) rejectSubmission(submission.id, reason);
+                        if (!reason) return;
+                        if (processingId) return;
+                        setProcessingId(submission.id);
+                        try { await rejectSubmission(submission.id, reason); }
+                        finally { setProcessingId(null); }
                       }}
                     >
                       <X size={16} />

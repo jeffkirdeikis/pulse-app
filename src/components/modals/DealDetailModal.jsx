@@ -70,7 +70,7 @@ const DealDetailModal = memo(function DealDetailModal({
     }
   };
 
-  const relatedDeals = getRelatedDeals(deal, allDeals);
+  const relatedDeals = getRelatedDeals(deal, allDeals || []);
 
   return (
     <div className="modal-overlay deal-modal-overlay" role="dialog" aria-modal="true" aria-label="Deal details" onClick={onClose}>

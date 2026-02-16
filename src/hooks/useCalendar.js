@@ -45,7 +45,7 @@ export function useCalendar({ myCalendar, isAuthenticated, session, registerForE
 
     if (!isAlreadyInCalendar && isAuthenticated) {
       try {
-        await registerForEvent({
+        const result = await registerForEvent({
           id: event.id,
           eventType: event.eventType || 'event',
           title: event.title,
@@ -55,6 +55,7 @@ export function useCalendar({ myCalendar, isAuthenticated, session, registerForE
           address: event.location || event.address || '',
           ...event
         });
+        if (result?.error) throw result.error;
         showToast(`"${event.title}" added to My Calendar!`);
         if (onCalendarAdd) onCalendarAdd();
         window.open(generateGoogleCalendarUrl(event), '_blank');

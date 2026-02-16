@@ -249,14 +249,16 @@ export default function PulseApp() {
   const clearAllNotifications = useCallback(async () => {
     const userId = session?.user?.id;
     if (!userId) return;
-    const clearedIds = new Set(notificationsRef.current.map(n => n.id));
+    // Snapshot BEFORE clearing — notificationsRef will be synced to [] after setNotifications
+    const snapshot = [...notificationsRef.current];
+    const clearedIds = new Set(snapshot.map(n => n.id));
     setNotifications([]);
     const { error } = await supabase.from('pulse_user_notifications').delete().eq('user_id', userId);
     if (error) {
-      // Restore cleared notifications, keeping any new real-time arrivals
+      // Restore cleared notifications from snapshot, keeping any new real-time arrivals
       setNotifications(prev => {
         const existingIds = new Set(prev.map(n => n.id));
-        const restored = notificationsRef.current.filter(n => clearedIds.has(n.id) && !existingIds.has(n.id));
+        const restored = snapshot.filter(n => clearedIds.has(n.id) && !existingIds.has(n.id));
         return [...prev, ...restored];
       });
     }
@@ -411,9 +413,9 @@ export default function PulseApp() {
       // Close any open modals on back button (critical for mobile UX)
       // Read from ref to avoid stale closure (this handler is created once on mount)
       const m = openModalRef.current;
-      if (m.showBookingConfirmation) { handleBookingConfirmation(false); return; }
+      if (m.showBookingConfirmation) { handleBookingConfirmationRef.current(false); return; }
       if (m.showImageCropper) { setShowImageCropper(false); return; }
-      if (m.showBookingSheet) { closeBookingSheet(); return; }
+      if (m.showBookingSheet) { closeBookingSheetRef.current(); return; }
       if (m.showContactSheet) { setShowContactSheet(false); setContactSubject(''); setContactMessage(''); return; }
       if (m.showEditEventModal) { setShowEditEventModal(false); setEditingEvent(null); return; }
       if (m.showEditVenueModal) { setShowEditVenueModal(false); return; }
@@ -425,7 +427,7 @@ export default function PulseApp() {
       if (m.showMyCalendarModal) { setShowMyCalendarModal(false); return; }
       if (m.showMessagesModal) { setShowMessagesModal(false); setCurrentConversation(null); return; }
       if (m.showProfileModal) { setShowProfileModal(false); return; }
-      if (m.showClaimBusinessModal) { setShowClaimBusinessModal(false); return; }
+      if (m.showClaimBusinessModal) { setShowClaimBusinessModal(false); setClaimFormData({ businessName: '', ownerName: '', email: '', phone: '', role: 'owner', address: '' }); setClaimVerificationStep('form'); setClaimVerificationCode(''); setClaimId(null); setClaimResendCooldown(0); if (claimCooldownTimerRef.current) { clearInterval(claimCooldownTimerRef.current); claimCooldownTimerRef.current = null; } setClaimDocuments([]); setClaimVerificationMethod('email'); setClaimSelectedBusiness(null); setClaimSearchQuery(''); return; }
       if (m.showAuthModal) { setShowAuthModal(false); return; }
       if (m.showAdminPanel) { setShowAdminPanel(false); return; }
       if (m.showNotifications) { setShowNotifications(false); return; }
@@ -732,11 +734,10 @@ export default function PulseApp() {
       events = events.filter(e => e.eventType === 'event');
     }
     // Apply day filter so category options reflect visible date range
+    // Must match filterHelpers.js logic exactly to avoid ghost categories
     const now = currentTime;
-    const todayMidnight = new Date(now);
-    todayMidnight.setHours(0, 0, 0, 0);
     if (filters.day === 'anytime') {
-      events = events.filter(e => e.start >= todayMidnight);
+      events = events.filter(e => e.start >= now);
     } else if (filters.day === 'happeningNow') {
       const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000);
       events = events.filter(e => e.start >= twoHoursAgo && e.start <= now);
@@ -745,8 +746,9 @@ export default function PulseApp() {
       thirtyDays.setDate(now.getDate() + 30);
       events = events.filter(e => e.start >= now && e.start < thirtyDays);
     } else if (filters.day === 'tomorrow') {
-      const tomorrow = new Date(todayMidnight);
-      tomorrow.setDate(todayMidnight.getDate() + 1);
+      const tomorrow = new Date(now);
+      tomorrow.setDate(now.getDate() + 1);
+      tomorrow.setHours(0, 0, 0, 0);
       const dayAfter = new Date(tomorrow);
       dayAfter.setDate(tomorrow.getDate() + 1);
       events = events.filter(e => e.start >= tomorrow && e.start < dayAfter);
@@ -757,6 +759,14 @@ export default function PulseApp() {
       sunday.setDate(now.getDate() + daysUntilSunday);
       sunday.setHours(23, 59, 59, 999);
       events = events.filter(e => e.start >= now && e.start <= sunday);
+    } else if (filters.day === 'nextWeek') {
+      const nextMonday = new Date(now);
+      const daysUntilNextMonday = (8 - now.getDay()) % 7 || 7;
+      nextMonday.setDate(now.getDate() + daysUntilNextMonday);
+      nextMonday.setHours(0, 0, 0, 0);
+      const followingSunday = new Date(nextMonday);
+      followingSunday.setDate(nextMonday.getDate() + 7);
+      events = events.filter(e => e.start >= nextMonday && e.start < followingSunday);
     } else if (filters.day === 'thisWeekend') {
       const dayOfWeek = now.getDay();
       const friday = new Date(now);
@@ -776,7 +786,12 @@ export default function PulseApp() {
       const [y, m, d] = filters.day.split('-').map(Number);
       const dayStart = new Date(y, m - 1, d, 0, 0, 0, 0);
       const dayEnd = new Date(y, m - 1, d + 1, 0, 0, 0, 0);
-      events = events.filter(e => e.start >= dayStart && e.start < dayEnd);
+      // For today's date, exclude events that already started (match filterHelpers.js)
+      const isToday = dayStart.getFullYear() === now.getFullYear() &&
+                      dayStart.getMonth() === now.getMonth() &&
+                      dayStart.getDate() === now.getDate();
+      const startCutoff = isToday ? now : dayStart;
+      events = events.filter(e => e.start >= startCutoff && e.start < dayEnd);
     }
     events.forEach(e => {
       if (e.category) catCounts[e.category] = (catCounts[e.category] || 0) + 1;
@@ -833,6 +848,14 @@ export default function PulseApp() {
     setSendingMessage,
     showToast,
   });
+
+  // Refs for functions called from the popstate handler (which is created once on mount).
+  // Without refs, the popstate handler captures stale closures where bookingEvent=null,
+  // causing closeBookingSheet to skip the booking confirmation dialog.
+  const closeBookingSheetRef = useRef(closeBookingSheet);
+  const handleBookingConfirmationRef = useRef(handleBookingConfirmation);
+  useEffect(() => { closeBookingSheetRef.current = closeBookingSheet; }, [closeBookingSheet]);
+  useEffect(() => { handleBookingConfirmationRef.current = handleBookingConfirmation; }, [handleBookingConfirmation]);
 
   // Global keyboard shortcuts — placed after all hooks (useSubmissions,
   // useMessaging, useBooking) that declare modal state variables.

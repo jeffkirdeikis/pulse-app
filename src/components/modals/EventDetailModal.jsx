@@ -19,6 +19,12 @@ const EventDetailModal = memo(function EventDetailModal({
   toggleSave,
   showToast,
 }) {
+  // All hooks must be called before any early return (Rules of Hooks)
+  const dragY = useMotionValue(0);
+  const modalOpacity = useTransform(dragY, [0, 300], [1, 0.2]);
+  const modalScale = useTransform(dragY, [0, 300], [1, 0.92]);
+  const modalRef = useRef(null);
+
   if (!event) return null;
 
   const itemType = event.eventType === 'class' ? 'class' : 'event';
@@ -40,11 +46,6 @@ const EventDetailModal = memo(function EventDetailModal({
       // User cancelled share or share failed — don't show misleading toast
     }
   };
-
-  const dragY = useMotionValue(0);
-  const modalOpacity = useTransform(dragY, [0, 300], [1, 0.2]);
-  const modalScale = useTransform(dragY, [0, 300], [1, 0.92]);
-  const modalRef = useRef(null);
 
   const handleDragEnd = (_, info) => {
     if (info.offset.y > 120 || info.velocity.y > 500) {
@@ -138,18 +139,18 @@ const EventDetailModal = memo(function EventDetailModal({
             </div>
           </div>
           <button
-            className={`add-calendar-btn ${isInMyCalendar(event.id) ? 'added' : ''}`}
-            onClick={() => addToCalendar(event)}
+            className={`add-calendar-btn ${isInMyCalendar?.(event.id) ? 'added' : ''}`}
+            onClick={() => addToCalendar?.(event)}
             style={{
               width: '44px', height: '44px', minWidth: '44px',
-              background: isInMyCalendar(event.id) ? '#dcfce7' : '#ffffff',
-              border: isInMyCalendar(event.id) ? '2px solid #bbf7d0' : '2px solid #c7d2fe',
+              background: isInMyCalendar?.(event.id) ? '#dcfce7' : '#ffffff',
+              border: isInMyCalendar?.(event.id) ? '2px solid #bbf7d0' : '2px solid #c7d2fe',
               borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center',
               cursor: 'pointer', flexShrink: 0, boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
             }}
           >
-            <div style={{ color: isInMyCalendar(event.id) ? '#047857' : '#4f46e5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              {isInMyCalendar(event.id) ? <Check size={22} strokeWidth={3} /> : <CalendarPlus size={22} strokeWidth={2} />}
+            <div style={{ color: isInMyCalendar?.(event.id) ? '#047857' : '#4f46e5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {isInMyCalendar?.(event.id) ? <Check size={22} strokeWidth={3} /> : <CalendarPlus size={22} strokeWidth={2} />}
             </div>
           </button>
         </div>
@@ -247,10 +248,10 @@ const EventDetailModal = memo(function EventDetailModal({
             </button>
           )}
           <button
-            className={`event-cta-btn ${event.eventType === 'class' ? 'secondary' : 'primary'} ${isInMyCalendar(event.id) ? 'added' : ''}`}
-            onClick={() => addToCalendar(event)}
+            className={`event-cta-btn ${event.eventType === 'class' ? 'secondary' : 'primary'} ${isInMyCalendar?.(event.id) ? 'added' : ''}`}
+            onClick={() => addToCalendar?.(event)}
           >
-            {isInMyCalendar(event.id) ? (<><Check size={18} /> Added to Calendar</>) : (<><Calendar size={18} /> Add to Calendar</>)}
+            {isInMyCalendar?.(event.id) ? (<><Check size={18} /> Added to Calendar</>) : (<><Calendar size={18} /> Add to Calendar</>)}
           </button>
           <a
             href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(getVenueName(event.venueId, event) + ' Squamish BC')}`}
