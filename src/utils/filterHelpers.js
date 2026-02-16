@@ -160,7 +160,8 @@ export function filterEvents(allEvents, { currentSection, filters, searchQuery, 
       filtered = filtered.filter(e => { const h = e.start.getHours(); return h >= 17; });
     } else {
       const [filterHour, filterMin] = filters.time.split(':').map(Number);
-      const filterMinutes = filterHour * 60 + filterMin;
+      const filterMinutes = (filterHour || 0) * 60 + (filterMin || 0);
+      if (isNaN(filterMinutes)) return filtered;
       filtered = filtered.filter(e => {
         const eventMinutes = e.start.getHours() * 60 + e.start.getMinutes();
         return eventMinutes >= filterMinutes;

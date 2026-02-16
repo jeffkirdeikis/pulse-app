@@ -119,7 +119,7 @@ export function getLevelProgress(totalXP, currentLevel) {
     current: xpInCurrentLevel,
     needed: xpNeededForLevel,
     remaining: nextLevelXP - totalXP,
-    percent: Math.round((xpInCurrentLevel / xpNeededForLevel) * 100),
+    percent: xpNeededForLevel > 0 ? Math.round((xpInCurrentLevel / xpNeededForLevel) * 100) : 0,
   };
 }
 

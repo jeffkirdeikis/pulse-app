@@ -208,8 +208,8 @@ export function generateSocialProofText(socialProof, googleRating, googleReviews
   }
 
   // Testimonial
-  if (testimonial) {
-    return { type: 'testimonial', text: `💬 "${testimonial.quote.substring(0, 50)}..." — ${testimonial.author}` };
+  if (testimonial?.quote) {
+    return { type: 'testimonial', text: `💬 "${testimonial.quote.substring(0, 50)}..." — ${testimonial.author || 'Customer'}` };
   }
 
   // High satisfaction
