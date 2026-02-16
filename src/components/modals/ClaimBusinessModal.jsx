@@ -145,7 +145,7 @@ const ClaimBusinessModal = memo(function ClaimBusinessModal({
                 />
                 {claimSearchQuery.length >= 2 && !claimSelectedBusiness && (
                   <div style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid #e5e7eb', borderRadius: '8px', marginTop: '4px', background: '#fff' }}>
-                    {services.filter(s => s.name.toLowerCase().includes(claimSearchQuery.toLowerCase())).slice(0, 8).map(biz => (
+                    {services.filter(s => s.name?.toLowerCase().includes(claimSearchQuery.toLowerCase())).slice(0, 8).map(biz => (
                       <div key={biz.id} style={{ padding: '10px 14px', cursor: 'pointer', borderBottom: '1px solid #f3f4f6', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
                         onClick={() => {
                           setClaimSelectedBusiness(biz);
@@ -162,7 +162,7 @@ const ClaimBusinessModal = memo(function ClaimBusinessModal({
                         <CheckCircle size={16} style={{ color: '#9ca3af' }} />
                       </div>
                     ))}
-                    {services.filter(s => s.name.toLowerCase().includes(claimSearchQuery.toLowerCase())).length === 0 && (
+                    {services.filter(s => s.name?.toLowerCase().includes(claimSearchQuery.toLowerCase())).length === 0 && (
                       <div style={{ padding: '12px 14px', color: '#6b7280', textAlign: 'center' }}>No businesses found</div>
                     )}
                   </div>

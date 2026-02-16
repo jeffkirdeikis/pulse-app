@@ -47,10 +47,12 @@ const ServiceDetailModal = memo(function ServiceDetailModal({
               <span className="category-pill">{service.category}</span>
             </div>
             <h1 className="service-hero-title">{service.name}</h1>
+            {service.address && (
             <div className="service-hero-location">
               <MapPin size={16} />
               <span>{service.address}</span>
             </div>
+            )}
           </div>
 
           {/* Rating Card */}
@@ -121,6 +123,7 @@ const ServiceDetailModal = memo(function ServiceDetailModal({
                 <span className="detail-value">{service.category}</span>
               </div>
             </div>
+            {service.address && (
             <div className="detail-card">
               <div className="detail-card-icon"><MapPin size={20} /></div>
               <div className="detail-card-content">
@@ -128,6 +131,7 @@ const ServiceDetailModal = memo(function ServiceDetailModal({
                 <span className="detail-value">{service.address}</span>
               </div>
             </div>
+            )}
             {service.phone && (
               <div className="detail-card">
                 <div className="detail-card-icon"><Phone size={20} /></div>
