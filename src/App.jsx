@@ -1386,6 +1386,28 @@ export default function PulseApp() {
     deals: filteredDeals.length,
   }), [dbEvents, currentTime, filteredDeals]);
 
+  // Memoize unread notification count
+  const unreadNotifCount = useMemo(() => notifications.filter(n => !n.is_read).length, [notifications]);
+
+  // Memoize services count to avoid re-filtering 500+ items on every render
+  const filteredServicesCount = useMemo(() => {
+    const mainCategories = ['Restaurants & Dining', 'Retail & Shopping', 'Cafes & Bakeries', 'Outdoor Adventures', 'Auto Services', 'Real Estate', 'Fitness & Gyms', 'Recreation & Sports', 'Health & Wellness', 'Construction & Building', 'Outdoor Gear & Shops', 'Community Services', 'Hotels & Lodging', 'Web & Marketing', 'Financial Services', 'Medical Clinics', 'Photography', 'Attractions', 'Churches & Religious', 'Salons & Spas', 'Arts & Culture'];
+    return services.filter(s => {
+      if (debouncedSearch) {
+        const query = debouncedSearch.toLowerCase().trim();
+        if (!s.name?.toLowerCase().includes(query) && !s.category?.toLowerCase().includes(query) && !s.address?.toLowerCase().includes(query)) return false;
+      }
+      if (serviceCategoryFilter === 'All') return true;
+      if (serviceCategoryFilter === 'Other') return !mainCategories.includes(s.category);
+      return s.category === serviceCategoryFilter;
+    }).length;
+  }, [services, debouncedSearch, serviceCategoryFilter]);
+
+  // Memoize deals display count with category filter
+  const filteredDealsDisplayCount = useMemo(() => {
+    return filteredDeals.filter(d => dealCategoryFilter === 'All' || normalizeDealCategory(d.category) === dealCategoryFilter).length;
+  }, [filteredDeals, dealCategoryFilter]);
+
   // Group events by date for infinite scroll with dividers
   const groupEventsByDate = (events) => {
     const grouped = {};
@@ -1738,7 +1760,7 @@ export default function PulseApp() {
             openMessages={openMessages}
             showToast={showToast}
             onOpenNotifications={() => setShowNotifications(true)}
-            unreadNotifCount={notifications.filter(n => !n.is_read).length}
+            unreadNotifCount={unreadNotifCount}
             searchSuggestions={searchSuggestions}
             tabCounts={tabCounts}
           />
@@ -1778,18 +1800,9 @@ export default function PulseApp() {
                   let count;
                   if (currentSection === 'deals') {
                     if (dealsLoading) return <motion.span key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>Loading...</motion.span>;
-                    count = filteredDeals.filter(d => dealCategoryFilter === 'All' || normalizeDealCategory(d.category) === dealCategoryFilter).length;
+                    count = filteredDealsDisplayCount;
                   } else if (currentSection === 'services') {
-                    count = services.filter(s => {
-                      if (debouncedSearch) {
-                        const query = debouncedSearch.toLowerCase().trim();
-                        if (!s.name?.toLowerCase().includes(query) && !s.category?.toLowerCase().includes(query) && !s.address?.toLowerCase().includes(query)) return false;
-                      }
-                      if (serviceCategoryFilter === 'All') return true;
-                      const mainCategories = ['Restaurants & Dining', 'Retail & Shopping', 'Cafes & Bakeries', 'Outdoor Adventures', 'Auto Services', 'Real Estate', 'Fitness & Gyms', 'Recreation & Sports', 'Health & Wellness', 'Construction & Building', 'Outdoor Gear & Shops', 'Community Services', 'Hotels & Lodging', 'Web & Marketing', 'Financial Services', 'Medical Clinics', 'Photography', 'Attractions', 'Churches & Religious', 'Salons & Spas', 'Arts & Culture'];
-                      if (serviceCategoryFilter === 'Other') return !mainCategories.includes(s.category);
-                      return s.category === serviceCategoryFilter;
-                    }).length;
+                    count = filteredServicesCount;
                   } else {
                     if (eventsLoading) return <motion.span key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>Loading...</motion.span>;
                     count = filteredEvents.length;
