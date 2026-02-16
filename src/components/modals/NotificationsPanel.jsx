@@ -1,4 +1,4 @@
-import React, { memo, useEffect } from 'react';
+import React, { memo } from 'react';
 import { Bell, Calendar, DollarSign, MessageCircle, Star, Check, Trash2, X } from 'lucide-react';
 
 const ICON_MAP = {
@@ -44,11 +44,7 @@ const NotificationsPanel = memo(function NotificationsPanel({
 }) {
   const unreadCount = notifications.filter(n => !n.is_read).length;
 
-  useEffect(() => {
-    const handleKey = (e) => { if (e.key === 'Escape') onClose(); };
-    document.addEventListener('keydown', handleKey);
-    return () => document.removeEventListener('keydown', handleKey);
-  }, [onClose]);
+  // ESC key is handled by the global keyboard handler in App.jsx — no local handler needed
 
   return (
     <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Notifications" onClick={onClose}>

@@ -358,8 +358,9 @@ export function useSubmissions(user, { showToast, userClaimedBusinesses, updateA
     }
   }, [user?.id, showToast]);
 
-  // Load pending submissions from database
+  // Load pending submissions from database (admin only)
   const loadPendingSubmissions = useCallback(async () => {
+    if (!user?.id) return;
     try {
       const { data, error } = await supabase
         .from('pending_items')

@@ -63,12 +63,19 @@ const FilterSection = React.memo(function FilterSection({
   hasFreeItems,
   searchQuery,
   setSearchQuery,
+  currentTime,
   dateEventCounts = {},
   happeningNowCount = 0,
   freeCount = 0,
   weekendCount = 0,
 }) {
-  const dateStrip = useMemo(() => getDateStrip(14), []);
+  // Derive Pacific date string from currentTime so date strip regenerates at midnight
+  const pacificDateKey = useMemo(() => {
+    if (!currentTime) return '';
+    const p = new Date(currentTime.toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }));
+    return `${p.getFullYear()}-${String(p.getMonth()+1).padStart(2,'0')}-${String(p.getDate()).padStart(2,'0')}`;
+  }, [currentTime]);
+  const dateStrip = useMemo(() => getDateStrip(14), [pacificDateKey]);
   const stripRef = useRef(null);
   const selectedRef = useRef(null);
 
@@ -84,6 +91,7 @@ const FilterSection = React.memo(function FilterSection({
 
   const isDateSelected = /^\d{4}-\d{2}-\d{2}$/.test(filters.day);
   const activeFilterCount = [
+    filters.day !== 'today',
     filters.time !== 'all',
     filters.age !== 'all',
     filters.category !== 'all',

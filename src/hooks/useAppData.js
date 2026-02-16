@@ -117,12 +117,15 @@ export function useAppData() {
 
   // Fetch events from Supabase
   useEffect(() => {
-    async function fetchEvents(force = false) {
+    async function fetchEvents() {
       const now = Date.now();
-      if (!force && now - fetchTimestamps.current.events < CACHE_TTL && dbEvents.length > 0) return;
+      // eventsRefreshKey > 0 means user-initiated refresh (pull-to-refresh, tab switch) — bypass cache
+      const isForced = eventsRefreshKey > 0;
+      if (!isForced && now - fetchTimestamps.current.events < CACHE_TTL && dbEvents.length > 0) return;
       fetchTimestamps.current.events = now;
 
       setEventsLoading(true);
+      try {
       const localDateStr = getPacificDateStr();
 
       // Supabase PostgREST server caps at 1000 rows per request.
@@ -143,9 +146,7 @@ export function useAppData() {
 
         if (error) {
           console.error('Error fetching events:', error);
-          // Reset cache timestamp so a retry is possible immediately
           fetchTimestamps.current.events = 0;
-          setEventsLoading(false);
           return;
         }
 
@@ -214,7 +215,12 @@ export function useAppData() {
       });
 
       setDbEvents(mappedEvents);
-      setEventsLoading(false);
+      } catch (err) {
+        console.error('Error fetching/mapping events:', err);
+        fetchTimestamps.current.events = 0;
+      } finally {
+        setEventsLoading(false);
+      }
     }
 
     fetchEvents();
@@ -222,12 +228,15 @@ export function useAppData() {
 
   // Fetch deals from Supabase
   useEffect(() => {
-    async function fetchDeals(force = false) {
+    async function fetchDeals() {
       const now = Date.now();
-      if (!force && now - fetchTimestamps.current.deals < CACHE_TTL && dbDeals.length > 0) return;
+      // dealsRefreshKey > 0 means user-initiated refresh — bypass cache
+      const isForced = dealsRefreshKey > 0;
+      if (!isForced && now - fetchTimestamps.current.deals < CACHE_TTL && dbDeals.length > 0) return;
       fetchTimestamps.current.deals = now;
 
       setDealsLoading(true);
+      try {
       const { data, error } = await supabase
         .from('deals')
         .select('*')
@@ -236,9 +245,7 @@ export function useAppData() {
 
       if (error) {
         console.error('Error fetching deals:', error);
-        // Reset cache timestamp so a retry is possible immediately
         fetchTimestamps.current.deals = 0;
-        setDealsLoading(false);
         return;
       }
 
@@ -266,7 +273,12 @@ export function useAppData() {
       }));
 
       setDbDeals(mappedDeals);
-      setDealsLoading(false);
+      } catch (err) {
+        console.error('Error fetching/mapping deals:', err);
+        fetchTimestamps.current.deals = 0;
+      } finally {
+        setDealsLoading(false);
+      }
     }
 
     fetchDeals();

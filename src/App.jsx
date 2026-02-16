@@ -119,6 +119,7 @@ export default function PulseApp() {
   // Track view count on events/deals tables for business analytics
   const trackView = useCallback(async (table, id) => {
     if (!id) return;
+    if (!['events', 'deals'].includes(table)) return; // Whitelist allowed tables
     try {
       await supabase.rpc('increment_view_count', { p_table: table, p_id: id });
     } catch (e) { /* silent */ }
@@ -143,17 +144,18 @@ export default function PulseApp() {
   }, []);
 
   const markNotificationRead = useCallback(async (notifId) => {
+    const userId = session?.user?.id;
+    if (!userId) return;
     setNotifications(prev => prev.map(n => n.id === notifId ? { ...n, is_read: true } : n));
     try {
-      const { error } = await supabase.from('pulse_user_notifications').update({ is_read: true }).eq('id', notifId);
+      const { error } = await supabase.from('pulse_user_notifications').update({ is_read: true }).eq('id', notifId).eq('user_id', userId);
       if (error) {
-        // Revert optimistic update on failure
         setNotifications(prev => prev.map(n => n.id === notifId ? { ...n, is_read: false } : n));
       }
     } catch {
       setNotifications(prev => prev.map(n => n.id === notifId ? { ...n, is_read: false } : n));
     }
-  }, []);
+  }, [session]);
 
   // User data from Supabase (replaces all hardcoded dummy data)
   const {
@@ -234,22 +236,29 @@ export default function PulseApp() {
   const markAllNotificationsRead = useCallback(async () => {
     const userId = session?.user?.id;
     if (!userId) return;
-    const prevSnapshot = [...notificationsRef.current];
+    // Track which IDs we're marking so rollback doesn't lose real-time notifications
+    const idsToMark = new Set(notificationsRef.current.filter(n => !n.is_read).map(n => n.id));
     setNotifications(p => p.map(n => ({ ...n, is_read: true })));
     const { error } = await supabase.from('pulse_user_notifications').update({ is_read: true }).eq('user_id', userId).eq('is_read', false);
     if (error) {
-      setNotifications(prevSnapshot);
+      // Revert only the specific notifications we marked, preserving any new arrivals
+      setNotifications(prev => prev.map(n => idsToMark.has(n.id) ? { ...n, is_read: false } : n));
     }
   }, [session]);
 
   const clearAllNotifications = useCallback(async () => {
     const userId = session?.user?.id;
     if (!userId) return;
-    const prevSnapshot = [...notificationsRef.current];
+    const clearedIds = new Set(notificationsRef.current.map(n => n.id));
     setNotifications([]);
     const { error } = await supabase.from('pulse_user_notifications').delete().eq('user_id', userId);
     if (error) {
-      setNotifications(prevSnapshot);
+      // Restore cleared notifications, keeping any new real-time arrivals
+      setNotifications(prev => {
+        const existingIds = new Set(prev.map(n => n.id));
+        const restored = notificationsRef.current.filter(n => clearedIds.has(n.id) && !existingIds.has(n.id));
+        return [...prev, ...restored];
+      });
     }
   }, [session]);
 
@@ -366,15 +375,15 @@ export default function PulseApp() {
   // Keep openModalRef in sync with modal states (for popstate handler which runs in stale closure)
   useEffect(() => {
     openModalRef.current = {
-      showImageCropper, showBookingSheet, showContactSheet,
-      showEditEventModal, showEditVenueModal, selectedEvent,
+      showBookingConfirmation, showImageCropper, showBookingSheet, showContactSheet,
+      showEditEventModal, showEditVenueModal, showAddEventModal, selectedEvent,
       selectedDeal, selectedService, showSubmissionModal,
       showMyCalendarModal, showMessagesModal, showProfileModal,
       showClaimBusinessModal, showAuthModal, showAdminPanel,
       showNotifications, showProfileMenu,
     };
-  }, [showImageCropper, showBookingSheet, showContactSheet,
-    showEditEventModal, showEditVenueModal, selectedEvent,
+  }, [showBookingConfirmation, showImageCropper, showBookingSheet, showContactSheet,
+    showEditEventModal, showEditVenueModal, showAddEventModal, selectedEvent,
     selectedDeal, selectedService, showSubmissionModal,
     showMyCalendarModal, showMessagesModal, showProfileModal,
     showClaimBusinessModal, showAuthModal, showAdminPanel,
@@ -403,11 +412,13 @@ export default function PulseApp() {
       // Close any open modals on back button (critical for mobile UX)
       // Read from ref to avoid stale closure (this handler is created once on mount)
       const m = openModalRef.current;
+      if (m.showBookingConfirmation) { handleBookingConfirmation(false); return; }
       if (m.showImageCropper) { setShowImageCropper(false); return; }
-      if (m.showBookingSheet) { setShowBookingSheet(false); return; }
-      if (m.showContactSheet) { setShowContactSheet(false); return; }
+      if (m.showBookingSheet) { closeBookingSheet(); return; }
+      if (m.showContactSheet) { setShowContactSheet(false); setContactSubject(''); setContactMessage(''); return; }
       if (m.showEditEventModal) { setShowEditEventModal(false); setEditingEvent(null); return; }
       if (m.showEditVenueModal) { setShowEditVenueModal(false); return; }
+      if (m.showAddEventModal) { setShowAddEventModal(false); return; }
       if (m.selectedEvent) { setSelectedEvent(null); return; }
       if (m.selectedDeal) { setSelectedDeal(null); return; }
       if (m.selectedService) { setSelectedService(null); return; }
@@ -832,9 +843,10 @@ export default function PulseApp() {
       const isTyping = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.target.isContentEditable;
 
       if (e.key === 'Escape') {
+        if (showBookingConfirmation) { handleBookingConfirmation(false); return; }
         if (showImageCropper) { setShowImageCropper(false); return; }
-        if (showBookingSheet) { setShowBookingSheet(false); return; }
-        if (showContactSheet) { setShowContactSheet(false); return; }
+        if (showBookingSheet) { closeBookingSheet(); return; }
+        if (showContactSheet) { setShowContactSheet(false); setContactSubject(''); setContactMessage(''); return; }
         if (showEditEventModal) { setShowEditEventModal(false); setEditingEvent(null); return; }
         if (showEditVenueModal) { setShowEditVenueModal(false); return; }
         if (showAddEventModal) { setShowAddEventModal(false); return; }
@@ -873,7 +885,7 @@ export default function PulseApp() {
     };
     window.addEventListener('keydown', handleKeydown);
     return () => window.removeEventListener('keydown', handleKeydown);
-  }, [view, showImageCropper, showBookingSheet, showContactSheet, showEditEventModal, showEditVenueModal, showAddEventModal, showSubmissionModal, selectedEvent, selectedDeal, selectedService, showMyCalendarModal, showMessagesModal, showAuthModal, showClaimBusinessModal, showProfileModal, showAdminPanel, showProfileMenu, showNotifications]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [view, showBookingConfirmation, showImageCropper, showBookingSheet, showContactSheet, showEditEventModal, showEditVenueModal, showAddEventModal, showSubmissionModal, selectedEvent, selectedDeal, selectedService, showMyCalendarModal, showMessagesModal, showAuthModal, showClaimBusinessModal, showProfileModal, showAdminPanel, showProfileMenu, showNotifications]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ESC to exit impersonation mode — only when no modals are open
   useEffect(() => {
@@ -899,14 +911,14 @@ export default function PulseApp() {
       showEditEventModal || showEditVenueModal || showAddEventModal || showSubmissionModal ||
       selectedEvent || selectedDeal || selectedService || showMyCalendarModal ||
       showMessagesModal || showAuthModal || showClaimBusinessModal || showProfileModal ||
-      showAdminPanel || showNotifications || showProfileMenu;
+      showAdminPanel || showNotifications || showProfileMenu || showBookingConfirmation;
     if (anyModalOpen) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = '';
     }
     return () => { document.body.style.overflow = ''; };
-  }, [showImageCropper, showBookingSheet, showContactSheet, showEditEventModal, showEditVenueModal, showAddEventModal, showSubmissionModal, selectedEvent, selectedDeal, selectedService, showMyCalendarModal, showMessagesModal, showAuthModal, showClaimBusinessModal, showProfileModal, showAdminPanel, showNotifications, showProfileMenu]);
+  }, [showImageCropper, showBookingSheet, showContactSheet, showEditEventModal, showEditVenueModal, showAddEventModal, showSubmissionModal, selectedEvent, selectedDeal, selectedService, showMyCalendarModal, showMessagesModal, showAuthModal, showClaimBusinessModal, showProfileModal, showAdminPanel, showNotifications, showProfileMenu, showBookingConfirmation]);
 
   // Get available time slots from DB events only, filtered by active day filter
   const getAvailableTimeSlots = useCallback(() => {
@@ -992,8 +1004,14 @@ export default function PulseApp() {
     });
   }, [dbEvents, currentSection, filters.day, currentTime]);
 
-  // Check if any events/classes are free (for data-driven price filter) — DB only
-  const hasFreeItems = dbEvents.some(e => e.price?.toLowerCase() === 'free');
+  // Check if any events/classes in the CURRENT section are free (for data-driven price filter)
+  const hasFreeItems = useMemo(() => {
+    return dbEvents.some(e => {
+      if (currentSection === 'classes' && e.eventType !== 'class') return false;
+      if (currentSection === 'events' && e.eventType !== 'event') return false;
+      return e.price?.toLowerCase() === 'free';
+    });
+  }, [dbEvents, currentSection]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -1694,8 +1712,8 @@ export default function PulseApp() {
             unreadNotifCount={notifications.filter(n => !n.is_read).length}
             searchSuggestions={searchSuggestions}
             tabCounts={{
-              classes: dbEvents.filter(e => e.eventType === 'class').length,
-              events: dbEvents.filter(e => e.eventType === 'event').length,
+              classes: dbEvents.filter(e => e.eventType === 'class' && e.start >= currentTime).length,
+              events: dbEvents.filter(e => e.eventType === 'event' && e.start >= currentTime).length,
               deals: filteredDeals.length,
             }}
           />
@@ -1715,6 +1733,7 @@ export default function PulseApp() {
               hasFreeItems={hasFreeItems}
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}
+              currentTime={currentTime}
               dateEventCounts={dateEventCounts}
               happeningNowCount={happeningNowCount}
               freeCount={freeCount}
