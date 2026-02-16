@@ -494,6 +494,7 @@ const SubmissionModal = memo(function SubmissionModal({
                     submitting ||
                     !submissionForm.title?.trim() || !submissionForm.description?.trim() || !submissionForm.businessType ||
                     (submissionForm.businessType === 'new' && !submissionForm.businessName?.trim()) ||
+                    (submissionForm.businessType === 'claimed' && !submissionForm.selectedBusinessId) ||
                     ((submissionType === 'event' || submissionType === 'class') && (!submissionForm.date || !submissionForm.startTime || !submissionForm.endTime || !submissionForm.category)) ||
                     (submissionType === 'deal' && !submissionForm.schedule)
                   }

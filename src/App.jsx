@@ -416,7 +416,7 @@ export default function PulseApp() {
       if (m.showBookingConfirmation) { handleBookingConfirmationRef.current(false); return; }
       if (m.showImageCropper) { setShowImageCropper(false); return; }
       if (m.showBookingSheet) { closeBookingSheetRef.current(); return; }
-      if (m.showContactSheet) { setShowContactSheet(false); setContactSubject(''); setContactMessage(''); return; }
+      if (m.showContactSheet) { setShowContactSheet(false); setContactBusiness(null); setContactSubject(''); setContactMessage(''); return; }
       if (m.showEditEventModal) { setShowEditEventModal(false); setEditingEvent(null); return; }
       if (m.showEditVenueModal) { setShowEditVenueModal(false); return; }
       if (m.showAddEventModal) { setShowAddEventModal(false); return; }
@@ -868,7 +868,7 @@ export default function PulseApp() {
         if (showBookingConfirmation) { handleBookingConfirmation(false); return; }
         if (showImageCropper) { setShowImageCropper(false); return; }
         if (showBookingSheet) { closeBookingSheet(); return; }
-        if (showContactSheet) { setShowContactSheet(false); setContactSubject(''); setContactMessage(''); return; }
+        if (showContactSheet) { setShowContactSheet(false); setContactBusiness(null); setContactSubject(''); setContactMessage(''); return; }
         if (showEditEventModal) { setShowEditEventModal(false); setEditingEvent(null); return; }
         if (showEditVenueModal) { setShowEditVenueModal(false); return; }
         if (showAddEventModal) { setShowAddEventModal(false); return; }
@@ -2118,7 +2118,7 @@ export default function PulseApp() {
               contactMessage={contactMessage}
               setContactMessage={setContactMessage}
               sendingMessage={sendingMessage}
-              onClose={() => { setShowContactSheet(false); setContactSubject(''); setContactMessage(''); }}
+              onClose={() => { setShowContactSheet(false); setContactBusiness(null); setContactSubject(''); setContactMessage(''); }}
               submitContactForm={submitContactForm}
             />
             </motion.div>

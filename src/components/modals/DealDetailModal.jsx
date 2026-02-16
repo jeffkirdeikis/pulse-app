@@ -42,7 +42,7 @@ const DealDetailModal = memo(function DealDetailModal({
 
   const handleRedeem = async () => {
     if (!session?.user) {
-      onAuthRequired();
+      onAuthRequired?.();
       return;
     }
     if (redeemingRef.current) return;

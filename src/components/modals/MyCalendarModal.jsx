@@ -51,7 +51,7 @@ const MyCalendarModal = memo(function MyCalendarModal({
             </div>
           ) : (
             <div className="calendar-events-list">
-              {getCalendarEventsByDate().map(({ date, events }) => (
+              {(getCalendarEventsByDate() || []).map(({ date, events }) => (
                 <div key={date.toISOString()} className="calendar-date-group">
                   <div className="calendar-date-header">
                     <div className="calendar-date-badge">

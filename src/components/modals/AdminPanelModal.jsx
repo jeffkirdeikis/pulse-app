@@ -23,7 +23,7 @@ const AdminPanelModal = memo(function AdminPanelModal({
       setFeedbackLoading(true);
       supabase.from('feedback').select('*').order('created_at', { ascending: false }).limit(50)
         .then(({ data }) => { setFeedbackItems(data || []); setFeedbackLoading(false); })
-        .catch(() => setFeedbackLoading(false));
+        .catch(() => { setFeedbackItems([]); setFeedbackLoading(false); });
     }
   }, [adminTab]);
   return (
