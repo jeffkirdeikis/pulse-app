@@ -120,7 +120,7 @@ export function filterEvents(allEvents, { currentSection, filters, searchQuery, 
       if (!e.ageGroup?.includes('Kids')) return false;
 
       if (kidsAgeRange[0] !== 0 || kidsAgeRange[1] !== 18) {
-        const text = `${e.title} ${e.description}`.toLowerCase();
+        const text = `${e.title || ''} ${e.description || ''}`.toLowerCase();
 
         // Check for prenatal
         if (kidsAgeRange[0] === -1 && kidsAgeRange[1] === 0) {
