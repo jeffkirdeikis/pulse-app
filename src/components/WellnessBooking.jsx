@@ -245,17 +245,21 @@ export default function WellnessBooking({
     const url = slot?.booking_url || provider.booking_url || `https://${provider.janeapp_slug}.janeapp.com`;
 
     if (isAuthenticated && session?.user?.id) {
-      // Log click and award XP
-      const { data } = await supabase.rpc('log_booking_click', {
-        p_user_id: session.user.id,
-        p_provider_id: provider.provider_id || provider.id,
-        p_slot_id: slot?.slot_id || null,
-        p_booking_url: url,
-      });
+      // Log click and award XP — don't block booking if analytics fails
+      try {
+        const { data } = await supabase.rpc('log_booking_click', {
+          p_user_id: session.user.id,
+          p_provider_id: provider.provider_id || provider.id,
+          p_slot_id: slot?.slot_id || null,
+          p_booking_url: url,
+        });
 
-      if (data?.xp?.xp_earned) {
-        const bonusText = data.same_day_bonus ? ' (+25 same-day bonus!)' : '';
-        showToast?.(`+${data.xp.xp_earned} XP for booking through Pulse${bonusText}`);
+        if (data?.xp?.xp_earned) {
+          const bonusText = data.same_day_bonus ? ' (+25 same-day bonus!)' : '';
+          showToast?.(`+${data.xp.xp_earned} XP for booking through Pulse${bonusText}`);
+        }
+      } catch {
+        // Analytics failure should not block the booking
       }
     }
 
@@ -266,7 +270,7 @@ export default function WellnessBooking({
 
   // Save alert
   const handleSaveAlert = async () => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated || !session?.user?.id) {
       setShowAuthModal?.(true);
       return;
     }
