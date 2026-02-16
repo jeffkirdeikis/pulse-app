@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo, Suspense, lazy } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowUp, Calendar, Check, X, Plus, CheckCircle, Moon, Percent, Sparkles, Sun, Sunset, LayoutList, List } from 'lucide-react';
 import { supabase } from './lib/supabase';
@@ -21,21 +21,21 @@ import EventDetailModal from './components/modals/EventDetailModal';
 import DealDetailModal from './components/modals/DealDetailModal';
 import ServiceDetailModal from './components/modals/ServiceDetailModal';
 import AuthModal from './components/modals/AuthModal';
-import BusinessDashboard from './components/BusinessDashboard';
-import AdminDashboard from './components/AdminDashboard';
-import ProfileModal from './components/modals/ProfileModal';
-import SubmissionModal from './components/modals/SubmissionModal';
-import ClaimBusinessModal from './components/modals/ClaimBusinessModal';
-import MyCalendarModal from './components/modals/MyCalendarModal';
-import MessagesModal from './components/modals/MessagesModal';
-import BookingSheet from './components/modals/BookingSheet';
-import AdminPanelModal from './components/modals/AdminPanelModal';
-import EditVenueModal from './components/modals/EditVenueModal';
+const BusinessDashboard = lazy(() => import('./components/BusinessDashboard'));
+const AdminDashboard = lazy(() => import('./components/AdminDashboard'));
+const ProfileModal = lazy(() => import('./components/modals/ProfileModal'));
+const SubmissionModal = lazy(() => import('./components/modals/SubmissionModal'));
+const ClaimBusinessModal = lazy(() => import('./components/modals/ClaimBusinessModal'));
+const MyCalendarModal = lazy(() => import('./components/modals/MyCalendarModal'));
+const MessagesModal = lazy(() => import('./components/modals/MessagesModal'));
+const BookingSheet = lazy(() => import('./components/modals/BookingSheet'));
+const AdminPanelModal = lazy(() => import('./components/modals/AdminPanelModal'));
+const EditVenueModal = lazy(() => import('./components/modals/EditVenueModal'));
 import FeedbackWidget from './components/FeedbackWidget';
-import ImageCropperModal from './components/modals/ImageCropperModal';
-import ContactSheet from './components/modals/ContactSheet';
-import EditEventModal from './components/modals/EditEventModal';
-import NotificationsPanel from './components/modals/NotificationsPanel';
+const ImageCropperModal = lazy(() => import('./components/modals/ImageCropperModal'));
+const ContactSheet = lazy(() => import('./components/modals/ContactSheet'));
+const EditEventModal = lazy(() => import('./components/modals/EditEventModal'));
+const NotificationsPanel = lazy(() => import('./components/modals/NotificationsPanel'));
 import EventCard from './components/EventCard';
 import SkeletonCards from './components/SkeletonCards';
 import PullToRefresh from './components/PullToRefresh';
@@ -1379,6 +1379,13 @@ export default function PulseApp() {
     ).length;
   }, [dbEvents, currentSection, currentTime]);
 
+  // Memoize tab counts to avoid breaking ConsumerHeader memoization
+  const tabCounts = useMemo(() => ({
+    classes: dbEvents.filter(e => e.eventType === 'class' && e.start >= currentTime).length,
+    events: dbEvents.filter(e => e.eventType === 'event' && e.start >= currentTime).length,
+    deals: filteredDeals.length,
+  }), [dbEvents, currentTime, filteredDeals]);
+
   // Group events by date for infinite scroll with dividers
   const groupEventsByDate = (events) => {
     const grouped = {};
@@ -1733,11 +1740,7 @@ export default function PulseApp() {
             onOpenNotifications={() => setShowNotifications(true)}
             unreadNotifCount={notifications.filter(n => !n.is_read).length}
             searchSuggestions={searchSuggestions}
-            tabCounts={{
-              classes: dbEvents.filter(e => e.eventType === 'class' && e.start >= currentTime).length,
-              events: dbEvents.filter(e => e.eventType === 'event' && e.start >= currentTime).length,
-              deals: filteredDeals.length,
-            }}
+            tabCounts={tabCounts}
           />
 
           {/* Premium Filter System - Clean 5-Filter Layout */}
@@ -1955,7 +1958,7 @@ export default function PulseApp() {
           <AnimatePresence>
           {showMyCalendarModal && (
             <motion.div key="calendar" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} style={{ position: 'fixed', inset: 0, zIndex: 1000 }}>
-            <MyCalendarModal
+            <Suspense fallback={null}><MyCalendarModal
               myCalendar={myCalendar}
               showCalendarToast={showCalendarToast}
               calendarToastMessage={calendarToastMessage}
@@ -1967,7 +1970,7 @@ export default function PulseApp() {
               getVenueName={getVenueName}
               generateGoogleCalendarUrl={generateGoogleCalendarUrl}
               removeFromCalendar={removeFromCalendar}
-            />
+            /></Suspense>
             </motion.div>
           )}
           </AnimatePresence>
@@ -1998,7 +2001,7 @@ export default function PulseApp() {
           <AnimatePresence>
           {showProfileModal && (
             <motion.div key="profile" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} style={{ position: 'fixed', inset: 0, zIndex: 1000 }}>
-            <ProfileModal
+            <Suspense fallback={null}><ProfileModal
               user={user}
               session={session}
               userStats={userStats}
@@ -2035,7 +2038,7 @@ export default function PulseApp() {
               updateProfile={updateProfile}
               showToast={showToast}
               toggleSaveItem={toggleSaveItem}
-            />
+            /></Suspense>
             </motion.div>
           )}
           </AnimatePresence>
@@ -2043,7 +2046,7 @@ export default function PulseApp() {
           <AnimatePresence>
           {showBookingSheet && bookingEvent && (
             <motion.div key="booking" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }} style={{ position: 'fixed', inset: 0, zIndex: 1000 }}>
-            <BookingSheet
+            <Suspense fallback={null}><BookingSheet
               bookingEvent={bookingEvent}
               bookingStep={bookingStep}
               bookingRequestMessage={bookingRequestMessage}
@@ -2056,7 +2059,7 @@ export default function PulseApp() {
               addToCalendar={addToCalendar}
               submitBookingRequest={submitBookingRequest}
               showToast={showToast}
-            />
+            /></Suspense>
             </motion.div>
           )}
           </AnimatePresence>
@@ -2111,7 +2114,7 @@ export default function PulseApp() {
           <AnimatePresence>
           {showContactSheet && contactBusiness && (
             <motion.div key="contact" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }} style={{ position: 'fixed', inset: 0, zIndex: 1000 }}>
-            <ContactSheet
+            <Suspense fallback={null}><ContactSheet
               contactBusiness={contactBusiness}
               contactSubject={contactSubject}
               setContactSubject={setContactSubject}
@@ -2120,7 +2123,7 @@ export default function PulseApp() {
               sendingMessage={sendingMessage}
               onClose={() => { setShowContactSheet(false); setContactBusiness(null); setContactSubject(''); setContactMessage(''); }}
               submitContactForm={submitContactForm}
-            />
+            /></Suspense>
             </motion.div>
           )}
           </AnimatePresence>
@@ -2129,7 +2132,7 @@ export default function PulseApp() {
           <AnimatePresence>
           {showMessagesModal && (
             <motion.div key="messages" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} style={{ position: 'fixed', inset: 0, zIndex: 1000 }}>
-            <MessagesModal
+            <Suspense fallback={null}><MessagesModal
               currentConversation={currentConversation}
               setCurrentConversation={setCurrentConversation}
               conversationsLoading={conversationsLoading}
@@ -2142,7 +2145,7 @@ export default function PulseApp() {
               onClose={() => { setShowMessagesModal(false); setCurrentConversation(null); setMessageInput(''); }}
               fetchMessages={fetchMessages}
               sendMessage={sendMessage}
-            />
+            /></Suspense>
             </motion.div>
           )}
           </AnimatePresence>
@@ -2151,7 +2154,7 @@ export default function PulseApp() {
           <AnimatePresence>
           {showNotifications && (
             <motion.div key="notifications" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} style={{ position: 'fixed', inset: 0, zIndex: 1000 }}>
-            <NotificationsPanel
+            <Suspense fallback={null}><NotificationsPanel
               notifications={notifications}
               loading={notificationsLoading}
               onClose={() => setShowNotifications(false)}
@@ -2170,7 +2173,7 @@ export default function PulseApp() {
                   else { showToast('This deal is no longer available'); }
                 }
               }}
-            />
+            /></Suspense>
             </motion.div>
           )}
           </AnimatePresence>
@@ -2179,7 +2182,7 @@ export default function PulseApp() {
           <AnimatePresence>
           {showAdminPanel && user.isAdmin && (
             <motion.div key="admin-panel" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} style={{ position: 'fixed', inset: 0, zIndex: 1000 }}>
-            <AdminPanelModal
+            <Suspense fallback={null}><AdminPanelModal
               adminTab={adminTab}
               setAdminTab={setAdminTab}
               pendingSubmissions={pendingSubmissions}
@@ -2187,7 +2190,7 @@ export default function PulseApp() {
               setView={setView}
               approveSubmission={approveSubmission}
               rejectSubmission={rejectSubmission}
-            />
+            /></Suspense>
             </motion.div>
           )}
           </AnimatePresence>
@@ -2195,7 +2198,7 @@ export default function PulseApp() {
       )}
 
       {view === 'business' && (
-        <BusinessDashboard
+        <Suspense fallback={<SkeletonCards count={6} />}><BusinessDashboard
           user={user}
           isImpersonating={isImpersonating}
           impersonatedBusiness={impersonatedBusiness}
@@ -2243,10 +2246,10 @@ export default function PulseApp() {
           fetchBusinessMessages={fetchBusinessMessages}
           markConversationResolved={markConversationResolved}
           sendBusinessReply={sendBusinessReply}
-        />
+        /></Suspense>
       )}
       {view === 'admin' && (
-        <AdminDashboard
+        <Suspense fallback={<SkeletonCards count={6} />}><AdminDashboard
           user={user}
           services={services}
           impersonateSearchQuery={impersonateSearchQuery}
@@ -2282,14 +2285,14 @@ export default function PulseApp() {
           setEditEventForm={setEditEventForm}
           setShowEditEventModal={setShowEditEventModal}
           setSelectedEvent={setSelectedEvent}
-        />
+        /></Suspense>
       )}
 
       {/* Claim Business Modal - Global (works from any view: consumer, business, admin) */}
       <AnimatePresence>
       {showClaimBusinessModal && (
         <motion.div key="claim-biz" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} style={{ position: 'fixed', inset: 0, zIndex: 1000 }}>
-        <ClaimBusinessModal
+        <Suspense fallback={null}><ClaimBusinessModal
           claimSearchQuery={claimSearchQuery}
           setClaimSearchQuery={setClaimSearchQuery}
           claimSelectedBusiness={claimSelectedBusiness}
@@ -2314,7 +2317,7 @@ export default function PulseApp() {
           onClose={() => { setShowClaimBusinessModal(false); setClaimFormData({ businessName: '', ownerName: '', email: '', phone: '', role: 'owner', address: '' }); setClaimVerificationStep('form'); setClaimVerificationCode(''); setClaimId(null); setClaimResendCooldown(0); if (claimCooldownTimerRef.current) { clearInterval(claimCooldownTimerRef.current); claimCooldownTimerRef.current = null; } setClaimDocuments([]); setClaimVerificationMethod('email'); setClaimSelectedBusiness(null); setClaimSearchQuery(''); }}
           setShowAuthModal={setShowAuthModal}
           handleClaimBusiness={handleClaimBusiness}
-        />
+        /></Suspense>
         </motion.div>
       )}
       </AnimatePresence>
@@ -2323,7 +2326,7 @@ export default function PulseApp() {
       <AnimatePresence>
       {showSubmissionModal && (
         <motion.div key="submission" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} style={{ position: 'fixed', inset: 0, zIndex: 1000 }}>
-        <SubmissionModal
+        <Suspense fallback={null}><SubmissionModal
           submissionStep={submissionStep}
           submissionType={submissionType}
           submissionForm={submissionForm}
@@ -2352,7 +2355,7 @@ export default function PulseApp() {
           submitting={submitting}
           getSelectedBusinessInfo={getSelectedBusinessInfo}
           showToast={showToast}
-        />
+        /></Suspense>
         </motion.div>
       )}
       </AnimatePresence>
@@ -2361,14 +2364,14 @@ export default function PulseApp() {
       <AnimatePresence>
       {showEditVenueModal && editingVenue && (
         <motion.div key="edit-venue" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} style={{ position: 'fixed', inset: 0, zIndex: 1000 }}>
-        <EditVenueModal
+        <Suspense fallback={null}><EditVenueModal
           editingVenue={editingVenue}
           editVenueForm={editVenueForm}
           setEditVenueForm={setEditVenueForm}
           onClose={() => { setShowEditVenueModal(false); setEditingVenue(null); }}
           showToast={showToast}
           fetchServices={fetchServices}
-        />
+        /></Suspense>
         </motion.div>
       )}
       </AnimatePresence>
@@ -2377,14 +2380,14 @@ export default function PulseApp() {
       <AnimatePresence>
       {showEditEventModal && editingEvent && (
         <motion.div key="edit-event" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} style={{ position: 'fixed', inset: 0, zIndex: 1000 }}>
-        <EditEventModal
+        <Suspense fallback={null}><EditEventModal
           editingEvent={editingEvent}
           editEventForm={editEventForm}
           setEditEventForm={setEditEventForm}
           onClose={() => { setShowEditEventModal(false); setEditingEvent(null); }}
           showToast={showToast}
           setEventsRefreshKey={forceRefreshEvents}
-        />
+        /></Suspense>
         </motion.div>
       )}
       </AnimatePresence>
@@ -2393,7 +2396,7 @@ export default function PulseApp() {
       <AnimatePresence>
       {showImageCropper && cropperImage && (
         <motion.div key="cropper" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }} style={{ position: 'fixed', inset: 0, zIndex: 1100 }}>
-        <ImageCropperModal
+        <Suspense fallback={null}><ImageCropperModal
           cropperImage={cropperImage}
           cropperType={cropperType}
           cropPosition={cropPosition}
@@ -2402,7 +2405,7 @@ export default function PulseApp() {
           setCropZoom={setCropZoom}
           onClose={closeImageCropper}
           handleCropComplete={handleCropComplete}
-        />
+        /></Suspense>
         </motion.div>
       )}
       </AnimatePresence>
