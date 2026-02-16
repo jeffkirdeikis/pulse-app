@@ -1,11 +1,10 @@
 import React, { useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Calendar, CalendarPlus, Check, ChevronRight, Clock, MapPin, Share2, Star, Zap } from 'lucide-react';
-import { PACIFIC_TZ, getPacificNow } from '../utils/timezoneHelpers';
+import { PACIFIC_TZ } from '../utils/timezoneHelpers';
 
-function getTimeBadge(start) {
+function getTimeBadge(start, now) {
   if (!start || !(start instanceof Date)) return null;
-  const now = getPacificNow();
   const diffMs = start - now;
   const diffMin = diffMs / 60000;
   if (diffMin < 0 && diffMin > -120) return { label: 'Happening Now', className: 'time-badge-now' };
@@ -13,9 +12,8 @@ function getTimeBadge(start) {
   return null;
 }
 
-function getRelativeTime(start) {
+function getRelativeTime(start, now) {
   if (!start || !(start instanceof Date)) return null;
-  const now = getPacificNow();
   const diffMs = start - now;
   const diffMin = Math.round(diffMs / 60000);
   if (diffMin < -120) return null; // past events beyond 2 hrs
@@ -36,12 +34,12 @@ function highlightMatch(text, query) {
   return <>{text.slice(0, idx)}<mark className="search-highlight">{text.slice(idx, idx + query.length)}</mark>{text.slice(idx + query.length)}</>;
 }
 
-const EventCard = React.forwardRef(({ event, venues, isItemSavedLocal, toggleSave, getVenueName, onSelect, onBookClick, onPrefetch, addToCalendar, isInMyCalendar, showToast, searchQuery, compact, index = 0 }, ref) => {
+const EventCard = React.forwardRef(({ event, venues, isItemSavedLocal, toggleSave, getVenueName, onSelect, onBookClick, onPrefetch, addToCalendar, isInMyCalendar, showToast, searchQuery, compact, index = 0, currentTime }, ref) => {
   const itemType = event.eventType === 'class' ? 'class' : 'event';
   const isSaved = isItemSavedLocal(itemType, event.id);
   const inCalendar = isInMyCalendar?.(event.id);
-  const timeBadge = useMemo(() => getTimeBadge(event.start), [event.start]);
-  const relativeTime = useMemo(() => getRelativeTime(event.start), [event.start]);
+  const timeBadge = useMemo(() => getTimeBadge(event.start, currentTime), [event.start, currentTime]);
+  const relativeTime = useMemo(() => getRelativeTime(event.start, currentTime), [event.start, currentTime]);
   const duration = useMemo(() => {
     if (!event.end || !event.start) return null;
     const mins = Math.round((event.end - event.start) / 60000);

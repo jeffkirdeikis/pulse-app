@@ -1,6 +1,18 @@
 import { useCallback } from 'react';
 import { supabase } from '../lib/supabase';
-import { PACIFIC_TZ } from '../utils/timezoneHelpers';
+import { PACIFIC_TZ, getPacificNow } from '../utils/timezoneHelpers';
+
+// Format a Date as Google Calendar datetime string (YYYYMMDDTHHmmss) in Pacific timezone
+function toGCalDateStr(date) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: PACIFIC_TZ,
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    hour12: false,
+  }).formatToParts(date);
+  const get = (type) => parts.find(p => p.type === type)?.value || '00';
+  return `${get('year')}${get('month')}${get('day')}T${get('hour')}${get('minute')}${get('second')}`;
+}
 
 /**
  * Hook for calendar-related functions (Google Calendar, My Calendar).
@@ -17,13 +29,14 @@ export function useCalendar({ myCalendar, isAuthenticated, session, registerForE
   // Generate Google Calendar URL
   const generateGoogleCalendarUrl = useCallback((event) => {
     if (!event.start || isNaN(event.start.getTime())) return '';
-    const startDate = event.start.toISOString().replace(/-|:|\.\d+/g, '');
-    const endDate = event.end && !isNaN(event.end.getTime()) ? event.end.toISOString().replace(/-|:|\.\d+/g, '') : startDate;
+    const startDate = toGCalDateStr(event.start);
+    const endDate = event.end && !isNaN(event.end.getTime()) ? toGCalDateStr(event.end) : startDate;
     const title = encodeURIComponent(event.title);
     const details = encodeURIComponent(event.description || '');
     const location = encodeURIComponent(getVenueName(event.venueId, event) + ', Squamish, BC');
+    const ctz = encodeURIComponent(PACIFIC_TZ);
 
-    return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${startDate}/${endDate}&details=${details}&location=${location}`;
+    return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${startDate}/${endDate}&details=${details}&location=${location}&ctz=${ctz}`;
   }, [getVenueName]);
 
   // Add event to both Google Calendar and My Calendar

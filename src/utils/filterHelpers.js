@@ -1,4 +1,5 @@
 import { isRealDeal, calculateDealScore } from './dealHelpers';
+import { getPacificNow } from './timezoneHelpers';
 
 /**
  * Filter and sort events/classes based on current filters.
@@ -198,8 +199,8 @@ export function filterDeals(allDeals, { searchQuery, filters, getVenueName }) {
   // Filter out vague deals with no real value
   filtered = filtered.filter(deal => isRealDeal(deal));
 
-  // Filter out expired deals
-  const now = new Date();
+  // Filter out expired deals (use Pacific time for consistency)
+  const now = getPacificNow();
   filtered = filtered.filter(deal => {
     if (!deal.validUntil) return true; // No expiry = always valid
     return new Date(deal.validUntil) >= now;

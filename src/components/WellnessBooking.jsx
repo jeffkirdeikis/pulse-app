@@ -5,6 +5,7 @@ import {
   Activity, Stethoscope, Sparkles, RefreshCw, Check, AlertCircle
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { getPacificNow, PACIFIC_TZ } from '../utils/timezoneHelpers';
 import ProgressiveImage from './ProgressiveImage';
 
 // Discipline config
@@ -31,23 +32,21 @@ const DURATIONS = [
   { key: 90, label: '90 min' },
 ];
 
-// Generate next 14 days
+// Generate next 14 days using Pacific timezone
 function getDateRange() {
   const dates = [];
-  const today = new Date();
+  const now = getPacificNow();
   for (let i = 0; i < 14; i++) {
-    const d = new Date(today);
-    d.setDate(today.getDate() + i);
-    // Use local date components to avoid UTC offset issues
-    // toISOString() converts to UTC which shifts the date after 4 PM Pacific
+    const d = new Date(now);
+    d.setDate(now.getDate() + i);
     const year = d.getFullYear();
     const month = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
     dates.push({
       date: `${year}-${month}-${day}`,
-      dayName: d.toLocaleDateString('en-US', { weekday: 'short' }),
+      dayName: d.toLocaleDateString('en-US', { timeZone: PACIFIC_TZ, weekday: 'short' }),
       dayNum: d.getDate(),
-      monthName: d.toLocaleDateString('en-US', { month: 'short' }),
+      monthName: d.toLocaleDateString('en-US', { timeZone: PACIFIC_TZ, month: 'short' }),
       isToday: i === 0,
     });
   }
@@ -158,7 +157,9 @@ export default function WellnessBooking({
   const fetchDateCounts = useCallback(async () => {
     const dateList = dates.map(d => d.date);
     const today = dates[0].date;
-    const nowTime = new Date().toTimeString().slice(0, 8); // "HH:MM:SS"
+    // Use Pacific timezone for current time comparison
+    const pacificNow = getPacificNow();
+    const nowTime = pacificNow.toLocaleTimeString('en-US', { timeZone: PACIFIC_TZ, hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
     // Get all available slots for the next 14 days
     let query = supabase

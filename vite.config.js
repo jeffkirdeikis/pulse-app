@@ -17,11 +17,11 @@ export default defineConfig({
         background_color: '#ffffff',
         display: 'standalone',
         orientation: 'portrait',
-        scope: '/',
-        start_url: '/',
+        scope: '/squamish',
+        start_url: '/squamish',
         categories: ['lifestyle', 'entertainment'],
         share_target: {
-          action: '/',
+          action: '/squamish',
           method: 'GET',
           params: {
             title: 'title',
