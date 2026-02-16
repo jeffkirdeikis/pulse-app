@@ -34,7 +34,7 @@ function highlightMatch(text, query) {
   return <>{text.slice(0, idx)}<mark className="search-highlight">{text.slice(idx, idx + query.length)}</mark>{text.slice(idx + query.length)}</>;
 }
 
-const EventCard = React.forwardRef(({ event, venues, isItemSavedLocal, toggleSave, getVenueName, onSelect, onBookClick, onPrefetch, addToCalendar, isInMyCalendar, showToast, searchQuery, compact, index = 0, currentTime }, ref) => {
+const EventCard = React.memo(React.forwardRef(({ event, venues, isItemSavedLocal, toggleSave, getVenueName, onSelect, onBookClick, onPrefetch, addToCalendar, isInMyCalendar, showToast, searchQuery, compact, index = 0, currentTime }, ref) => {
   const itemType = event.eventType === 'class' ? 'class' : 'event';
   const isSaved = isItemSavedLocal(itemType, event.id);
   const inCalendar = isInMyCalendar?.(event.id);
@@ -193,7 +193,7 @@ const EventCard = React.forwardRef(({ event, venues, isItemSavedLocal, toggleSav
         <div className="event-badges-row">
           {event.ageGroup && <span className="event-badge age-badge">{event.ageGroup}</span>}
           {event.price && <span className="event-badge price-badge">{event.price}</span>}
-          {event.recurrence !== 'none' && <span className="event-badge recurrence-badge">Recurring {event.recurrence}</span>}
+          {event.recurrence && event.recurrence !== 'none' && <span className="event-badge recurrence-badge">Recurring {event.recurrence}</span>}
         </div>
       </div>
 
@@ -242,6 +242,8 @@ const EventCard = React.forwardRef(({ event, venues, isItemSavedLocal, toggleSav
       <ChevronRight className="event-chevron" size={20} />
     </motion.div>
   );
-});
+}));
+
+EventCard.displayName = 'EventCard';
 
 export default EventCard;

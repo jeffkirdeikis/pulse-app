@@ -77,6 +77,9 @@ export function useUserData() {
       } else {
         setLoading(false);
       }
+    }).catch((err) => {
+      console.error('[Auth] getSession failed:', err);
+      setLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {

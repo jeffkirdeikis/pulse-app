@@ -99,7 +99,7 @@ const EventDetailModal = memo(function EventDetailModal({
                   Event
                 </span>
               )}
-              {event.recurrence !== 'none' && (
+              {event.recurrence && event.recurrence !== 'none' && (
                 <span className="recurring-pill">
                   <Repeat size={12} />
                   {event.recurrence}

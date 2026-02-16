@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import React, { memo, useRef, useEffect } from 'react';
 import { ChevronLeft, MessageCircle, Send } from 'lucide-react';
 
 const MessagesModal = memo(function MessagesModal({
@@ -15,8 +15,17 @@ const MessagesModal = memo(function MessagesModal({
   fetchMessages,
   sendMessage,
 }) {
+  const messagesEndRef = useRef(null);
+
+  // Auto-scroll to bottom when new messages arrive or conversation opens
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [conversationMessages]);
+
   return (
-    <div className="modal-overlay messages-modal-overlay" role="dialog" aria-modal="true" aria-label="Messages" onClick={() => onClose()}>
+    <div className="modal-overlay messages-modal-overlay" role="dialog" aria-modal="true" aria-label="Messages" onClick={() => { onClose(); setCurrentConversation(null); }}>
       <div className="messages-modal" onClick={(e) => e.stopPropagation()}>
         <button className="close-btn messages-close" onClick={() => { onClose(); setCurrentConversation(null); }} aria-label="Close">
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
@@ -52,9 +61,10 @@ const MessagesModal = memo(function MessagesModal({
                     tabIndex={0}
                     onClick={() => {
                       setCurrentConversation(conv);
+                      setMessageInput('');
                       fetchMessages(conv.id);
                     }}
-                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setCurrentConversation(conv); fetchMessages(conv.id); } }}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setCurrentConversation(conv); setMessageInput(''); fetchMessages(conv.id); } }}
                   >
                     <div className="conv-avatar">
                       {conv.business_name?.charAt(0) || 'B'}
@@ -81,7 +91,7 @@ const MessagesModal = memo(function MessagesModal({
         ) : (
           <>
             <div className="chat-header">
-              <button className="back-btn" onClick={() => setCurrentConversation(null)}>
+              <button className="back-btn" onClick={() => { setCurrentConversation(null); setMessageInput(''); }}>
                 <ChevronLeft size={20} />
               </button>
               <div className="chat-info">
@@ -100,17 +110,20 @@ const MessagesModal = memo(function MessagesModal({
                   <p>No messages in this conversation yet</p>
                 </div>
               ) : (
-                conversationMessages.map(msg => (
-                  <div
-                    key={msg.id}
-                    className={`message-bubble ${msg.sender_type === 'user' ? 'sent' : 'received'}`}
-                  >
-                    <p>{msg.content}</p>
-                    <span className="message-time">
-                      {msg.created_at && !isNaN(new Date(msg.created_at).getTime()) ? new Date(msg.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : ''}
-                    </span>
-                  </div>
-                ))
+                <>
+                  {conversationMessages.map(msg => (
+                    <div
+                      key={msg.id}
+                      className={`message-bubble ${msg.sender_type === 'user' ? 'sent' : 'received'}`}
+                    >
+                      <p>{msg.content}</p>
+                      <span className="message-time">
+                        {msg.created_at && !isNaN(new Date(msg.created_at).getTime()) ? new Date(msg.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : ''}
+                      </span>
+                    </div>
+                  ))}
+                  <div ref={messagesEndRef} />
+                </>
               )}
             </div>
 

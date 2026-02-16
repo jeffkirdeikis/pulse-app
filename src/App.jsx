@@ -425,7 +425,7 @@ export default function PulseApp() {
       if (m.selectedService) { setSelectedService(null); return; }
       if (m.showSubmissionModal) { setShowSubmissionModal(false); return; }
       if (m.showMyCalendarModal) { setShowMyCalendarModal(false); return; }
-      if (m.showMessagesModal) { setShowMessagesModal(false); setCurrentConversation(null); return; }
+      if (m.showMessagesModal) { setShowMessagesModal(false); setCurrentConversation(null); setMessageInput(''); return; }
       if (m.showProfileModal) { setShowProfileModal(false); return; }
       if (m.showClaimBusinessModal) { setShowClaimBusinessModal(false); setClaimFormData({ businessName: '', ownerName: '', email: '', phone: '', role: 'owner', address: '' }); setClaimVerificationStep('form'); setClaimVerificationCode(''); setClaimId(null); setClaimResendCooldown(0); if (claimCooldownTimerRef.current) { clearInterval(claimCooldownTimerRef.current); claimCooldownTimerRef.current = null; } setClaimDocuments([]); setClaimVerificationMethod('email'); setClaimSelectedBusiness(null); setClaimSearchQuery(''); return; }
       if (m.showAuthModal) { setShowAuthModal(false); return; }
@@ -877,7 +877,7 @@ export default function PulseApp() {
         if (selectedDeal) { setSelectedDeal(null); return; }
         if (selectedService) { setSelectedService(null); return; }
         if (showMyCalendarModal) { setShowMyCalendarModal(false); return; }
-        if (showMessagesModal) { setShowMessagesModal(false); setCurrentConversation(null); return; }
+        if (showMessagesModal) { setShowMessagesModal(false); setCurrentConversation(null); setMessageInput(''); return; }
         if (showAuthModal) { setShowAuthModal(false); return; }
         if (showClaimBusinessModal) { setShowClaimBusinessModal(false); setClaimFormData({ businessName: '', ownerName: '', email: '', phone: '', role: 'owner', address: '' }); setClaimVerificationStep('form'); setClaimVerificationCode(''); setClaimId(null); setClaimResendCooldown(0); if (claimCooldownTimerRef.current) { clearInterval(claimCooldownTimerRef.current); claimCooldownTimerRef.current = null; } setClaimDocuments([]); setClaimVerificationMethod('email'); setClaimSelectedBusiness(null); setClaimSearchQuery(''); return; }
         if (showProfileModal) { setShowProfileModal(false); return; }
@@ -2118,7 +2118,7 @@ export default function PulseApp() {
               contactMessage={contactMessage}
               setContactMessage={setContactMessage}
               sendingMessage={sendingMessage}
-              onClose={() => setShowContactSheet(false)}
+              onClose={() => { setShowContactSheet(false); setContactSubject(''); setContactMessage(''); }}
               submitContactForm={submitContactForm}
             />
             </motion.div>

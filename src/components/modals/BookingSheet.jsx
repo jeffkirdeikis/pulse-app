@@ -51,25 +51,30 @@ const BookingSheet = memo(function BookingSheet({
 
           return (
             <div className="external-booking-container">
+              {bookingUrl ? (
               <a
-                href={bookingUrl || '#'}
+                href={bookingUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="open-booking-btn"
                 onClick={() => {
-                  // Track that they opened the booking page
                   trackAnalytics('booking_click', business?.id, bookingEvent.id);
                 }}
               >
                 <Ticket size={20} />
                 Open Booking Page
               </a>
+              ) : (
+              <div className="open-booking-btn" style={{ opacity: 0.5, cursor: 'default' }}>
+                <Ticket size={20} />
+                Booking link unavailable
+              </div>
+              )}
 
               <button
                 className="add-calendar-secondary"
                 onClick={() => {
                   addToCalendar(bookingEvent);
-                  showToast('Added to your calendar!', 'success');
                 }}
               >
                 <Calendar size={18} />
