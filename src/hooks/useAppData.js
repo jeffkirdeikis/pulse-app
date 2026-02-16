@@ -148,7 +148,7 @@ export function useAppData() {
       while (hasMore) {
         const { data: pageData, error } = await supabase
           .from('events')
-          .select('*')
+          .select('id, title, event_type, venue_id, venue_name, venue_address, start_date, start_time, end_time, tags, category, description, is_free, price, price_description, featured, image_url, view_count, created_at, business_id')
           .eq('status', 'active')
           .gte('start_date', localDateStr)
           .order('start_date', { ascending: true })
@@ -247,7 +247,7 @@ export function useAppData() {
       try {
       const { data, error } = await supabase
         .from('deals')
-        .select('*')
+        .select('id, title, business_id, business_name, business_address, category, description, discount_type, discount_value, original_price, deal_price, valid_until, terms_conditions, image_url, featured, schedule')
         .eq('status', 'active')
         .order('created_at', { ascending: false });
 
