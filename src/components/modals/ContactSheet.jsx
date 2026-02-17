@@ -16,7 +16,7 @@ const ContactSheet = memo(function ContactSheet({
     <div className="modal-overlay contact-sheet-overlay" role="dialog" aria-modal="true" aria-label="Contact business" onClick={() => onClose()}>
       <div className="contact-bottom-sheet" onClick={(e) => e.stopPropagation()}>
         <div className="sheet-handle" />
-        <button className="close-btn sheet-close" onClick={() => onClose()} aria-label="Close">
+        <button type="button" className="close-btn sheet-close" onClick={() => onClose()} aria-label="Close">
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
             <path d="M1 1L13 13M1 13L13 1" stroke="#6b7280" strokeWidth="2" strokeLinecap="round"/>
           </svg>
@@ -35,6 +35,7 @@ const ContactSheet = memo(function ContactSheet({
               placeholder="e.g., Class inquiry, Booking question"
               value={contactSubject}
               onChange={(e) => setContactSubject(e.target.value)}
+              autoComplete="off"
             />
           </div>
           <div className="form-field">

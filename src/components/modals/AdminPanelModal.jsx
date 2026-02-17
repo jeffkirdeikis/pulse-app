@@ -29,7 +29,7 @@ const AdminPanelModal = memo(function AdminPanelModal({
   return (
     <div className="modal-overlay admin-modal-overlay" role="dialog" aria-modal="true" aria-label="Admin panel" onClick={() => onClose()}>
       <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
-        <button className="close-btn admin-close" onClick={() => onClose()} aria-label="Close"><X size={24} /></button>
+        <button type="button" className="close-btn admin-close" onClick={() => onClose()} aria-label="Close"><X size={24} /></button>
 
         <div className="admin-header">
           <div className="admin-header-content">
@@ -41,7 +41,7 @@ const AdminPanelModal = memo(function AdminPanelModal({
               <p>Review and approve submissions</p>
             </div>
           </div>
-          <button className="admin-btn approve" style={{ marginTop: '12px', display: 'flex', alignItems: 'center', gap: '8px' }} onClick={() => { onClose(); setView('admin'); }}>
+          <button type="button" className="admin-btn approve" style={{ marginTop: '12px', display: 'flex', alignItems: 'center', gap: '8px' }} onClick={() => { onClose(); setView('admin'); }}>
             <SlidersHorizontal size={16} />
             Open Full Dashboard
           </button>

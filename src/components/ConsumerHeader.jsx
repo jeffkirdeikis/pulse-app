@@ -161,17 +161,17 @@ const ConsumerHeader = React.memo(function ConsumerHeader({
 
           <div className="header-actions-premium">
             {user.isGuest ? (
-              <button className="sign-in-btn" onClick={() => setShowAuthModal(true)}>
+              <button type="button" className="sign-in-btn" onClick={() => setShowAuthModal(true)}>
                 Sign In
               </button>
             ) : (
               <>
-                <button className="header-btn-icon messages-btn" onClick={openMessages} aria-label="Messages">
+                <button type="button" className="header-btn-icon messages-btn" onClick={openMessages} aria-label="Messages">
                   <div style={{ color: '#374151', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <MessageCircle size={22} strokeWidth={2} />
                   </div>
                 </button>
-                <button className="header-btn-icon notification-btn" onClick={onOpenNotifications} style={{ position: 'relative' }} aria-label="Notifications">
+                <button type="button" className="header-btn-icon notification-btn" onClick={onOpenNotifications} style={{ position: 'relative' }} aria-label="Notifications">
                   <div style={{ color: '#374151', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <Bell size={22} strokeWidth={2} />
                   </div>
@@ -311,7 +311,7 @@ const ConsumerHeader = React.memo(function ConsumerHeader({
               <>
                 <div className="suggestions-header">
                   <span>Recent</span>
-                  <button className="clear-recent-btn" onMouseDown={(e) => { e.preventDefault(); handleClearRecent(); }}>Clear</button>
+                  <button type="button" className="clear-recent-btn" onMouseDown={(e) => { e.preventDefault(); handleClearRecent(); }}>Clear</button>
                 </div>
                 {recentSearches.map((s, i) => (
                   <button

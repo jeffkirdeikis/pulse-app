@@ -609,7 +609,7 @@ function EmptyState({ hasProviders, selectedDate, onSetAlert, dateCounts, onSele
               return `${nextAvailable[1]} slots available on ${nextStr}`;
             })()}
           </p>
-          <button className="wb-empty-jump-btn" onClick={() => onSelectDate(nextAvailable[0])}>
+          <button type="button" className="wb-empty-jump-btn" onClick={() => onSelectDate(nextAvailable[0])}>
             <Calendar size={16} />
             Jump to Next Available
           </button>
@@ -617,7 +617,7 @@ function EmptyState({ hasProviders, selectedDate, onSetAlert, dateCounts, onSele
       ) : (
         <>
           <p>Try adjusting your filters, or set up an alert to get notified when slots open up.</p>
-          <button className="wb-empty-alert-btn" onClick={onSetAlert}>
+          <button type="button" className="wb-empty-alert-btn" onClick={onSetAlert}>
             <Bell size={16} />
             Notify Me When Available
           </button>
@@ -677,7 +677,7 @@ function ProviderView({ groups, onSlotClick, onProviderClick, onAlertClick, user
         const priceStr = formatPrice(provider.price_min, provider.price_max);
         return (
           <div key={provider.provider_id} className="wb-provider-card">
-            <div className="wb-provider-header" onClick={() => onProviderClick(provider)}>
+            <div className="wb-provider-header" role="button" tabIndex={0} onClick={() => onProviderClick(provider)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onProviderClick(provider); } }}>
               <div className="wb-provider-avatar">
                 {provider.photo_url ? (
                   <ProgressiveImage src={provider.photo_url} alt={provider.provider_name} style={{ width: '100%', height: '100%', borderRadius: '50%' }} />
@@ -740,7 +740,7 @@ function BookingSheet({ slot, onClose, onBook, onViewProfile }) {
       <div className="wb-sheet-backdrop" onClick={onClose} />
       <div className="wb-sheet">
         <div className="wb-sheet-handle" />
-        <button className="wb-sheet-close-btn" onClick={onClose} aria-label="Close">
+        <button type="button" className="wb-sheet-close-btn" onClick={onClose} aria-label="Close">
           <X size={18} />
         </button>
         <div className="wb-sheet-content">
@@ -782,11 +782,11 @@ function BookingSheet({ slot, onClose, onBook, onViewProfile }) {
           </div>
 
           <div className="wb-sheet-actions">
-            <button className="wb-sheet-book-btn" onClick={onBook}>
+            <button type="button" className="wb-sheet-book-btn" onClick={onBook}>
               <ExternalLink size={18} />
               Book Now
             </button>
-            <button className="wb-sheet-profile-btn" onClick={onViewProfile}>
+            <button type="button" className="wb-sheet-profile-btn" onClick={onViewProfile}>
               View Profile
             </button>
           </div>
@@ -807,7 +807,7 @@ function ProviderDetailModal({ provider, slots, onClose, onSlotClick, onBook, ha
   return (
     <div className="wb-modal-overlay" onClick={onClose}>
       <div className="wb-provider-modal" onClick={(e) => e.stopPropagation()}>
-        <button className="wb-modal-close" onClick={onClose} aria-label="Close">
+        <button type="button" className="wb-modal-close" onClick={onClose} aria-label="Close">
           <X size={20} />
         </button>
 
@@ -871,7 +871,7 @@ function ProviderDetailModal({ provider, slots, onClose, onSlotClick, onBook, ha
         )}
 
         <div className="wb-modal-actions">
-          <button className="wb-modal-book-btn" onClick={onBook}>
+          <button type="button" className="wb-modal-book-btn" onClick={onBook}>
             <ExternalLink size={18} />
             Book on {provider.clinic_name}
           </button>
@@ -898,7 +898,7 @@ function AlertSetupModal({ provider, days, setDays, timeRange, setTimeRange, onS
   return (
     <div className="wb-modal-overlay" onClick={onClose}>
       <div className="wb-alert-modal" onClick={(e) => e.stopPropagation()}>
-        <button className="wb-modal-close" onClick={onClose} aria-label="Close">
+        <button type="button" className="wb-modal-close" onClick={onClose} aria-label="Close">
           <X size={20} />
         </button>
         <div className="wb-alert-header">
@@ -939,7 +939,7 @@ function AlertSetupModal({ provider, days, setDays, timeRange, setTimeRange, onS
           </div>
         </div>
 
-        <button className="wb-alert-save-btn" onClick={onSave}>
+        <button type="button" className="wb-alert-save-btn" onClick={onSave}>
           <Bell size={16} />
           Save Alert
         </button>

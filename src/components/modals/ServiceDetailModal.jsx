@@ -38,7 +38,7 @@ const ServiceDetailModal = memo(function ServiceDetailModal({
   return (
     <div className="modal-overlay service-modal-overlay" role="dialog" aria-modal="true" aria-label="Service details" onClick={handleClose}>
       <div className="service-detail-modal" onClick={(e) => e.stopPropagation()}>
-        <button className="close-btn service-close" onClick={handleClose} aria-label="Close"><X size={24} /></button>
+        <button type="button" className="close-btn service-close" onClick={handleClose} aria-label="Close"><X size={24} /></button>
 
         {/* Hero Section */}
         <div className="service-hero">
@@ -251,7 +251,7 @@ const ServiceDetailModal = memo(function ServiceDetailModal({
         {/* Footer */}
         <div className="service-modal-footer">
           <p>Information sourced from Google. Last updated recently.</p>
-          <button className="report-btn" onClick={() => showToast('Report submitted. Thank you!', 'info')}>Report an issue</button>
+          <button type="button" className="report-btn" onClick={() => showToast('Report submitted. Thank you!', 'info')}>Report an issue</button>
         </div>
       </div>
     </div>

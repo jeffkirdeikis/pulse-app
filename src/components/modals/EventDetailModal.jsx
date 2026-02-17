@@ -78,7 +78,7 @@ const EventDetailModal = memo(function EventDetailModal({
         <div className="modal-drag-handle" aria-hidden="true">
           <div className="drag-handle-bar" />
         </div>
-        <button className="close-btn event-close" onClick={onClose} aria-label="Close">
+        <button type="button" className="close-btn event-close" onClick={onClose} aria-label="Close">
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
             <path d="M1 1L13 13M1 13L13 1" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
           </svg>
@@ -158,7 +158,7 @@ const EventDetailModal = memo(function EventDetailModal({
         {/* Quick Actions */}
         <div className="event-quick-actions">
           {event.eventType === 'class' && (
-            <button className="quick-action-btn book-class-highlight" onClick={() => handleBookClick(event)}>
+            <button type="button" className="quick-action-btn book-class-highlight" onClick={() => handleBookClick(event)}>
               <div className="quick-action-icon book-class"><Ticket size={20} /></div>
               <span>Book</span>
             </button>
@@ -172,7 +172,7 @@ const EventDetailModal = memo(function EventDetailModal({
             </div>
             <span>{isItemSavedLocal(itemType, event.id) ? 'Saved' : 'Save'}</span>
           </button>
-          <button className="quick-action-btn" onClick={handleShare}>
+          <button type="button" className="quick-action-btn" onClick={handleShare}>
             <div className="quick-action-icon share"><Share2 size={20} /></div>
             <span>Share</span>
           </button>

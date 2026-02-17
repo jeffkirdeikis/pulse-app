@@ -75,7 +75,7 @@ const DealDetailModal = memo(function DealDetailModal({
   return (
     <div className="modal-overlay deal-modal-overlay" role="dialog" aria-modal="true" aria-label="Deal details" onClick={onClose}>
       <div className="deal-detail-modal" onClick={(e) => e.stopPropagation()}>
-        <button className="close-btn deal-close" onClick={onClose} aria-label="Close">
+        <button type="button" className="close-btn deal-close" onClick={onClose} aria-label="Close">
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{display: 'block'}} aria-hidden="true">
             <path d="M1 1L13 13M1 13L13 1" stroke="#374151" strokeWidth="2" strokeLinecap="round"/>
           </svg>
@@ -122,7 +122,7 @@ const DealDetailModal = memo(function DealDetailModal({
             </div>
             <span>{isItemSavedLocal('deal', deal.id) ? 'Saved' : 'Save'}</span>
           </button>
-          <button className="quick-action-btn" onClick={handleShare}>
+          <button type="button" className="quick-action-btn" onClick={handleShare}>
             <div className="quick-action-icon share"><Share2 size={20} /></div>
             <span>Share</span>
           </button>
@@ -207,7 +207,7 @@ const DealDetailModal = memo(function DealDetailModal({
 
         {/* CTA Section */}
         <div className="deal-cta-section">
-          <button className="deal-cta-btn primary" onClick={handleRedeem} disabled={redeeming}>
+          <button type="button" className="deal-cta-btn primary" onClick={handleRedeem} disabled={redeeming}>
             <Ticket size={18} />
             Redeem Deal
           </button>

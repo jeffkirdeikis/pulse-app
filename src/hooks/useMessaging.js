@@ -199,7 +199,9 @@ export function useMessaging(user, { showToast, onAuthRequired, activeBusiness, 
         bookings: all.filter(c => c.conversation_type === 'booking' && c.unread_count > 0).length,
         messages: all.filter(c => c.conversation_type !== 'booking' && c.unread_count > 0).length,
       });
-    } catch { /* silent */ }
+    } catch (err) {
+      if (import.meta.env.DEV) console.warn('[fetchInboxUnreadCounts]', err.message);
+    }
   }, []);
 
   // Fetch business inbox conversations

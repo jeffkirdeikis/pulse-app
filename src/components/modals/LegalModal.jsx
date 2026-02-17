@@ -14,7 +14,7 @@ const LegalModal = memo(function LegalModal({ type, onClose }) {
   return (
     <div className="modal-overlay" role="dialog" aria-modal="true" aria-label={type === 'privacy' ? 'Privacy Policy' : 'Terms of Service'} onClick={onClose}>
       <div className="auth-modal" style={{ maxHeight: '85vh', overflow: 'auto' }} onClick={(e) => e.stopPropagation()}>
-        <button className="auth-modal-close" onClick={onClose} aria-label="Close"><X size={24} /></button>
+        <button type="button" className="auth-modal-close" onClick={onClose} aria-label="Close"><X size={24} /></button>
         <div style={{ padding: '24px', lineHeight: 1.7 }}>
           {type === 'privacy' ? <PrivacyPolicy /> : <TermsOfService />}
         </div>

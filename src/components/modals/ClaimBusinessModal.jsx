@@ -63,7 +63,7 @@ const ClaimBusinessModal = memo(function ClaimBusinessModal({
   return (
     <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Claim business" onClick={onClose}>
       <div className="claim-modal-premium" ref={focusTrapRef} onClick={(e) => e.stopPropagation()}>
-        <button className="claim-modal-close" onClick={onClose} aria-label="Close"><X size={24} /></button>
+        <button type="button" className="claim-modal-close" onClick={onClose} aria-label="Close"><X size={24} /></button>
 
         {/* Purple Gradient Header */}
         <div className="claim-modal-header">
@@ -85,7 +85,7 @@ const ClaimBusinessModal = memo(function ClaimBusinessModal({
                 <AlertCircle size={24} />
                 <p>Please sign in to claim your business</p>
               </div>
-              <button className="claim-signin-btn" onClick={() => { onClose(); setShowAuthModal(true); }}>
+              <button type="button" className="claim-signin-btn" onClick={() => { onClose(); setShowAuthModal(true); }}>
                 Sign In to Continue
               </button>
             </div>
@@ -147,11 +147,14 @@ const ClaimBusinessModal = memo(function ClaimBusinessModal({
                   <div style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid #e5e7eb', borderRadius: '8px', marginTop: '4px', background: '#fff' }}>
                     {services.filter(s => s.name?.toLowerCase().includes(claimSearchQuery.toLowerCase())).slice(0, 8).map(biz => (
                       <div key={biz.id} style={{ padding: '10px 14px', cursor: 'pointer', borderBottom: '1px solid #f3f4f6', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                        role="button"
+                        tabIndex={0}
                         onClick={() => {
                           setClaimSelectedBusiness(biz);
                           setClaimFormData(prev => ({ ...prev, businessName: biz.name, address: biz.address || '' }));
                           setClaimSearchQuery('');
                         }}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setClaimSelectedBusiness(biz); setClaimFormData(prev => ({ ...prev, businessName: biz.name, address: biz.address || '' })); setClaimSearchQuery(''); } }}
                         onMouseEnter={(e) => e.currentTarget.style.background = '#f9fafb'}
                         onMouseLeave={(e) => e.currentTarget.style.background = '#fff'}
                       >
@@ -180,19 +183,19 @@ const ClaimBusinessModal = memo(function ClaimBusinessModal({
               <div className="claim-form-grid">
                 <div className="claim-form-group full">
                   <label>Business Name *</label>
-                  <input type="text" placeholder="e.g., The Sound Martial Arts" value={claimFormData.businessName} onChange={(e) => setClaimFormData({...claimFormData, businessName: e.target.value})} />
+                  <input type="text" placeholder="e.g., The Sound Martial Arts" value={claimFormData.businessName} onChange={(e) => setClaimFormData({...claimFormData, businessName: e.target.value})} autoComplete="organization" />
                 </div>
                 <div className="claim-form-group">
                   <label>Your Name *</label>
-                  <input type="text" placeholder="Full name" value={claimFormData.ownerName} onChange={(e) => setClaimFormData({...claimFormData, ownerName: e.target.value})} />
+                  <input type="text" placeholder="Full name" value={claimFormData.ownerName} onChange={(e) => setClaimFormData({...claimFormData, ownerName: e.target.value})} autoComplete="name" />
                 </div>
                 <div className="claim-form-group">
                   <label>Email *</label>
-                  <input type="email" placeholder="your@email.com" value={claimFormData.email} onChange={(e) => setClaimFormData({...claimFormData, email: e.target.value})} />
+                  <input type="email" placeholder="your@email.com" value={claimFormData.email} onChange={(e) => setClaimFormData({...claimFormData, email: e.target.value})} autoComplete="email" />
                 </div>
                 <div className="claim-form-group">
                   <label>Phone</label>
-                  <input type="tel" placeholder="(604) 555-1234" value={claimFormData.phone} onChange={(e) => setClaimFormData({...claimFormData, phone: e.target.value})} />
+                  <input type="tel" placeholder="(604) 555-1234" value={claimFormData.phone} onChange={(e) => setClaimFormData({...claimFormData, phone: e.target.value})} autoComplete="tel" />
                 </div>
                 <div className="claim-form-group">
                   <label>Role</label>
@@ -204,7 +207,7 @@ const ClaimBusinessModal = memo(function ClaimBusinessModal({
                 </div>
                 <div className="claim-form-group full">
                   <label>Business Address</label>
-                  <input type="text" placeholder="Street address in Squamish" value={claimFormData.address} onChange={(e) => setClaimFormData({...claimFormData, address: e.target.value})} />
+                  <input type="text" placeholder="Street address in Squamish" value={claimFormData.address} onChange={(e) => setClaimFormData({...claimFormData, address: e.target.value})} autoComplete="street-address" />
                 </div>
               </div>
 
@@ -322,8 +325,8 @@ const ClaimBusinessModal = memo(function ClaimBusinessModal({
               </div>
 
               <div className="claim-modal-actions">
-                <button className="claim-cancel-btn" onClick={onClose}>Cancel</button>
-                <button className="claim-submit-btn" onClick={handleClaimBusiness} disabled={claimSubmitting || !claimFormData.businessName?.trim() || !claimFormData.ownerName?.trim() || !claimFormData.email?.trim()}>
+                <button type="button" className="claim-cancel-btn" onClick={onClose}>Cancel</button>
+                <button type="button" className="claim-submit-btn" onClick={handleClaimBusiness} disabled={claimSubmitting || !claimFormData.businessName?.trim() || !claimFormData.ownerName?.trim() || !claimFormData.email?.trim()}>
                   {claimSubmitting ? 'Submitting...' : claimVerificationMethod === 'document' ? 'Submit with Documents' : 'Submit Claim'}
                 </button>
               </div>

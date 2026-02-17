@@ -165,10 +165,10 @@ const ImageCropperModal = memo(function ImageCropperModal({
       </div>
     </div>
     <div className="cropper-actions">
-      <button className="cropper-btn cancel" onClick={() => { onClose(); }}>
+      <button type="button" className="cropper-btn cancel" onClick={() => { onClose(); }}>
         Cancel
       </button>
-      <button className="cropper-btn apply" onClick={handleCropComplete}>
+      <button type="button" className="cropper-btn apply" onClick={handleCropComplete}>
         Apply Crop
       </button>
     </div>

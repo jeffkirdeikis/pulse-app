@@ -161,8 +161,13 @@ export function useAppData() {
         }
 
         allData = allData.concat(pageData);
-        hasMore = pageData.length === PAGE_SIZE;
+        hasMore = pageData && pageData.length === PAGE_SIZE;
         page++;
+        // Safety limit to prevent infinite pagination
+        if (allData.length > 50000) {
+          if (import.meta.env.DEV) console.warn('Event pagination exceeded safety limit');
+          break;
+        }
       }
 
       const data = allData;
@@ -171,6 +176,12 @@ export function useAppData() {
         const timeUnknown = !event.start_time;
         let startTimeStr = event.start_time || '09:00';
         let [hours, minutes] = startTimeStr.split(':').map(Number);
+
+        // Guard against NaN from unparseable time strings
+        if (isNaN(hours) || isNaN(minutes)) {
+          hours = 9;
+          minutes = 0;
+        }
 
         // Fix suspicious times: midnight through 4 AM are likely scraper errors
         // Allow 5 AM+ as legitimate early morning classes (sunrise yoga, etc.)

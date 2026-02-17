@@ -104,7 +104,7 @@ export function useSubmissions(user, { showToast, userClaimedBusinesses, updateA
         ...prev,
         businessType: 'individual',
         selectedBusinessId: '',
-        businessName: user?.name,
+        businessName: user?.name || '',
         businessAddress: 'Squamish, BC'
       }));
     }
@@ -114,6 +114,17 @@ export function useSubmissions(user, { showToast, userClaimedBusinesses, updateA
   const handleImageSelect = useCallback((e, imageType) => {
     const file = e.target.files[0];
     if (file) {
+      // Validate file type
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+      if (!allowedTypes.includes(file.type)) {
+        showToast?.('Invalid image format. Use JPG, PNG, WebP, or GIF.', 'error');
+        return;
+      }
+      // Validate file size (10MB max)
+      if (file.size > 10 * 1024 * 1024) {
+        showToast?.('Image too large. Maximum 10MB.', 'error');
+        return;
+      }
       const reader = new FileReader();
       reader.onload = (event) => {
         setCropperImage(event.target.result);

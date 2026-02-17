@@ -17,7 +17,7 @@ const EditEventModal = memo(function EditEventModal({
   <div className="claim-modal-premium" onClick={(e) => e.stopPropagation()}>
     <div className="modal-header-premium">
       <h2>Edit {editingEvent.eventType === 'class' ? 'Class' : 'Event'}</h2>
-      <button className="modal-close-btn" onClick={() => { onClose(); }} aria-label="Close"><X size={20} /></button>
+      <button type="button" className="modal-close-btn" onClick={() => { onClose(); }} aria-label="Close"><X size={20} /></button>
     </div>
     <div className="modal-body-premium">
       <div className="form-group">
@@ -54,8 +54,8 @@ const EditEventModal = memo(function EditEventModal({
       </div>
     </div>
     <div className="modal-actions-premium">
-      <button className="btn-secondary" onClick={() => { onClose(); }}>Cancel</button>
-      <button className="btn-primary-gradient" disabled={saving || !editEventForm.title?.trim() || !editEventForm.date} onClick={async () => {
+      <button type="button" className="btn-secondary" onClick={() => { onClose(); }}>Cancel</button>
+      <button type="button" className="btn-primary-gradient" disabled={saving || !editEventForm.title?.trim() || !editEventForm.date} onClick={async () => {
         if (saving || !editEventForm.title?.trim() || !editEventForm.date) return;
         setSaving(true);
         try {

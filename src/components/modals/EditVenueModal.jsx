@@ -15,7 +15,7 @@ const EditVenueModal = memo(function EditVenueModal({
   return (
 <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Edit venue" onClick={() => { onClose(); }}>
   <div className="claim-modal-premium" onClick={(e) => e.stopPropagation()}>
-    <button className="claim-modal-close" onClick={() => { onClose(); }} aria-label="Close"><X size={24} /></button>
+    <button type="button" className="claim-modal-close" onClick={() => { onClose(); }} aria-label="Close"><X size={24} /></button>
 
     <div className="claim-modal-header">
       <div className="claim-modal-icon">
@@ -36,6 +36,7 @@ const EditVenueModal = memo(function EditVenueModal({
             value={editVenueForm.name}
             onChange={(e) => setEditVenueForm({...editVenueForm, name: e.target.value})}
             maxLength={200}
+            autoComplete="organization"
           />
         </div>
         <div className="claim-form-group full">
@@ -47,6 +48,7 @@ const EditVenueModal = memo(function EditVenueModal({
             value={editVenueForm.address}
             onChange={(e) => setEditVenueForm({...editVenueForm, address: e.target.value})}
             maxLength={300}
+            autoComplete="street-address"
           />
         </div>
         <div className="claim-form-group">
@@ -58,6 +60,7 @@ const EditVenueModal = memo(function EditVenueModal({
             value={editVenueForm.phone}
             onChange={(e) => setEditVenueForm({...editVenueForm, phone: e.target.value})}
             maxLength={20}
+            autoComplete="tel"
           />
         </div>
         <div className="claim-form-group">
@@ -69,6 +72,7 @@ const EditVenueModal = memo(function EditVenueModal({
             value={editVenueForm.email}
             onChange={(e) => setEditVenueForm({...editVenueForm, email: e.target.value})}
             maxLength={254}
+            autoComplete="email"
           />
         </div>
         <div className="claim-form-group">
@@ -80,6 +84,7 @@ const EditVenueModal = memo(function EditVenueModal({
             value={editVenueForm.website}
             onChange={(e) => setEditVenueForm({...editVenueForm, website: e.target.value})}
             maxLength={500}
+            autoComplete="url"
           />
         </div>
         <div className="claim-form-group">
@@ -96,8 +101,8 @@ const EditVenueModal = memo(function EditVenueModal({
       </div>
 
       <div className="claim-modal-actions">
-        <button className="claim-cancel-btn" onClick={() => { onClose(); }}>Cancel</button>
-        <button className="claim-submit-btn" disabled={saving || !editVenueForm.name?.trim()} onClick={async () => {
+        <button type="button" className="claim-cancel-btn" onClick={() => { onClose(); }}>Cancel</button>
+        <button type="button" className="claim-submit-btn" disabled={saving || !editVenueForm.name?.trim()} onClick={async () => {
           if (!editingVenue?.id) {
             showToast('Error: No venue ID found', 'error');
             return;

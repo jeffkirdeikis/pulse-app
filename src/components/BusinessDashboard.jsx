@@ -109,7 +109,7 @@ const BusinessDashboard = memo(function BusinessDashboard({
             </div>
             <h2>Sign In Required</h2>
             <p>Sign in to access the Business Dashboard and manage your business on Pulse.</p>
-            <button className="claim-biz-btn-large" onClick={() => setShowAuthModal(true)}>
+            <button type="button" className="claim-biz-btn-large" onClick={() => setShowAuthModal(true)}>
               Sign In
             </button>
           </div>
@@ -146,7 +146,7 @@ const BusinessDashboard = memo(function BusinessDashboard({
               </div>
             </div>
 
-            <button className="claim-biz-btn-large" onClick={() => setShowClaimBusinessModal(true)}>
+            <button type="button" className="claim-biz-btn-large" onClick={() => setShowClaimBusinessModal(true)}>
               <Plus size={20} />
               Claim Your Business
             </button>
@@ -163,7 +163,7 @@ const BusinessDashboard = memo(function BusinessDashboard({
                 <span>Admin View: <strong>{impersonatedBusiness.name}</strong></span>
                 <span className="impersonation-badge">Impersonation Mode</span>
               </div>
-              <button className="impersonation-exit-btn" onClick={exitImpersonation}>
+              <button type="button" className="impersonation-exit-btn" onClick={exitImpersonation}>
                 <X size={16} />
                 Exit Business View
               </button>
@@ -174,7 +174,7 @@ const BusinessDashboard = memo(function BusinessDashboard({
           <div className="premium-header">
             <div className="premium-header-content">
               <div className="header-left">
-                <div className="venue-avatar-upload" onClick={() => document.getElementById('business-logo-upload')?.click()}>
+                <div className="venue-avatar-upload" role="button" tabIndex={0} aria-label="Upload business logo" onClick={() => document.getElementById('business-logo-upload')?.click()} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); document.getElementById('business-logo-upload')?.click(); } }}>
                   <input
                     id="business-logo-upload"
                     type="file"
@@ -246,7 +246,7 @@ const BusinessDashboard = memo(function BusinessDashboard({
 
           {/* Pulse Score Card */}
           <div className="biz-pulse-score-card">
-            <button className="pulse-share-btn" title="Share your Pulse Score" aria-label="Share your Pulse Score" onClick={async () => {
+            <button type="button" className="pulse-share-btn" title="Share your Pulse Score" aria-label="Share your Pulse Score" onClick={async () => {
               const shareText = `${activeBusiness?.name} has a Pulse Score of ${pulseScore}/100 on Pulse Squamish! ${earnedBadgeCount} badges earned. Check them out!`;
               if (navigator.share) {
                 try { await navigator.share({ title: `${activeBusiness?.name} - Pulse Score`, text: shareText, url: `https://pulse-app.ca/squamish#services` }); } catch { /* user cancelled share dialog */ }
@@ -315,10 +315,10 @@ const BusinessDashboard = memo(function BusinessDashboard({
           {/* Time Period Selector */}
           <div className="analytics-controls">
             <div className="time-selector">
-              <button className={`time-btn ${analyticsPeriod === 30 ? 'active' : ''}`} onClick={() => setAnalyticsPeriod(30)}>Last 30 Days</button>
-              <button className={`time-btn ${analyticsPeriod === 90 ? 'active' : ''}`} onClick={() => setAnalyticsPeriod(90)}>Last 90 Days</button>
-              <button className={`time-btn ${analyticsPeriod === 365 ? 'active' : ''}`} onClick={() => setAnalyticsPeriod(365)}>This Year</button>
-              <button className={`time-btn ${analyticsPeriod === 9999 ? 'active' : ''}`} onClick={() => setAnalyticsPeriod(9999)}>All Time</button>
+              <button type="button" className={`time-btn ${analyticsPeriod === 30 ? 'active' : ''}`} onClick={() => setAnalyticsPeriod(30)}>Last 30 Days</button>
+              <button type="button" className={`time-btn ${analyticsPeriod === 90 ? 'active' : ''}`} onClick={() => setAnalyticsPeriod(90)}>Last 90 Days</button>
+              <button type="button" className={`time-btn ${analyticsPeriod === 365 ? 'active' : ''}`} onClick={() => setAnalyticsPeriod(365)}>This Year</button>
+              <button type="button" className={`time-btn ${analyticsPeriod === 9999 ? 'active' : ''}`} onClick={() => setAnalyticsPeriod(9999)}>All Time</button>
             </div>
           </div>
 
@@ -490,14 +490,14 @@ const BusinessDashboard = memo(function BusinessDashboard({
                 <div className="insight-tag">Get Started</div>
                 <p>Post your first <strong>event, class, or deal</strong> to start attracting customers on Pulse.</p>
                 <div style={{ display: 'flex', gap: '8px' }}>
-                  <button className="insight-btn" onClick={() => { openSubmissionModal(); selectSubmissionType('event'); }}>Create Event</button>
-                  <button className="insight-btn" onClick={() => { openSubmissionModal(); selectSubmissionType('deal'); }}>Create Deal</button>
+                  <button type="button" className="insight-btn" onClick={() => { openSubmissionModal(); selectSubmissionType('event'); }}>Create Event</button>
+                  <button type="button" className="insight-btn" onClick={() => { openSubmissionModal(); selectSubmissionType('deal'); }}>Create Deal</button>
                 </div>
               </div>
               <div className="insight-item">
                 <div className="insight-tag">Tip</div>
                 <p>Complete your business profile to <strong>build trust</strong> with potential customers.</p>
-                <button className="insight-btn" onClick={() => {
+                <button type="button" className="insight-btn" onClick={() => {
                   if (activeBusiness) {
                     const biz = activeBusiness;
                     setEditingVenue(biz);
@@ -647,7 +647,7 @@ const BusinessDashboard = memo(function BusinessDashboard({
           <div className="premium-section">
             <div className="section-header-premium">
               <h2>🏆 Top Performing</h2>
-              <button className="btn-text" onClick={() => document.querySelector('.analytics-controls')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>View all analytics →</button>
+              <button type="button" className="btn-text" onClick={() => document.querySelector('.analytics-controls')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>View all analytics →</button>
             </div>
 
             <div className="top-classes-grid">
@@ -706,7 +706,7 @@ const BusinessDashboard = memo(function BusinessDashboard({
             <div className="section-header-premium">
               <h2>Your Active Listings</h2>
               <div className="section-actions">
-                <button className="btn-primary-gradient" onClick={() => openSubmissionModal()}><Plus size={18} /> Add New</button>
+                <button type="button" className="btn-primary-gradient" onClick={() => openSubmissionModal()}><Plus size={18} /> Add New</button>
               </div>
             </div>
 
@@ -752,7 +752,7 @@ const BusinessDashboard = memo(function BusinessDashboard({
                           <td>
                             <div className="actions-cell">
                               {listing._source === 'event' && (
-                                <button className="action-btn-sm" title="Edit" onClick={() => {
+                                <button type="button" className="action-btn-sm" title="Edit" onClick={() => {
                                   setEditingEvent(listing);
                                   const s = listing.start ? (listing.start instanceof Date ? listing.start : new Date(listing.start)) : null;
                                   const e = listing.end ? (listing.end instanceof Date ? listing.end : new Date(listing.end)) : null;
@@ -762,7 +762,7 @@ const BusinessDashboard = memo(function BusinessDashboard({
                                   setShowEditEventModal(true);
                                 }}><Edit2 size={14} /></button>
                               )}
-                              <button className="action-btn-sm danger" title="Delete" onClick={async () => {
+                              <button type="button" className="action-btn-sm danger" title="Delete" onClick={async () => {
                                 if (confirm(`Delete "${listing.title}"?`)) {
                                   try {
                                     const table = listing._source === 'deal' ? 'deals' : 'events';
@@ -862,7 +862,7 @@ const BusinessDashboard = memo(function BusinessDashboard({
               ) : selectedBusinessConversation ? (
                 <div className="inbox-thread">
                   <div className="thread-header">
-                    <button className="back-btn" onClick={() => setSelectedBusinessConversation(null)}>
+                    <button type="button" className="back-btn" onClick={() => setSelectedBusinessConversation(null)}>
                       <ChevronLeft size={20} />
                     </button>
                     <div className="thread-info">
@@ -966,19 +966,19 @@ const BusinessDashboard = memo(function BusinessDashboard({
           {/* Quick Actions */}
           <div className="premium-section actions-section">
             <div className="quick-actions-grid">
-              <button className="qa-btn primary" onClick={() => { openSubmissionModal(); selectSubmissionType('event'); }}>
+              <button type="button" className="qa-btn primary" onClick={() => { openSubmissionModal(); selectSubmissionType('event'); }}>
                 <Plus size={20} />
                 <span>New Event</span>
               </button>
-              <button className="qa-btn" onClick={() => { openSubmissionModal(); selectSubmissionType('class'); }}>
+              <button type="button" className="qa-btn" onClick={() => { openSubmissionModal(); selectSubmissionType('class'); }}>
                 <Sparkles size={20} />
                 <span>New Class</span>
               </button>
-              <button className="qa-btn" onClick={() => { openSubmissionModal(); selectSubmissionType('deal'); }}>
+              <button type="button" className="qa-btn" onClick={() => { openSubmissionModal(); selectSubmissionType('deal'); }}>
                 <Percent size={20} />
                 <span>New Deal</span>
               </button>
-              <button className="qa-btn" onClick={() => {
+              <button type="button" className="qa-btn" onClick={() => {
                 if (activeBusiness) {
                   setEditingVenue(activeBusiness);
                   setEditVenueForm({ name: activeBusiness.name || '', address: activeBusiness.address || '', phone: activeBusiness.phone || '', website: activeBusiness.website || '', email: activeBusiness.email || '', category: activeBusiness.category || '' });
@@ -988,7 +988,7 @@ const BusinessDashboard = memo(function BusinessDashboard({
                 <Edit2 size={20} />
                 <span>Edit Profile</span>
               </button>
-              <button className="qa-btn" onClick={() => {
+              <button type="button" className="qa-btn" onClick={() => {
                 document.querySelector('.analytics-controls')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
               }}>
                 <TrendingUp size={20} />
@@ -1004,7 +1004,7 @@ const BusinessDashboard = memo(function BusinessDashboard({
               <h3>Download Report</h3>
               <p>Get detailed analytics for this month</p>
               <div style={{ display: 'flex', gap: '8px' }}>
-                <button className="btn-outline" style={{ flex: 1 }} onClick={() => {
+                <button type="button" className="btn-outline" style={{ flex: 1 }} onClick={() => {
                   const data = `Pulse Business Report - ${activeBusiness?.name || 'Business'}\nGenerated: ${new Date().toLocaleDateString()}\n\nPulse Score: ${pulseScore}/100\n  Profile: ${profileScore}%\n  Engagement: ${engagementScore}%\n  Response: ${responseScore > 0 ? responseScore + '%' : 'N/A'}\n  Quality: ${qualityScore}%\n\nAnalytics (${analyticsPeriod === 9999 ? 'All Time' : `Last ${analyticsPeriod} Days`})\n  Profile Views: ${businessAnalytics?.totals?.profile_views || 0}\n  Class Views: ${businessAnalytics?.totals?.class_views || 0}\n  Event Views: ${businessAnalytics?.totals?.event_views || 0}\n  Booking Clicks: ${businessAnalytics?.totals?.booking_clicks || 0}\n  Total Saves: ${businessAnalytics?.totals?.total_saves || 0}\n\nContent\n  Active Listings: ${businessListingsAll.length}\n  Badges Earned: ${earnedBadgeCount}/${badges.length}\n\nTop Performing\n${topItems.map((e, i) => `  ${i+1}. ${e.title} (${e.viewCount || 0} views)`).join('\n')}`;
                   const blob = new Blob([data], { type: 'text/plain' });
                   const url = URL.createObjectURL(blob);
@@ -1015,7 +1015,7 @@ const BusinessDashboard = memo(function BusinessDashboard({
                   <Download size={14} style={{ marginRight: '4px' }} />
                   TXT
                 </button>
-                <button className="btn-outline" style={{ flex: 1 }} onClick={() => {
+                <button type="button" className="btn-outline" style={{ flex: 1 }} onClick={() => {
                   const rows = [
                     ['Metric', 'Value'],
                     ['Business', activeBusiness?.name || ''],
@@ -1052,13 +1052,13 @@ const BusinessDashboard = memo(function BusinessDashboard({
               <div className="qa-icon">✉️</div>
               <h3>Contact Support</h3>
               <p>Need help? Our team is here for you</p>
-              <button className="btn-outline" onClick={() => window.open('mailto:support@pulsesquamish.com', '_blank')}>Get Help</button>
+              <button type="button" className="btn-outline" onClick={() => window.open('mailto:support@pulsesquamish.com', '_blank')}>Get Help</button>
             </div>
             <div className="quick-action-card">
               <div className="qa-icon">🎯</div>
               <h3>Boost Visibility</h3>
               <p>Feature your listings for more reach</p>
-              <button className="btn-outline" onClick={() => showToast('Premium features coming soon', 'info')}>Upgrade</button>
+              <button type="button" className="btn-outline" onClick={() => showToast('Premium features coming soon', 'info')}>Upgrade</button>
             </div>
           </div>
         </>

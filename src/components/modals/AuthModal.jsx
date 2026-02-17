@@ -179,20 +179,20 @@ const AuthModal = memo(function AuthModal({ onClose, onSuccess }) {
             {authMode === 'signup' && (
               <div className="auth-form-group">
                 <label htmlFor="auth-name">Full Name</label>
-                <input id="auth-name" type="text" placeholder="Your name" value={authName} onChange={(e) => { setAuthName(e.target.value); if (fieldErrors.name) setFieldErrors(fe => ({...fe, name: ''})); }} aria-invalid={!!fieldErrors.name} maxLength={100} />
-                {fieldErrors.name && <span className="auth-field-error" role="alert" style={{color:'#dc2626',fontSize:'12px',marginTop:'4px',display:'block'}}>{fieldErrors.name}</span>}
+                <input id="auth-name" type="text" placeholder="Your name" value={authName} onChange={(e) => { setAuthName(e.target.value); if (fieldErrors.name) setFieldErrors(fe => ({...fe, name: ''})); }} aria-invalid={!!fieldErrors.name} aria-describedby={fieldErrors.name ? 'error-auth-name' : undefined} autoComplete="name" maxLength={100} />
+                {fieldErrors.name && <span id="error-auth-name" className="auth-field-error" role="alert" style={{color:'#dc2626',fontSize:'12px',marginTop:'4px',display:'block'}}>{fieldErrors.name}</span>}
               </div>
             )}
             <div className="auth-form-group">
               <label htmlFor="auth-email">Email</label>
-              <input id="auth-email" type="email" placeholder="you@example.com" value={authEmail} onChange={(e) => { setAuthEmail(e.target.value); if (fieldErrors.email) setFieldErrors(fe => ({...fe, email: ''})); }} aria-invalid={!!fieldErrors.email} maxLength={254} />
-              {fieldErrors.email && <span className="auth-field-error" role="alert" style={{color:'#dc2626',fontSize:'12px',marginTop:'4px',display:'block'}}>{fieldErrors.email}</span>}
+              <input id="auth-email" type="email" placeholder="you@example.com" value={authEmail} onChange={(e) => { setAuthEmail(e.target.value); if (fieldErrors.email) setFieldErrors(fe => ({...fe, email: ''})); }} aria-invalid={!!fieldErrors.email} aria-describedby={fieldErrors.email ? 'error-auth-email' : undefined} autoComplete="email" maxLength={254} />
+              {fieldErrors.email && <span id="error-auth-email" className="auth-field-error" role="alert" style={{color:'#dc2626',fontSize:'12px',marginTop:'4px',display:'block'}}>{fieldErrors.email}</span>}
             </div>
             {authMode !== 'forgotPassword' && (
               <div className="auth-form-group">
                 <label htmlFor="auth-password">Password</label>
-                <input id="auth-password" type="password" placeholder={authMode === 'signup' ? 'Create a password (min 6 chars)' : 'Your password'} value={authPassword} onChange={(e) => { setAuthPassword(e.target.value); if (fieldErrors.password) setFieldErrors(fe => ({...fe, password: ''})); }} aria-invalid={!!fieldErrors.password} maxLength={128} />
-                {fieldErrors.password && <span className="auth-field-error" role="alert" style={{color:'#dc2626',fontSize:'12px',marginTop:'4px',display:'block'}}>{fieldErrors.password}</span>}
+                <input id="auth-password" type="password" placeholder={authMode === 'signup' ? 'Create a password (min 6 chars)' : 'Your password'} value={authPassword} onChange={(e) => { setAuthPassword(e.target.value); if (fieldErrors.password) setFieldErrors(fe => ({...fe, password: ''})); }} aria-invalid={!!fieldErrors.password} aria-describedby={fieldErrors.password ? 'error-auth-password' : undefined} autoComplete={authMode === 'signup' ? 'new-password' : 'current-password'} maxLength={128} />
+                {fieldErrors.password && <span id="error-auth-password" className="auth-field-error" role="alert" style={{color:'#dc2626',fontSize:'12px',marginTop:'4px',display:'block'}}>{fieldErrors.password}</span>}
                 {authMode === 'signin' && (
                   <button type="button" onClick={() => { setAuthMode('forgotPassword'); setAuthError(''); setFieldErrors({}); }} style={{ background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', padding: '4px 0 0', font: 'inherit', fontSize: '13px', textDecoration: 'none', textAlign: 'right', display: 'block', width: '100%' }}>Forgot password?</button>
                 )}

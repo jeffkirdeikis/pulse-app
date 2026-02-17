@@ -50,7 +50,7 @@ const ProfileModal = memo(function ProfileModal({
   return (
     <div className="modal-overlay profile-modal-overlay" role="dialog" aria-modal="true" aria-label="Profile" onClick={() => onClose()}>
       <div className="profile-modal" ref={focusTrapRef} onClick={(e) => e.stopPropagation()}>
-        <button className="close-btn profile-close" onClick={() => onClose()} aria-label="Close"><X size={24} /></button>
+        <button type="button" className="close-btn profile-close" onClick={() => onClose()} aria-label="Close"><X size={24} /></button>
 
         {/* Hidden file inputs for profile images */}
         <input 
@@ -71,7 +71,7 @@ const ProfileModal = memo(function ProfileModal({
         {/* Profile Hero Section */}
         <div className="profile-hero">
           <div className={`profile-cover ${!user.coverPhoto ? 'no-photo' : ''}`} style={{ backgroundImage: user.coverPhoto ? `url(${user.coverPhoto})` : 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)' }}>
-            <button className="cover-edit-btn" onClick={() => document.getElementById('profile-cover-input').click()}>
+            <button type="button" className="cover-edit-btn" onClick={() => document.getElementById('profile-cover-input').click()}>
               <Camera size={16} />
               <span>{user.coverPhoto ? 'Change Cover' : 'Add Cover Photo'}</span>
             </button>
@@ -80,7 +80,7 @@ const ProfileModal = memo(function ProfileModal({
             <div className="profile-avatar-wrapper">
               <div className="profile-avatar-large">
                 {user.avatar ? <img src={user.avatar} alt={user.name ? `${user.name}'s avatar` : 'Profile photo'} loading="lazy" width="80" height="80" /> : (user.name?.trim() ? user.name.trim().split(/\s+/).filter(Boolean).map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'U' : 'U')}
-                <button className="avatar-edit-btn" aria-label="Change profile photo" onClick={() => document.getElementById('profile-avatar-input').click()}>
+                <button type="button" className="avatar-edit-btn" aria-label="Change profile photo" onClick={() => document.getElementById('profile-avatar-input').click()}>
                   <Camera size={14} />
                 </button>
               </div>
@@ -290,7 +290,7 @@ const ProfileModal = memo(function ProfileModal({
               <div className="profile-section">
                 <div className="section-header">
                   <h3>Recent Activity</h3>
-                  <button className="see-all-btn" onClick={() => setProfileTab('activity')}>See All</button>
+                  <button type="button" className="see-all-btn" onClick={() => setProfileTab('activity')}>See All</button>
                 </div>
                 <div className="activity-preview">
                   {userActivity.slice(0, 3).map(activity => (
@@ -446,7 +446,7 @@ const ProfileModal = memo(function ProfileModal({
                     </div>
                   </div>
 
-                  <button className="claim-business-btn" onClick={() => { setShowClaimBusinessModal(true); onClose(); }}>
+                  <button type="button" className="claim-business-btn" onClick={() => { setShowClaimBusinessModal(true); onClose(); }}>
                     <Plus size={18} />
                     Claim Your Business
                   </button>
@@ -673,7 +673,7 @@ const ProfileModal = memo(function ProfileModal({
                       <div className="insight-card hot">
                         <div className="insight-badge">Get Started</div>
                         <p>Post your first <strong>deal or event</strong> to start attracting customers on Pulse.</p>
-                        <button className="insight-action" onClick={() => {
+                        <button type="button" className="insight-action" onClick={() => {
                           setShowSubmissionModal(true);
                           setSubmissionStep(1);
                           setSubmissionType('deal');
@@ -682,7 +682,7 @@ const ProfileModal = memo(function ProfileModal({
                       <div className="insight-card">
                         <div className="insight-badge">Tip</div>
                         <p>Complete your business profile to <strong>build trust</strong> with potential customers.</p>
-                        <button className="insight-action" onClick={() => {
+                        <button type="button" className="insight-action" onClick={() => {
                           if (activeBusiness) {
                             const biz = activeBusiness;
                             setEditingVenue(biz);
@@ -709,15 +709,15 @@ const ProfileModal = memo(function ProfileModal({
 
                   {/* Quick Actions */}
                   <div className="biz-quick-actions">
-                    <button className="quick-action-btn primary" onClick={() => { setShowSubmissionModal(true); setSubmissionStep(1); setSubmissionType('event'); }}>
+                    <button type="button" className="quick-action-btn primary" onClick={() => { setShowSubmissionModal(true); setSubmissionStep(1); setSubmissionType('event'); }}>
                       <Plus size={18} />
                       New Event
                     </button>
-                    <button className="quick-action-btn" onClick={() => { setShowSubmissionModal(true); setSubmissionStep(1); setSubmissionType('deal'); }}>
+                    <button type="button" className="quick-action-btn" onClick={() => { setShowSubmissionModal(true); setSubmissionStep(1); setSubmissionType('deal'); }}>
                       <Percent size={18} />
                       New Deal
                     </button>
-                    <button className="quick-action-btn" onClick={() => {
+                    <button type="button" className="quick-action-btn" onClick={() => {
                       if (activeBusiness) {
                         setEditingVenue(activeBusiness);
                         setEditVenueForm({ name: activeBusiness.name || '', address: activeBusiness.address || '', phone: activeBusiness.phone || '', website: activeBusiness.website || '', email: activeBusiness.email || '', category: activeBusiness.category || '' });
@@ -727,7 +727,7 @@ const ProfileModal = memo(function ProfileModal({
                       <Edit2 size={18} />
                       Edit Profile
                     </button>
-                    <button className="quick-action-btn" onClick={() => {
+                    <button type="button" className="quick-action-btn" onClick={() => {
                       document.querySelector('.analytics-controls')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     }}>
                       <TrendingUp size={18} />
@@ -735,7 +735,7 @@ const ProfileModal = memo(function ProfileModal({
                     </button>
                   </div>
 
-                  <button className="add-another-business" onClick={() => { setShowClaimBusinessModal(true); }}>
+                  <button type="button" className="add-another-business" onClick={() => { setShowClaimBusinessModal(true); }}>
                     <Plus size={16} />
                     Claim Another Business
                   </button>
@@ -754,19 +754,19 @@ const ProfileModal = memo(function ProfileModal({
                   <div className="setting-item">
                     <div className="setting-info">
                       <label>Full Name</label>
-                      <input type="text" value={user.name} onChange={(e) => setUser(prev => ({ ...prev, name: e.target.value }))} />
+                      <input type="text" value={user.name} onChange={(e) => setUser(prev => ({ ...prev, name: e.target.value }))} autoComplete="name" />
                     </div>
                   </div>
                   <div className="setting-item">
                     <div className="setting-info">
                       <label>Email</label>
-                      <input type="email" value={user.email} onChange={(e) => setUser(prev => ({ ...prev, email: e.target.value }))} />
+                      <input type="email" value={user.email} onChange={(e) => setUser(prev => ({ ...prev, email: e.target.value }))} autoComplete="email" />
                     </div>
                   </div>
                   <div className="setting-item">
                     <div className="setting-info">
                       <label>Phone</label>
-                      <input type="tel" value={user.phone} placeholder="Add phone number" onChange={(e) => setUser(prev => ({ ...prev, phone: e.target.value }))} />
+                      <input type="tel" value={user.phone} placeholder="Add phone number" onChange={(e) => setUser(prev => ({ ...prev, phone: e.target.value }))} autoComplete="tel" />
                     </div>
                   </div>
                   <div className="setting-item">
@@ -932,7 +932,7 @@ const ProfileModal = memo(function ProfileModal({
               <div className="settings-section danger">
                 <h3>Danger Zone</h3>
                 <div className="danger-actions">
-                  <button className="danger-btn" onClick={() => {
+                  <button type="button" className="danger-btn" onClick={() => {
                     showToast('Please contact support to delete your account', 'info');
                   }}>
                     <Trash2 size={16} />

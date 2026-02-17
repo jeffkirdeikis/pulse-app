@@ -142,6 +142,7 @@ const DealsGrid = React.memo(function DealsGrid({
             </div>
 
             <button
+              type="button"
               className={`save-star-btn ${isItemSavedLocal('deal', deal.id) ? 'saved' : ''}`}
               onClick={(e) => {
                 e.stopPropagation();
@@ -165,7 +166,7 @@ const DealsGrid = React.memo(function DealsGrid({
           <h3 style={{color: '#374151', marginBottom: '8px'}}>No deals found</h3>
           <p>{searchQuery ? `No deals matching "${searchQuery}"` : 'No deals in this category'}</p>
           {(searchQuery || dealCategoryFilter !== 'All') && (
-            <button onClick={() => { setSearchQuery(''); setDealCategoryFilter('All'); }} className="clear-search-btn" style={{marginTop: '12px', padding: '8px 16px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600}}>
+            <button type="button" onClick={() => { setSearchQuery(''); setDealCategoryFilter('All'); }} className="clear-search-btn" style={{marginTop: '12px', padding: '8px 16px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600}}>
               Clear Filters
             </button>
           )}

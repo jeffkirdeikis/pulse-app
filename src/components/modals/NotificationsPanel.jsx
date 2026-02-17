@@ -59,16 +59,16 @@ const NotificationsPanel = memo(function NotificationsPanel({
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             {unreadCount > 0 && (
-              <button className="notif-action-btn" onClick={onMarkAllRead} title="Mark all read">
+              <button type="button" className="notif-action-btn" onClick={onMarkAllRead} title="Mark all read">
                 <Check size={16} />
               </button>
             )}
             {notifications.length > 0 && (
-              <button className="notif-action-btn" onClick={onClearAll} title="Clear all">
+              <button type="button" className="notif-action-btn" onClick={onClearAll} title="Clear all">
                 <Trash2 size={16} />
               </button>
             )}
-            <button className="notif-close-btn" onClick={onClose} aria-label="Close">
+            <button type="button" className="notif-close-btn" onClick={onClose} aria-label="Close">
               <X size={18} />
             </button>
           </div>

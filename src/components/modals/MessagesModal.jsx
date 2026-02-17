@@ -27,7 +27,7 @@ const MessagesModal = memo(function MessagesModal({
   return (
     <div className="modal-overlay messages-modal-overlay" role="dialog" aria-modal="true" aria-label="Messages" onClick={() => { onClose(); setCurrentConversation(null); }}>
       <div className="messages-modal" onClick={(e) => e.stopPropagation()}>
-        <button className="close-btn messages-close" onClick={() => { onClose(); setCurrentConversation(null); }} aria-label="Close">
+        <button type="button" className="close-btn messages-close" onClick={() => { onClose(); setCurrentConversation(null); }} aria-label="Close">
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
             <path d="M1 1L13 13M1 13L13 1" stroke="#374151" strokeWidth="2" strokeLinecap="round"/>
           </svg>
@@ -91,7 +91,7 @@ const MessagesModal = memo(function MessagesModal({
         ) : (
           <>
             <div className="chat-header">
-              <button className="back-btn" onClick={() => { setCurrentConversation(null); setMessageInput(''); }}>
+              <button type="button" className="back-btn" onClick={() => { setCurrentConversation(null); setMessageInput(''); }}>
                 <ChevronLeft size={20} />
               </button>
               <div className="chat-info">
@@ -134,6 +134,7 @@ const MessagesModal = memo(function MessagesModal({
                 value={messageInput}
                 onChange={(e) => setMessageInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && messageInput.trim() && !sendingMessage && sendMessage()}
+                autoComplete="off"
               />
               <button
                 className="send-btn"

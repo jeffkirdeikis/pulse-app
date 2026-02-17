@@ -45,6 +45,14 @@ import { filterEvents as filterEventsUtil, filterDeals as filterDealsUtil } from
 import { PACIFIC_TZ, getPacificNow } from './utils/timezoneHelpers';
 import './styles/pulse-app.css';
 
+// Constants — extracted from inline magic numbers
+const PAGE_SIZE = 50;
+const SCROLL_TO_TOP_THRESHOLD = 600;
+const DEFAULT_ANALYTICS_PERIOD = 30;
+const TIME_PERIOD_THRESHOLD = 6; // Min events per day to show time period headers
+const MIN_HOUR_FOR_FILTER = 6; // Skip pre-6AM time slots in filter dropdown
+const MAX_CLAIM_DOCUMENTS = 5;
+
 const AGE_RANGE_OPTIONS = [
   { label: 'Prenatal', min: -1, max: 0 },
   { label: '0-1', min: 0, max: 1 },
@@ -86,7 +94,7 @@ export default function PulseApp() {
     if (!el) return;
     const observer = new IntersectionObserver(([entry]) => {
       if (entry.isIntersecting) {
-        setVisibleEventCount(c => c + 50);
+        setVisibleEventCount(c => c + PAGE_SIZE);
       }
     }, { rootMargin: '200px' });
     observer.observe(el);
@@ -134,7 +142,7 @@ export default function PulseApp() {
     if (!['events', 'deals'].includes(table)) return; // Whitelist allowed tables
     try {
       await supabase.rpc('increment_view_count', { p_table: table, p_id: id });
-    } catch (e) { /* silent */ }
+    } catch (e) { if (import.meta.env.DEV) console.warn('[trackView]', e.message); }
   }, []);
 
   const fetchNotifications = useCallback(async (userId) => {
@@ -151,7 +159,7 @@ export default function PulseApp() {
         setNotifications(data || []);
       }
       // On error, keep existing notifications instead of wiping them
-    } catch (e) { /* silent */ }
+    } catch (e) { if (import.meta.env.DEV) console.warn('[fetchNotifications]', e.message); }
     setNotificationsLoading(false);
   }, []);
 
@@ -167,7 +175,7 @@ export default function PulseApp() {
     } catch {
       setNotifications(prev => prev.map(n => n.id === notifId ? { ...n, is_read: false } : n));
     }
-  }, [session]);
+  }, [session?.user?.id]);
 
   // User data from Supabase (replaces all hardcoded dummy data)
   const {
@@ -256,7 +264,7 @@ export default function PulseApp() {
       // Revert only the specific notifications we marked, preserving any new arrivals
       setNotifications(prev => prev.map(n => idsToMark.has(n.id) ? { ...n, is_read: false } : n));
     }
-  }, [session]);
+  }, [session?.user?.id]);
 
   const clearAllNotifications = useCallback(async () => {
     const userId = session?.user?.id;
@@ -274,7 +282,7 @@ export default function PulseApp() {
         return [...prev, ...restored];
       });
     }
-  }, [session]);
+  }, [session?.user?.id]);
 
   const createNotification = useCallback(async (type, title, body, data = null) => {
     const userId = session?.user?.id;
@@ -287,7 +295,7 @@ export default function PulseApp() {
     if (inserted) {
       setNotifications(prev => [inserted, ...prev]);
     }
-  }, [session]);
+  }, [session?.user?.id]);
 
   // Cleanup claim cooldown timer on unmount
   useEffect(() => {
@@ -498,7 +506,7 @@ export default function PulseApp() {
   // Business Analytics State
   const [businessAnalytics, setBusinessAnalytics] = useState(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
-  const [analyticsPeriod, setAnalyticsPeriod] = useState(30); // days
+  const [analyticsPeriod, setAnalyticsPeriod] = useState(DEFAULT_ANALYTICS_PERIOD);
   const analyticsRequestRef = useRef(0);
 
   // Fetch business analytics (request ID prevents stale responses from racing)
@@ -652,7 +660,7 @@ export default function PulseApp() {
   const [showAuthModal, setShowAuthModal] = useState(false);
 
   // Pagination — render events incrementally to avoid 981+ DOM nodes
-  const [visibleEventCount, setVisibleEventCount] = useState(50);
+  const [visibleEventCount, setVisibleEventCount] = useState(PAGE_SIZE);
   const [compactMode, setCompactMode] = useState(false);
 
   // Filter states - all dropdowns (persisted to localStorage, excluding specific dates)
@@ -1016,7 +1024,7 @@ export default function PulseApp() {
 
     events.forEach(event => {
       const hour = event.start.getHours();
-      if (hour < 6) return; // Skip suspicious pre-6AM times from dropdown
+      if (hour < MIN_HOUR_FOR_FILTER) return; // Skip suspicious pre-6AM times from dropdown
       const minute = event.start.getMinutes();
       const timeStr = `${hour}:${String(minute).padStart(2, '0')}`;
       slots.add(timeStr);
@@ -1541,7 +1549,7 @@ export default function PulseApp() {
           {(() => {
             const dayEvents = groupedEvents[dateKey];
             // Add time-of-day sub-headers when 6+ events in a day
-            if (dayEvents.length >= 6) {
+            if (dayEvents.length >= TIME_PERIOD_THRESHOLD) {
               const periods = [
                 { key: 'morning', label: 'Morning', icon: <Sun size={14} />, test: h => h >= 5 && h < 12 },
                 { key: 'afternoon', label: 'Afternoon', icon: <Sunset size={14} />, test: h => h >= 12 && h < 17 },
@@ -1712,7 +1720,7 @@ export default function PulseApp() {
     const handleScroll = () => {
       if (!ticking) {
         requestAnimationFrame(() => {
-          setShowBackToTop(window.scrollY > 600);
+          setShowBackToTop(window.scrollY > SCROLL_TO_TOP_THRESHOLD);
           ticking = false;
         });
         ticking = true;
@@ -1729,12 +1737,12 @@ export default function PulseApp() {
 
   return (
     <div className="pulse-app">
-      <a href="#main-content" className="skip-to-content" style={{position:'absolute',left:'-9999px',top:'auto',width:'1px',height:'1px',overflow:'hidden',zIndex:9999}} onFocus={(e)=>{e.target.style.position='fixed';e.target.style.left='50%';e.target.style.top='8px';e.target.style.transform='translateX(-50%)';e.target.style.width='auto';e.target.style.height='auto';e.target.style.overflow='visible';e.target.style.background='#1f2937';e.target.style.color='#fff';e.target.style.padding='8px 16px';e.target.style.borderRadius='8px';e.target.style.fontSize='14px';e.target.style.fontWeight='600';e.target.style.textDecoration='none';}} onBlur={(e)=>{e.target.style.position='absolute';e.target.style.left='-9999px';e.target.style.width='1px';e.target.style.height='1px';e.target.style.overflow='hidden';}}>Skip to content</a>
+      <a href="#main-content" className="skip-link">Skip to content</a>
       {(user.isAdmin || userClaimedBusinesses.length > 0) && (
         <div className="view-switcher">
-          <button tabIndex={-1} className={view === 'consumer' ? 'active' : ''} onClick={() => { if (impersonatedBusiness) { setImpersonatedBusiness(null); setBusinessAnalytics(null); clearBusinessInbox(); setPreviousAdminState(null); } setView('consumer'); }}>Consumer</button>
-          <button tabIndex={-1} className={view === 'business' ? 'active' : ''} onClick={() => { if (impersonatedBusiness) { setImpersonatedBusiness(null); setBusinessAnalytics(null); clearBusinessInbox(); setPreviousAdminState(null); } setView('business'); }}>Business</button>
-          {user.isAdmin && <button tabIndex={-1} className={view === 'admin' ? 'active' : ''} onClick={() => { if (impersonatedBusiness) { exitImpersonation(); } else { setView('admin'); } }}>Admin</button>}
+          <button className={view === 'consumer' ? 'active' : ''} onClick={() => { if (impersonatedBusiness) { setImpersonatedBusiness(null); setBusinessAnalytics(null); clearBusinessInbox(); setPreviousAdminState(null); } setView('consumer'); }} aria-pressed={view === 'consumer'}>Consumer</button>
+          <button className={view === 'business' ? 'active' : ''} onClick={() => { if (impersonatedBusiness) { setImpersonatedBusiness(null); setBusinessAnalytics(null); clearBusinessInbox(); setPreviousAdminState(null); } setView('business'); }} aria-pressed={view === 'business'}>Business</button>
+          {user.isAdmin && <button className={view === 'admin' ? 'active' : ''} onClick={() => { if (impersonatedBusiness) { exitImpersonation(); } else { setView('admin'); } }} aria-pressed={view === 'admin'}>Admin</button>}
         </div>
       )}
 

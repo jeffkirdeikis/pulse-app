@@ -200,6 +200,7 @@ const EventCard = React.memo(React.forwardRef(({ event, venues, isItemSavedLocal
       {/* Book button for classes, Add to Calendar for events */}
       {event.eventType === 'class' ? (
         <button
+          type="button"
           className="event-book-btn"
           onClick={(e) => {
             e.stopPropagation();
@@ -210,6 +211,7 @@ const EventCard = React.memo(React.forwardRef(({ event, venues, isItemSavedLocal
         </button>
       ) : (
         <button
+          type="button"
           className={`event-calendar-btn ${inCalendar ? 'in-calendar' : ''}`}
           onClick={handleAddToCalendar}
           aria-label={inCalendar ? 'Added to calendar' : 'Add to calendar'}
@@ -224,6 +226,7 @@ const EventCard = React.memo(React.forwardRef(({ event, venues, isItemSavedLocal
 
       <div className="event-card-actions">
         <button
+          type="button"
           className="share-btn"
           onClick={handleShare}
           aria-label="Share"
@@ -231,6 +234,7 @@ const EventCard = React.memo(React.forwardRef(({ event, venues, isItemSavedLocal
           <Share2 size={18} stroke="#9ca3af" strokeWidth={2} />
         </button>
         <button
+          type="button"
           className={`save-star-btn ${isSaved ? 'saved' : ''}`}
           onClick={handleSave}
           data-tooltip={isSaved ? "Saved" : "Save"}

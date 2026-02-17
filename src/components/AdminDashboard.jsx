@@ -211,7 +211,7 @@ const AdminDashboard = memo(function AdminDashboard({
             </div>
             <h2>Access Restricted</h2>
             <p>You need admin privileges to access this dashboard.</p>
-            <button className="claim-biz-btn-large" onClick={() => setView('consumer')}>
+            <button type="button" className="claim-biz-btn-large" onClick={() => setView('consumer')}>
               Go Back
             </button>
           </div>
@@ -242,7 +242,7 @@ const AdminDashboard = memo(function AdminDashboard({
                     .filter(s => s.name?.toLowerCase().includes(impersonateSearchQuery.toLowerCase()))
                     .slice(0, 8)
                     .map(venue => (
-                      <div key={venue.id} className="admin-search-result" onClick={() => enterImpersonation(venue)}>
+                      <div key={venue.id} className="admin-search-result" role="button" tabIndex={0} onClick={() => enterImpersonation(venue)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); enterImpersonation(venue); } }}>
                         <div className="admin-search-avatar">{venue.name?.charAt(0) || '?'}</div>
                         <div className="admin-search-info">
                           <div className="admin-search-name">{venue.name}</div>
@@ -258,7 +258,7 @@ const AdminDashboard = memo(function AdminDashboard({
                 </div>
               )}
             </div>
-            <button className="btn-secondary" disabled style={{opacity: 0.5, cursor: 'not-allowed'}}><SlidersHorizontal size={18} /> Settings <span style={{fontSize: '10px', background: '#fef3c7', color: '#92400e', padding: '2px 6px', borderRadius: '4px', marginLeft: '4px'}}>Soon</span></button>
+            <button type="button" className="btn-secondary" disabled style={{opacity: 0.5, cursor: 'not-allowed'}}><SlidersHorizontal size={18} /> Settings <span style={{fontSize: '10px', background: '#fef3c7', color: '#92400e', padding: '2px 6px', borderRadius: '4px', marginLeft: '4px'}}>Soon</span></button>
           </div>
         </div>
       </div>
@@ -576,7 +576,7 @@ const AdminDashboard = memo(function AdminDashboard({
                 </div>
                 {/* Stats will be populated from real analytics data */}
                 <div className="venue-card-actions">
-                  <button className="action-btn-mini" aria-label="Edit venue" onClick={() => {
+                  <button type="button" className="action-btn-mini" aria-label="Edit venue" onClick={() => {
                     setEditingVenue(venue);
                     setEditVenueForm({
                       name: venue.name || '',
@@ -588,8 +588,8 @@ const AdminDashboard = memo(function AdminDashboard({
                     });
                     setShowEditVenueModal(true);
                   }}><Edit2 size={14} /></button>
-                  <button className="action-btn-mini impersonate" title="View as this business" aria-label="View as this business" onClick={() => enterImpersonation(venue)}><Eye size={14} /></button>
-                  <button className="action-btn-mini danger" aria-label="Deactivate venue" onClick={async () => {
+                  <button type="button" className="action-btn-mini impersonate" title="View as this business" aria-label="View as this business" onClick={() => enterImpersonation(venue)}><Eye size={14} /></button>
+                  <button type="button" className="action-btn-mini danger" aria-label="Deactivate venue" onClick={async () => {
                     if (confirm(`Deactivate ${venue.name}? This will hide it from the directory. It can be reactivated later.`)) {
                       try {
                         const { error } = await supabase
@@ -687,7 +687,7 @@ const AdminDashboard = memo(function AdminDashboard({
               </select>
             </div>
           </div>
-          <button className="btn-primary-gradient btn-large-admin" onClick={async () => {
+          <button type="button" className="btn-primary-gradient btn-large-admin" onClick={async () => {
             if (!quickAddForm.title || !quickAddForm.venueId) {
               showToast('Please fill in title and venue', 'error');
               return;

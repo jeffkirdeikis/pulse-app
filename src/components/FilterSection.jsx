@@ -197,6 +197,7 @@ const FilterSection = React.memo(function FilterSection({
           )}
           <ChevronRight
             size={18}
+            aria-hidden="true"
             style={{
               transform: showFilters ? 'rotate(90deg)' : 'rotate(0deg)',
               transition: 'transform 0.2s ease'
@@ -217,20 +218,20 @@ const FilterSection = React.memo(function FilterSection({
               const period = h >= 12 ? 'PM' : 'AM';
               label = `${hr}${m ? ':' + String(m).padStart(2, '0') : ''} ${period}+`;
             }
-            return <button className="filter-pill" onClick={() => setFilters({...filters, time: 'all'})}>{label} <span className="pill-x">&times;</span></button>;
+            return <button type="button" className="filter-pill" onClick={() => setFilters({...filters, time: 'all'})}>{label} <span className="pill-x">&times;</span></button>;
           })()}
           {filters.age !== 'all' && (
-            <button className="filter-pill" onClick={() => { setFilters({...filters, age: 'all'}); setKidsAgeRange([0, 18]); }}>
+            <button type="button" className="filter-pill" onClick={() => { setFilters({...filters, age: 'all'}); setKidsAgeRange([0, 18]); }}>
               {filters.age === 'kids' ? 'Kids' : filters.age === 'adults' ? 'Adults' : filters.age} <span className="pill-x">&times;</span>
             </button>
           )}
           {filters.category !== 'all' && (
-            <button className="filter-pill" onClick={() => setFilters({...filters, category: 'all'})}>
+            <button type="button" className="filter-pill" onClick={() => setFilters({...filters, category: 'all'})}>
               {filters.category} <span className="pill-x">&times;</span>
             </button>
           )}
           {filters.price !== 'all' && (
-            <button className="filter-pill" onClick={() => setFilters({...filters, price: 'all'})}>
+            <button type="button" className="filter-pill" onClick={() => setFilters({...filters, price: 'all'})}>
               {filters.price === 'free' ? 'Free' : 'Paid'} <span className="pill-x">&times;</span>
             </button>
           )}

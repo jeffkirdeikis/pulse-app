@@ -308,10 +308,11 @@ export function useUserData() {
         })));
       }
       if (leaderboardResult.data) {
-        const userRank = leaderboardResult.data.findIndex(u => u.user_id === userId) + 1;
+        const userRankIndex = leaderboardResult.data.findIndex(u => u.user_id === userId);
+        const userRank = userRankIndex >= 0 ? userRankIndex + 1 : leaderboardResult.data.length + 1;
         setUserStats(prev => ({
           ...prev,
-          communityRank: userRank || leaderboardResult.data.length + 1,
+          communityRank: userRank,
           totalMembers: leaderboardResult.data.length
         }));
       }

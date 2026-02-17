@@ -38,20 +38,26 @@ export function usePushNotifications(userId) {
         });
       }
 
-      setPushSubscription(subscription);
-
-      // Store in database
+      // Store in database FIRST, before showing success
       const subJson = subscription.toJSON();
-      await supabase.from('push_subscriptions').upsert({
+      const { error: dbError } = await supabase.from('push_subscriptions').upsert({
         user_id: userId,
         endpoint: subJson.endpoint,
         auth: subJson.keys.auth,
         p256dh: subJson.keys.p256dh,
       }, { onConflict: 'user_id,endpoint' });
 
+      if (dbError) {
+        console.error('Failed to save push subscription:', dbError);
+        return null;
+      }
+
+      // Only set subscription state after DB save succeeds
+      setPushSubscription(subscription);
       return subscription;
     } catch (err) {
       console.error('Push subscription error:', err);
+      setPushSubscription(null);
       return null;
     }
   }, [userId]);

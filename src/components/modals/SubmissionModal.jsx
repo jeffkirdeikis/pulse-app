@@ -38,7 +38,7 @@ const SubmissionModal = memo(function SubmissionModal({
   return (
     <div className="modal-overlay submission-modal-overlay" role="dialog" aria-modal="true" aria-label="Submit event" onClick={onClose}>
       <div className="submission-modal" ref={focusTrapRef} onClick={(e) => e.stopPropagation()}>
-        <button className="close-btn submission-close" onClick={onClose} aria-label="Close"><X size={24} /></button>
+        <button type="button" className="close-btn submission-close" onClick={onClose} aria-label="Close"><X size={24} /></button>
 
         {/* Step 1: Select Type */}
         {submissionStep === 1 && (
@@ -224,7 +224,7 @@ const SubmissionModal = memo(function SubmissionModal({
                       {submissionForm.squareImagePreview ? (
                         <div className="image-preview square">
                           <img src={submissionForm.squareImagePreview} alt="Square preview" />
-                          <button className="remove-image-btn" onClick={() => removeImage('square')}>
+                          <button type="button" className="remove-image-btn" onClick={() => removeImage('square')}>
                             <X size={16} />
                           </button>
                         </div>
@@ -253,7 +253,7 @@ const SubmissionModal = memo(function SubmissionModal({
                       {submissionForm.bannerImagePreview ? (
                         <div className="image-preview banner">
                           <img src={submissionForm.bannerImagePreview} alt="Banner preview" />
-                          <button className="remove-image-btn" onClick={() => removeImage('banner')}>
+                          <button type="button" className="remove-image-btn" onClick={() => removeImage('banner')}>
                             <X size={16} />
                           </button>
                         </div>
@@ -484,7 +484,7 @@ const SubmissionModal = memo(function SubmissionModal({
               </div>
 
               <div className="submission-actions">
-                <button className="btn-back" onClick={() => setSubmissionStep(1)}>
+                <button type="button" className="btn-back" onClick={() => setSubmissionStep(1)}>
                   Back
                 </button>
                 <button
@@ -531,7 +531,7 @@ const SubmissionModal = memo(function SubmissionModal({
                   <span className="value">{submissionForm.businessName}</span>
                 </div>
               </div>
-              <button className="btn-done" onClick={onClose}>
+              <button type="button" className="btn-done" onClick={onClose}>
                 Done
               </button>
             </div>

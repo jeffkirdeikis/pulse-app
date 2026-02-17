@@ -246,7 +246,7 @@ const ServicesGrid = React.memo(function ServicesGrid({
           <div className="no-results-icon">🔍</div>
           <h3>No businesses found for "{searchQuery}"</h3>
           <p>Try a different search term or browse all services</p>
-          <button onClick={() => setSearchQuery('')} className="clear-search-btn">
+          <button type="button" onClick={() => setSearchQuery('')} className="clear-search-btn">
             Clear Search
           </button>
         </div>

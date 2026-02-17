@@ -221,6 +221,7 @@ const FeedbackWidget = memo(function FeedbackWidget() {
                   onChange={e => setEmail(e.target.value)}
                   placeholder="Email (optional — so we can follow up)"
                   aria-label="Email address (optional)"
+                  autoComplete="email"
                 />
 
                 {/* Context badge */}

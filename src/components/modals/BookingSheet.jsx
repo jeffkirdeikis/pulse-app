@@ -21,7 +21,7 @@ const BookingSheet = memo(function BookingSheet({
     <div className="modal-overlay booking-sheet-overlay" role="dialog" aria-modal="true" aria-label="Book class" onClick={onClose}>
       <div className={`booking-bottom-sheet ${bookingStep === 'iframe' ? 'full-height' : ''}`} onClick={(e) => e.stopPropagation()}>
         <div className="sheet-handle" />
-        <button className="close-btn sheet-close" onClick={onClose} aria-label="Close">
+        <button type="button" className="close-btn sheet-close" onClick={onClose} aria-label="Close">
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
             <path d="M1 1L13 13M1 13L13 1" stroke="#6b7280" strokeWidth="2" strokeLinecap="round"/>
           </svg>
