@@ -114,6 +114,7 @@ const DealDetailModal = memo(function DealDetailModal({
         {/* Quick Actions */}
         <div className="deal-quick-actions">
           <button
+            type="button"
             className={`quick-action-btn ${isItemSavedLocal('deal', deal.id) ? 'saved' : ''}`}
             onClick={() => toggleSave(deal.id, 'deal', deal.title, { business: deal.venueName })}
           >

@@ -57,21 +57,21 @@ const SubmissionModal = memo(function SubmissionModal({
             <div className="submission-content">
               <h3 className="step-title">What would you like to add?</h3>
               <div className="type-selection-grid">
-                <button className="type-card event" onClick={() => selectSubmissionType('event')}>
+                <button type="button" className="type-card event" onClick={() => selectSubmissionType('event')}>
                   <div className="type-card-icon">
                     <Zap size={32} />
                   </div>
                   <h4>Event</h4>
                   <p>One-time or recurring community events</p>
                 </button>
-                <button className="type-card class" onClick={() => selectSubmissionType('class')}>
+                <button type="button" className="type-card class" onClick={() => selectSubmissionType('class')}>
                   <div className="type-card-icon">
                     <Sparkles size={32} />
                   </div>
                   <h4>Class</h4>
                   <p>Fitness, art, music, or educational classes</p>
                 </button>
-                <button className="type-card deal" onClick={() => selectSubmissionType('deal')}>
+                <button type="button" className="type-card deal" onClick={() => selectSubmissionType('deal')}>
                   <div className="type-card-icon">
                     <Percent size={32} />
                   </div>
@@ -149,7 +149,8 @@ const SubmissionModal = memo(function SubmissionModal({
                     {/* Options */}
                     <div className="business-selector-section">
                       <span className="selector-label">{userClaimedBusinesses.length > 0 ? 'Other Options' : 'Select an Option'}</span>
-                      <button 
+                      <button
+                        type="button"
                         className={`business-option ${submissionForm.businessType === 'new' ? 'selected' : ''}`}
                         onClick={() => selectBusinessType('new')}
                       >
@@ -164,7 +165,8 @@ const SubmissionModal = memo(function SubmissionModal({
                           <div className="option-check"><Check size={16} /></div>
                         )}
                       </button>
-                      <button 
+                      <button
+                        type="button"
                         className={`business-option ${submissionForm.businessType === 'individual' ? 'selected' : ''}`}
                         onClick={() => selectBusinessType('individual')}
                       >
@@ -488,6 +490,7 @@ const SubmissionModal = memo(function SubmissionModal({
                   Back
                 </button>
                 <button
+                  type="button"
                   className="btn-submit"
                   onClick={submitForApproval}
                   disabled={

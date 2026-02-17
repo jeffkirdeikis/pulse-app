@@ -94,6 +94,7 @@ const ServiceDetailModal = memo(function ServiceDetailModal({
             <span>{safeWebsite ? 'Website' : 'Search'}</span>
           </a>
           <button
+            type="button"
             className={`quick-action-btn ${isItemSavedLocal('service', service.id) ? 'saved' : ''}`}
             onClick={() => toggleSave(service.id, 'service', service.name, { category: service.category })}
           >

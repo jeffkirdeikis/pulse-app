@@ -31,32 +31,32 @@ const ProfileMenu = React.memo(function ProfileMenu({
         </div>
         <div className="profile-menu-divider"></div>
         <div className="profile-menu-items">
-          <button className="profile-menu-item" onClick={onProfileOpen}>
+          <button type="button" className="profile-menu-item" onClick={onProfileOpen}>
             <Users size={18} />
             <span>My Profile</span>
           </button>
-          <button className="profile-menu-item" onClick={onCalendarOpen}>
+          <button type="button" className="profile-menu-item" onClick={onCalendarOpen}>
             <Calendar size={18} />
             <span>My Calendar</span>
             {myCalendar.length > 0 && <span className="menu-badge">{myCalendar.length}</span>}
           </button>
-          <button className="profile-menu-item" onClick={onSavedOpen}>
+          <button type="button" className="profile-menu-item" onClick={onSavedOpen}>
             <Star size={18} />
             <span>Saved Items</span>
           </button>
           <div className="profile-menu-divider"></div>
-          <button className="profile-menu-item" onClick={onSubmissionOpen}>
+          <button type="button" className="profile-menu-item" onClick={onSubmissionOpen}>
             <Plus size={18} />
             <span>Add Event / Class / Deal</span>
           </button>
-          <button className="profile-menu-item" onClick={onClaimBusinessOpen}>
+          <button type="button" className="profile-menu-item" onClick={onClaimBusinessOpen}>
             <Building size={18} />
             <span>Claim Business</span>
           </button>
           {user.isAdmin && (
             <>
               <div className="profile-menu-divider"></div>
-              <button className="profile-menu-item admin" onClick={onAdminPanelOpen}>
+              <button type="button" className="profile-menu-item admin" onClick={onAdminPanelOpen}>
                 <Eye size={18} />
                 <span>Admin Panel</span>
                 {pendingSubmissions.filter(s => s.status === 'pending').length > 0 && (
@@ -66,13 +66,13 @@ const ProfileMenu = React.memo(function ProfileMenu({
             </>
           )}
           <div className="profile-menu-divider"></div>
-          <button className="profile-menu-item" onClick={onSettingsOpen}>
+          <button type="button" className="profile-menu-item" onClick={onSettingsOpen}>
             <SlidersHorizontal size={18} />
             <span>Settings</span>
           </button>
         </div>
         <div className="profile-menu-divider"></div>
-        <button className="profile-menu-item logout" onClick={onSignOut}>
+        <button type="button" className="profile-menu-item logout" onClick={onSignOut}>
           <span>Sign Out</span>
         </button>
       </div>

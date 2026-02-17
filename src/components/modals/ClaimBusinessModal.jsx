@@ -107,6 +107,7 @@ const ClaimBusinessModal = memo(function ClaimBusinessModal({
                 autoFocus
               />
               <button
+                type="button"
                 className="claim-submit-btn"
                 onClick={handleVerifyClaimCode}
                 disabled={claimVerifying || claimVerificationCode.length !== 6}

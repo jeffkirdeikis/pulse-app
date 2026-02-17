@@ -139,6 +139,7 @@ const EventDetailModal = memo(function EventDetailModal({
             </div>
           </div>
           <button
+            type="button"
             className={`add-calendar-btn ${isInMyCalendar?.(event.id) ? 'added' : ''}`}
             onClick={() => addToCalendar?.(event)}
             style={{
@@ -164,6 +165,7 @@ const EventDetailModal = memo(function EventDetailModal({
             </button>
           )}
           <button
+            type="button"
             className={`quick-action-btn ${isItemSavedLocal(itemType, event.id) ? 'saved' : ''}`}
             onClick={() => toggleSave(event.id, itemType, event.title, { venue: event.venueName, date: event.start })}
           >
@@ -240,6 +242,7 @@ const EventDetailModal = memo(function EventDetailModal({
         <div className="event-cta-section">
           {event.eventType === 'class' && (
             <button
+              type="button"
               className="event-cta-btn primary book-class-btn"
               onClick={() => handleBookClick(event)}
             >
@@ -248,6 +251,7 @@ const EventDetailModal = memo(function EventDetailModal({
             </button>
           )}
           <button
+            type="button"
             className={`event-cta-btn ${event.eventType === 'class' ? 'secondary' : 'primary'} ${isInMyCalendar?.(event.id) ? 'added' : ''}`}
             onClick={() => addToCalendar?.(event)}
           >

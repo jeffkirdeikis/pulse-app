@@ -42,7 +42,8 @@ const MyCalendarModal = memo(function MyCalendarModal({
               </div>
               <h3>No Events Yet</h3>
               <p>Add events from the Events & Classes section to build your personal calendar</p>
-              <button 
+              <button
+                type="button"
                 className="browse-events-btn"
                 onClick={() => { onClose(); setCurrentSection('events'); }}
               >
@@ -95,7 +96,8 @@ const MyCalendarModal = memo(function MyCalendarModal({
                           >
                             <ExternalLink size={16} />
                           </a>
-                          <button 
+                          <button
+                            type="button"
                             className="calendar-action-btn remove"
                             onClick={() => removeFromCalendar(event.id)}
                             title="Remove from calendar"

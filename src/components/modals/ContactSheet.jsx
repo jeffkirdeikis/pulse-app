@@ -48,6 +48,7 @@ const ContactSheet = memo(function ContactSheet({
             />
           </div>
           <button
+            type="button"
             className="send-message-btn"
             onClick={submitContactForm}
             disabled={!contactMessage.trim() || sendingMessage}

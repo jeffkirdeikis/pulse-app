@@ -72,6 +72,7 @@ const BookingSheet = memo(function BookingSheet({
               )}
 
               <button
+                type="button"
                 className="add-calendar-secondary"
                 onClick={() => {
                   addToCalendar(bookingEvent);
@@ -107,6 +108,7 @@ const BookingSheet = memo(function BookingSheet({
             </div>
 
             <button
+              type="button"
               className="send-request-btn"
               onClick={submitBookingRequest}
               disabled={sendingMessage}

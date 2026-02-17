@@ -1244,7 +1244,7 @@ export default function PulseApp() {
       } else {
         const { error } = await supabase
           .from('business_claims')
-          .update({ status: 'rejected', rejected_reason: rejectedReason || 'Rejected by admin' })
+          .update({ status: 'rejected', rejected_reason: (rejectedReason || 'Rejected by admin').replace(/[<>]/g, '').substring(0, 500) })
           .eq('id', claimId);
         if (error) throw error;
         showToast('Claim rejected', 'info');

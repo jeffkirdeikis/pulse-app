@@ -144,6 +144,7 @@ const AdminPanelModal = memo(function AdminPanelModal({
                   </div>
                   <div className="admin-actions">
                     <button
+                      type="button"
                       className="admin-btn approve"
                       disabled={processingId === submission.id}
                       onClick={async () => {
@@ -157,6 +158,7 @@ const AdminPanelModal = memo(function AdminPanelModal({
                       {processingId === submission.id ? 'Processing...' : 'Approve'}
                     </button>
                     <button
+                      type="button"
                       className="admin-btn reject"
                       disabled={processingId === submission.id}
                       onClick={async () => {

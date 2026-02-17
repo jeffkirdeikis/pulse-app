@@ -135,6 +135,7 @@ const FeedbackWidget = memo(function FeedbackWidget() {
       {/* FAB */}
       {!isOpen && (
         <button
+          type="button"
           className={`feedback-fab${fabPulse ? ' feedback-fab-pulse' : ''}`}
           onClick={() => setIsOpen(true)}
           aria-label="Send feedback"
@@ -161,7 +162,7 @@ const FeedbackWidget = memo(function FeedbackWidget() {
                   <div className="feedback-header-title">Send us feedback</div>
                   <div className="feedback-header-subtitle">Help us make Pulse better for Squamish</div>
                 </div>
-                <button className="feedback-close" onClick={handleClose} aria-label="Close feedback">
+                <button type="button" className="feedback-close" onClick={handleClose} aria-label="Close feedback">
                   <X size={16} />
                 </button>
               </div>
@@ -205,7 +206,7 @@ const FeedbackWidget = memo(function FeedbackWidget() {
                         </button>
                       </div>
                     ) : (
-                      <button className="feedback-screenshot-btn" onClick={() => fileRef.current?.click()}>
+                      <button type="button" className="feedback-screenshot-btn" onClick={() => fileRef.current?.click()}>
                         <ImagePlus size={16} />
                         Attach screenshot
                       </button>
@@ -235,6 +236,7 @@ const FeedbackWidget = memo(function FeedbackWidget() {
 
                 {/* Submit */}
                 <button
+                  type="button"
                   className="feedback-submit"
                   onClick={handleSubmit}
                   disabled={!message.trim() || submitting}

@@ -105,6 +105,7 @@ const FilterSection = React.memo(function FilterSection({
         <div className="date-strip" ref={stripRef} role="tablist" aria-label="Select date">
           {/* Upcoming chip (default) */}
           <button
+            type="button"
             className={`date-chip ${filters.day === 'today' ? 'date-chip-active' : ''}`}
             onClick={() => setFilters({ ...filters, day: 'today' })}
             ref={filters.day === 'today' ? selectedRef : null}
@@ -128,6 +129,7 @@ const FilterSection = React.memo(function FilterSection({
                 </div>
               )}
               <button
+                type="button"
                 className={`date-chip ${isSelected ? 'date-chip-active' : ''} ${d.isWeekend ? 'date-chip-weekend' : ''} ${!hasEvents && !isSelected ? 'date-chip-empty' : ''}`}
                 onClick={() => setFilters({ ...filters, day: d.dateStr })}
                 ref={isSelected ? selectedRef : null}
@@ -164,6 +166,7 @@ const FilterSection = React.memo(function FilterSection({
           return (
             <button
               key={chip.key}
+              type="button"
               className={`quick-chip ${isActive ? 'quick-chip-active' : ''} ${chip.key === 'now' && isActive ? 'quick-chip-now' : ''}`}
               onClick={() => {
                 if (isActive) {
@@ -187,6 +190,7 @@ const FilterSection = React.memo(function FilterSection({
       {/* Filters Toggle Button */}
       <div className="filters-toggle-section">
         <button
+          type="button"
           className="filters-toggle-btn"
           onClick={() => setShowFilters(!showFilters)}
         >
@@ -342,6 +346,7 @@ const FilterSection = React.memo(function FilterSection({
                   const isExactMatch = kidsAgeRange[0] === opt.min && kidsAgeRange[1] === opt.max;
                   return (
                     <button
+                      type="button"
                       key={opt.label}
                       className={`age-range-btn ${isExactMatch ? 'active' : isSelected ? 'in-range' : ''}`}
                       onClick={() => setKidsAgeRange([opt.min, opt.max])}
@@ -351,6 +356,7 @@ const FilterSection = React.memo(function FilterSection({
                   );
                 })}
                 <button
+                  type="button"
                   className={`age-range-btn ${kidsAgeRange[0] === 0 && kidsAgeRange[1] === 18 ? 'active' : ''}`}
                   onClick={() => setKidsAgeRange([0, 18])}
                 >
@@ -365,6 +371,7 @@ const FilterSection = React.memo(function FilterSection({
             <div className="category-pills-section">
               <div className="category-pills" role="group" aria-label="Filter by category">
                 <button
+                  type="button"
                   className={`filter-cat-pill ${filters.category === 'all' ? 'filter-cat-pill-active' : ''}`}
                   onClick={() => setFilters({...filters, category: 'all'})}
                 >
@@ -375,7 +382,8 @@ const FilterSection = React.memo(function FilterSection({
                   return (
                     <button
                       key={cat}
-                      className={`filter-cat-pill ${filters.category === cat ? 'filter-cat-pill-active' : ''}`}
+                      type="button"
+                    className={`filter-cat-pill ${filters.category === cat ? 'filter-cat-pill-active' : ''}`}
                       onClick={() => setFilters({...filters, category: filters.category === cat ? 'all' : cat})}
                     >
                       {dotColor && <span className="cat-dot" style={{ background: dotColor }} />}
@@ -409,6 +417,7 @@ const FilterSection = React.memo(function FilterSection({
                                       (kidsAgeRange[0] !== 0 || kidsAgeRange[1] !== 18);
               return hasActiveFilters ? (
                 <button
+                  type="button"
                   onClick={() => {
                     setFilters({day: 'today', time: 'all', age: 'all', category: 'all', price: 'all'});
                     setKidsAgeRange([0, 18]);

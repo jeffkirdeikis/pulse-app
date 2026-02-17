@@ -149,7 +149,7 @@ const AuthModal = memo(function AuthModal({ onClose, onSuccess }) {
   return (
     <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Sign in" onClick={handleClose}>
       <div className="auth-modal" ref={focusTrapRef} onClick={(e) => e.stopPropagation()}>
-        <button className="auth-modal-close" onClick={handleClose} aria-label="Close"><X size={24} /></button>
+        <button type="button" className="auth-modal-close" onClick={handleClose} aria-label="Close"><X size={24} /></button>
         <div className="auth-modal-header">
           <div className="auth-logo">
             <MapPin size={32} />
@@ -160,7 +160,7 @@ const AuthModal = memo(function AuthModal({ onClose, onSuccess }) {
         <div className="auth-modal-body">
           {authMode !== 'forgotPassword' && (
             <>
-              <button className="auth-btn google" onClick={async () => {
+              <button type="button" className="auth-btn google" onClick={async () => {
                 const { error } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin + window.location.pathname, queryParams: { prompt: 'select_account' } } });
                 if (error) {
                   console.error('Auth error:', error);

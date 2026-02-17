@@ -36,6 +36,7 @@ function ContentReviewSection({ unverifiedContent, handleVerifyContent, handleRe
         {activeItems.length > 0 && (
           <div className="section-actions">
             <button
+              type="button"
               className="btn-primary-gradient"
               onClick={() => handleBulkVerifyContent(activeType, activeItems.map(i => i.id))}
               style={{ fontSize: '13px', padding: '8px 16px' }}

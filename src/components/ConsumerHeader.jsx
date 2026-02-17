@@ -282,6 +282,7 @@ const ConsumerHeader = React.memo(function ConsumerHeader({
           />
           {searchQuery && (
             <button
+              type="button"
               className="search-clear-btn"
               onClick={() => { setSearchQuery(''); setShowSuggestions(false); }}
               aria-label="Clear search"

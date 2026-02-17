@@ -135,7 +135,8 @@ const ImageCropperModal = memo(function ImageCropperModal({
       </div>
       <p className="cropper-hint">Drag to reposition • Scroll to zoom</p>
       <div className="cropper-controls smooth-zoom">
-        <button 
+        <button
+          type="button"
           className="zoom-btn"
           onClick={() => setCropZoom(prev => Math.max(1, prev - 0.15))}
         >−</button>
@@ -158,7 +159,8 @@ const ImageCropperModal = memo(function ImageCropperModal({
           }}
           className="zoom-slider"
         />
-        <button 
+        <button
+          type="button"
           className="zoom-btn"
           onClick={() => setCropZoom(prev => Math.min(3, prev + 0.15))}
         >+</button>

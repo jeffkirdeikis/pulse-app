@@ -870,6 +870,7 @@ const BusinessDashboard = memo(function BusinessDashboard({
                       <span className="thread-subject">{selectedBusinessConversation.subject}</span>
                     </div>
                     <button
+                      type="button"
                       className="resolve-btn"
                       onClick={() => markConversationResolved(selectedBusinessConversation.id)}
                     >
@@ -914,6 +915,7 @@ const BusinessDashboard = memo(function BusinessDashboard({
                       onKeyDown={(e) => e.key === 'Enter' && businessReplyInput.trim() && !sendingBusinessReply && sendBusinessReply()}
                     />
                     <button
+                      type="button"
                       className="send-reply-btn"
                       onClick={sendBusinessReply}
                       disabled={!businessReplyInput.trim() || sendingBusinessReply}

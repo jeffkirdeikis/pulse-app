@@ -137,6 +137,7 @@ const MessagesModal = memo(function MessagesModal({
                 autoComplete="off"
               />
               <button
+                type="button"
                 className="send-btn"
                 onClick={sendMessage}
                 disabled={!messageInput.trim() || sendingMessage}

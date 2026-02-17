@@ -65,7 +65,9 @@ const EventCard = React.memo(React.forwardRef(({ event, venues, isItemSavedLocal
 
   const handleSave = async (e) => {
     e.stopPropagation();
-    await toggleSave(event.id, itemType, event.title, { venue: getVenueName(event.venueId, event), date: event.start ? event.start.toISOString() : event.date });
+    try {
+      await toggleSave(event.id, itemType, event.title, { venue: getVenueName(event.venueId, event), date: event.start ? `${event.start.getFullYear()}-${String(event.start.getMonth() + 1).padStart(2, '0')}-${String(event.start.getDate()).padStart(2, '0')}` : event.date });
+    } catch { /* toggleSave handles its own errors */ }
   };
 
   const handleAddToCalendar = (e) => {

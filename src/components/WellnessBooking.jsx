@@ -55,7 +55,9 @@ function getDateRange() {
 
 function formatTime(timeStr) {
   if (!timeStr) return '';
-  const [h, m] = timeStr.split(':').map(Number);
+  const parts = timeStr.split(':').map(Number);
+  if (parts.length < 2 || isNaN(parts[0]) || isNaN(parts[1])) return '';
+  const [h, m] = parts;
   const period = h >= 12 ? 'PM' : 'AM';
   const hour = h % 12 || 12;
   return `${hour}:${String(m).padStart(2, '0')} ${period}`;
@@ -370,6 +372,7 @@ export default function WellnessBooking({
       {/* Filters Row */}
       <div className="wb-filter-bar">
         <button
+          type="button"
           className={`wb-filter-toggle ${showFilters ? 'active' : ''}`}
           onClick={() => setShowFilters(!showFilters)}
         >
@@ -384,6 +387,7 @@ export default function WellnessBooking({
 
         <div className="wb-view-toggle">
           <button
+            type="button"
             className={`wb-view-btn ${viewMode === 'timeline' ? 'active' : ''}`}
             onClick={() => setViewMode('timeline')}
           >
@@ -391,6 +395,7 @@ export default function WellnessBooking({
             <span>Timeline</span>
           </button>
           <button
+            type="button"
             className={`wb-view-btn ${viewMode === 'provider' ? 'active' : ''}`}
             onClick={() => setViewMode('provider')}
           >
@@ -408,6 +413,7 @@ export default function WellnessBooking({
             <div className="wb-filter-pills">
               {TIME_RANGES.map(t => (
                 <button
+                  type="button"
                   key={t.key}
                   className={`wb-pill ${timeRange === t.key ? 'active' : ''}`}
                   onClick={() => setTimeRange(t.key)}
@@ -422,6 +428,7 @@ export default function WellnessBooking({
             <div className="wb-filter-pills">
               {DURATIONS.map(d => (
                 <button
+                  type="button"
                   key={d.key ?? 'any'}
                   className={`wb-pill ${duration === d.key ? 'active' : ''}`}
                   onClick={() => setDuration(d.key)}
@@ -434,6 +441,7 @@ export default function WellnessBooking({
           <div className="wb-filter-section">
             <label className="wb-filter-label">
               <button
+                type="button"
                 className={`wb-toggle ${directBillingOnly ? 'active' : ''}`}
                 onClick={() => setDirectBillingOnly(!directBillingOnly)}
               >
@@ -699,6 +707,7 @@ function ProviderView({ groups, onSlotClick, onProviderClick, onAlertClick, user
                 </div>
               </div>
               <button
+                type="button"
                 className={`wb-alert-btn ${hasAlert ? 'active' : ''}`}
                 onClick={(e) => { e.stopPropagation(); onAlertClick(provider); }}
               >
@@ -876,6 +885,7 @@ function ProviderDetailModal({ provider, slots, onClose, onSlotClick, onBook, ha
             Book on {provider.clinic_name}
           </button>
           <button
+            type="button"
             className={`wb-modal-alert-btn ${hasAlert ? 'active' : ''}`}
             onClick={onAlertClick}
           >

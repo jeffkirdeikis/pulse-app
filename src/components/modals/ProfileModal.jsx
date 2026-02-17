@@ -386,6 +386,7 @@ const ProfileModal = memo(function ProfileModal({
                       <p><MapPin size={12} /> {item.data?.venue || item.venue || 'Squamish'}</p>
                     </div>
                     <button
+                      type="button"
                       className="saved-item-remove"
                       onClick={async () => {
                         if (session?.user) {
@@ -890,6 +891,7 @@ const ProfileModal = memo(function ProfileModal({
               {/* Save Button */}
               <div className="settings-section">
                 <button
+                  type="button"
                   className="save-profile-btn"
                   onClick={async (e) => {
                     const btn = e.currentTarget;
