@@ -51,6 +51,7 @@ function ContentReviewSection({ unverifiedContent, handleVerifyContent, handleRe
       <div style={{ display: 'flex', gap: '4px', marginBottom: '16px', background: '#f3f4f6', borderRadius: '10px', padding: '4px' }}>
         {tabs.map(tab => (
           <button
+            type="button"
             key={tab.key}
             onClick={() => setReviewTab(tab.key)}
             style={{
@@ -108,6 +109,7 @@ function ContentReviewSection({ unverifiedContent, handleVerifyContent, handleRe
               <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
                 {activeType === 'event' && onPreviewEvent && (
                   <button
+                    type="button"
                     onClick={() => onPreviewEvent(item)}
                     title="Preview"
                     aria-label="Preview event"
@@ -121,6 +123,7 @@ function ContentReviewSection({ unverifiedContent, handleVerifyContent, handleRe
                 )}
                 {activeType === 'event' && onEditEvent && (
                   <button
+                    type="button"
                     onClick={() => onEditEvent(item)}
                     title="Edit"
                     aria-label="Edit event"
@@ -133,6 +136,7 @@ function ContentReviewSection({ unverifiedContent, handleVerifyContent, handleRe
                   </button>
                 )}
                 <button
+                  type="button"
                   onClick={() => handleVerifyContent(activeType, item.id)}
                   title="Verify"
                   aria-label="Verify content"
@@ -144,6 +148,7 @@ function ContentReviewSection({ unverifiedContent, handleVerifyContent, handleRe
                   <Check size={18} strokeWidth={2.5} />
                 </button>
                 <button
+                  type="button"
                   onClick={() => handleRemoveContent(activeType, item.id, item.title)}
                   title="Remove"
                   aria-label="Remove content"
@@ -373,6 +378,7 @@ const AdminDashboard = memo(function AdminDashboard({
                   ) : (
                     <>
                       <button
+                        type="button"
                         onClick={() => handleClaimAction(claim.id, 'approve')}
                         style={{
                           display: 'inline-flex', alignItems: 'center', gap: '6px',
@@ -384,6 +390,7 @@ const AdminDashboard = memo(function AdminDashboard({
                         <ShieldCheck size={15} /> Approve
                       </button>
                       <button
+                        type="button"
                         onClick={() => {
                           const reason = prompt('Rejection reason (optional):');
                           if (reason !== null) handleClaimAction(claim.id, 'reject', reason);
@@ -628,6 +635,7 @@ const AdminDashboard = memo(function AdminDashboard({
           return filtered.length > adminVenueLimit ? (
             <div style={{ textAlign: 'center', padding: '16px 0' }}>
               <button
+                type="button"
                 onClick={() => setAdminVenueLimit(prev => prev + 50)}
                 style={{ background: '#2563eb', color: '#fff', border: 'none', padding: '10px 24px', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}
               >

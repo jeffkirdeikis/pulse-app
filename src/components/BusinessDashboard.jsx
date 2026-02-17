@@ -823,6 +823,7 @@ const BusinessDashboard = memo(function BusinessDashboard({
               <h2>📬 Inbox</h2>
               <div className="inbox-tabs" role="tablist">
                 <button
+                  type="button"
                   role="tab"
                   aria-selected={businessInboxTab === 'bookings'}
                   className={`inbox-tab ${businessInboxTab === 'bookings' ? 'active' : ''}`}
@@ -837,6 +838,7 @@ const BusinessDashboard = memo(function BusinessDashboard({
                   )}
                 </button>
                 <button
+                  type="button"
                   role="tab"
                   aria-selected={businessInboxTab === 'messages'}
                   className={`inbox-tab ${businessInboxTab === 'messages' ? 'active' : ''}`}

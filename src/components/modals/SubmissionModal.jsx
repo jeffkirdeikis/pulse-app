@@ -111,7 +111,8 @@ const SubmissionModal = memo(function SubmissionModal({
                       <div className="business-selector-section">
                         <span className="selector-label">My Businesses</span>
                         {userClaimedBusinesses.map(biz => (
-                          <button 
+                          <button
+                            type="button"
                             key={biz.id}
                             className={`business-option ${submissionForm.businessType === 'claimed' && submissionForm.selectedBusinessId === biz.id ? 'selected' : ''}`}
                             onClick={() => selectBusinessType('claimed', biz.id)}

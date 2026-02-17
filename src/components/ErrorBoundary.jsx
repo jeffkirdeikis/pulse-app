@@ -120,6 +120,7 @@ class ErrorBoundary extends React.Component {
               justifyContent: 'center',
             }}>
               <button
+                type="button"
                 onClick={this.handleReload}
                 style={{
                   backgroundColor: '#7c3aed',
@@ -136,6 +137,7 @@ class ErrorBoundary extends React.Component {
               </button>
 
               <button
+                type="button"
                 onClick={this.handleGoHome}
                 style={{
                   backgroundColor: 'white',

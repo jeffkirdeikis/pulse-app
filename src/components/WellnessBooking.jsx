@@ -336,6 +336,7 @@ export default function WellnessBooking({
           const Icon = d.icon;
           return (
             <button
+              type="button"
               key={d.key}
               className={`wb-discipline-tab ${discipline === d.key ? 'active' : ''}`}
               onClick={() => { setDiscipline(d.key); setSelectedSlot(null); }}
@@ -354,6 +355,7 @@ export default function WellnessBooking({
           const isSelected = selectedDate === d.date;
           return (
             <button
+              type="button"
               key={d.date}
               ref={isSelected ? selectedDateRef : null}
               className={`wb-date-item ${isSelected ? 'active' : ''} ${d.isToday ? 'today' : ''} ${count > 0 && !isSelected ? 'has-slots' : ''}`}
@@ -648,6 +650,7 @@ function TimelineView({ groups, onSlotClick, onProviderClick }) {
           <div className="wb-time-slots">
             {timeSlots.map(slot => (
               <button
+                type="button"
                 key={slot.slot_id}
                 className="wb-slot-card"
                 onClick={() => onSlotClick(slot)}
@@ -717,6 +720,7 @@ function ProviderView({ groups, onSlotClick, onProviderClick, onAlertClick, user
             <div className="wb-provider-slots">
               {provSlots.map(slot => (
                 <button
+                  type="button"
                   key={slot.slot_id}
                   className="wb-time-btn"
                   onClick={() => onSlotClick(slot)}
@@ -867,6 +871,7 @@ function ProviderDetailModal({ provider, slots, onClose, onSlotClick, onBook, ha
             <div className="wb-modal-slots">
               {slots.map(slot => (
                 <button
+                  type="button"
                   key={slot.slot_id}
                   className="wb-time-btn"
                   onClick={() => onSlotClick(slot)}
@@ -923,6 +928,7 @@ function AlertSetupModal({ provider, days, setDays, timeRange, setTimeRange, onS
           <div className="wb-alert-days">
             {DAY_OPTIONS.map(day => (
               <button
+                type="button"
                 key={day}
                 className={`wb-day-btn ${days.includes(day) ? 'active' : ''}`}
                 onClick={() => toggleDay(day)}

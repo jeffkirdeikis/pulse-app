@@ -201,6 +201,7 @@ const ConsumerHeader = React.memo(function ConsumerHeader({
         <div className="banner-content-premium">
           <div className="banner-tabs" role="tablist" aria-label="Content sections">
             <button
+              type="button"
               ref={el => tabRefs.current.classes = el}
               role="tab"
               aria-selected={currentSection === 'classes'}
@@ -212,6 +213,7 @@ const ConsumerHeader = React.memo(function ConsumerHeader({
               {tabCounts.classes > 0 && <span className="tab-count">{tabCounts.classes}</span>}
             </button>
             <button
+              type="button"
               ref={el => tabRefs.current.events = el}
               role="tab"
               aria-selected={currentSection === 'events'}
@@ -223,6 +225,7 @@ const ConsumerHeader = React.memo(function ConsumerHeader({
               {tabCounts.events > 0 && <span className="tab-count">{tabCounts.events}</span>}
             </button>
             <button
+              type="button"
               ref={el => tabRefs.current.deals = el}
               role="tab"
               aria-selected={currentSection === 'deals'}
@@ -239,6 +242,7 @@ const ConsumerHeader = React.memo(function ConsumerHeader({
           </div>
           <div className="banner-tabs banner-tabs-row2" role="tablist" aria-label="More sections">
             <button
+              type="button"
               ref={el => tabRefs.current.services = el}
               role="tab"
               aria-selected={currentSection === 'services'}
@@ -249,6 +253,7 @@ const ConsumerHeader = React.memo(function ConsumerHeader({
               <span>Services</span>
             </button>
             <button
+              type="button"
               ref={el => tabRefs.current.wellness = el}
               role="tab"
               aria-selected={currentSection === 'wellness'}
@@ -299,6 +304,7 @@ const ConsumerHeader = React.memo(function ConsumerHeader({
               /* Query-based autocomplete */
               matchedSuggestions.map((s, i) => (
                 <button
+                  type="button"
                   key={i}
                   className="search-suggestion-item"
                   onMouseDown={(e) => { e.preventDefault(); handleSelectSuggestion(s); }}

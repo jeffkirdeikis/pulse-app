@@ -869,8 +869,9 @@ const ProfileModal = memo(function ProfileModal({
                 <p className="settings-desc">Select categories to personalize your experience</p>
                 <div className="interests-grid">
                   {['Fitness', 'Music', 'Arts', 'Food & Drink', 'Outdoors & Nature', 'Wellness', 'Community', 'Family', 'Nightlife', 'Games'].map(interest => (
-                    <button 
-                      key={interest} 
+                    <button
+                      type="button"
+                      key={interest}
                       className={`interest-btn ${(user.interests || []).includes(interest) ? 'selected' : ''}`}
                       onClick={() => {
                         setUser(prev => ({

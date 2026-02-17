@@ -173,6 +173,7 @@ const FeedbackWidget = memo(function FeedbackWidget() {
                 <div className="feedback-types">
                   {TYPES.map(t => (
                     <button
+                      type="button"
                       key={t.id}
                       className={`feedback-type-btn${selectedType === t.id ? ' active' : ''}`}
                       onClick={() => setSelectedType(t.id)}

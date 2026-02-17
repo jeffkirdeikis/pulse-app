@@ -199,6 +199,7 @@ const ServiceDetailModal = memo(function ServiceDetailModal({
               <div className="rate-stars-interactive" onMouseLeave={() => setHoverServiceRating(0)}>
                 {[1, 2, 3, 4, 5].map(star => (
                   <button
+                    type="button"
                     key={star} className="rate-star-btn"
                     onMouseEnter={() => setHoverServiceRating(star)}
                     onClick={(e) => { e.stopPropagation(); setUserServiceRating(star); }}

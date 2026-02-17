@@ -117,6 +117,7 @@ const ClaimBusinessModal = memo(function ClaimBusinessModal({
               </button>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
                 <button
+                  type="button"
                   onClick={handleResendClaimCode}
                   disabled={claimResendCooldown > 0}
                   style={{ background: 'none', border: 'none', color: claimResendCooldown > 0 ? '#9ca3af' : '#4f46e5', cursor: claimResendCooldown > 0 ? 'default' : 'pointer', fontSize: '14px', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '6px' }}
@@ -125,6 +126,7 @@ const ClaimBusinessModal = memo(function ClaimBusinessModal({
                   {claimResendCooldown > 0 ? `Resend in ${claimResendCooldown}s` : 'Resend Code'}
                 </button>
                 <button
+                  type="button"
                   onClick={() => { setClaimVerificationCode(''); setClaimVerificationStep('form'); }}
                   style={{ background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer', fontSize: '13px' }}
                 >
@@ -294,6 +296,7 @@ const ClaimBusinessModal = memo(function ClaimBusinessModal({
                             <div style={{ fontSize: '11px', color: '#6b7280' }}>{formatFileSize(file.size)}</div>
                           </div>
                           <button
+                            type="button"
                             onClick={() => removeDocument(i)}
                             style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', padding: '4px' }}
                           >
