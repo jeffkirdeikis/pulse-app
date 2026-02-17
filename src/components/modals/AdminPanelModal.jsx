@@ -105,9 +105,7 @@ const AdminPanelModal = memo(function AdminPanelModal({
                       <span>{fb.page_url}</span>
                       {fb.viewport && <span>{fb.viewport}</span>}
                     </div>
-                    {fb.screenshot_url && (
-                      <a href={fb.screenshot_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '12px', color: '#3b82f6' }}>View screenshot</a>
-                    )}
+                    {fb.screenshot_url && (() => { try { const u = new URL(fb.screenshot_url); return ['http:', 'https:'].includes(u.protocol) ? <a href={u.href} target="_blank" rel="noopener noreferrer" style={{ fontSize: '12px', color: '#3b82f6' }}>View screenshot</a> : null; } catch { return null; } })()}
                   </div>
                 ))
               )

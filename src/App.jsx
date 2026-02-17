@@ -1079,7 +1079,7 @@ export default function PulseApp() {
     try {
       const isAdmin = user.isAdmin;
       const isDocumentVerification = claimVerificationMethod === 'document' && !isAdmin;
-      const verificationCode = (isAdmin || isDocumentVerification) ? null : Math.floor(100000 + Math.random() * 900000).toString();
+      const verificationCode = (isAdmin || isDocumentVerification) ? null : String(100000 + (crypto.getRandomValues(new Uint32Array(1))[0] % 900000));
 
       // Upload documents if document verification
       let documentUrls = null;
@@ -1321,7 +1321,7 @@ export default function PulseApp() {
       dbEvents,
       { currentSection, filters, searchQuery, kidsAgeRange, getVenueName, now: currentTime }
     );
-  }, [dbEvents, currentSection, filters, searchQuery, kidsAgeRange, currentTime]);
+  }, [dbEvents, currentSection, filters, searchQuery, kidsAgeRange, currentTime, getVenueName]);
 
   // Build search suggestions from venue names and event titles
   const searchSuggestions = useMemo(() => {
@@ -1400,7 +1400,7 @@ export default function PulseApp() {
   const filteredDeals = useMemo(() => filterDealsUtil(
     dbDeals,
     { searchQuery, filters, getVenueName }
-  ), [dbDeals, searchQuery, filters]);
+  ), [dbDeals, searchQuery, filters, getVenueName]);
 
   // Memoize tab counts to avoid breaking ConsumerHeader memoization
   const tabCounts = useMemo(() => ({
