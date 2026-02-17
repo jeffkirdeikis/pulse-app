@@ -151,7 +151,7 @@ export function useAppData() {
       while (hasMore) {
         const { data: pageData, error } = await supabase
           .from('events')
-          .select('id, title, event_type, venue_id, venue_name, venue_address, start_date, start_time, end_time, tags, category, description, is_free, price, price_description, featured, image_url, view_count, created_at, business_id')
+          .select('id, title, event_type, venue_id, venue_name, venue_address, start_date, start_time, end_time, tags, category, description, is_free, price, price_description, featured, image_url, view_count, created_at')
           .eq('status', 'active')
           .gte('start_date', localDateStr)
           .order('start_date', { ascending: true })
@@ -238,7 +238,7 @@ export function useAppData() {
           image: event.image_url,
           viewCount: event.view_count || 0,
           createdAt: event.created_at || null,
-          businessId: event.business_id || event.venue_id || null,
+          businessId: event.venue_id || null,
           timeUnknown
         };
       });
