@@ -92,22 +92,27 @@ export function useCalendar({ myCalendar, isAuthenticated, session, registerForE
     return myCalendar.some(e => e.eventId === eventId || e.id === eventId);
   }, [myCalendar]);
 
-  // Get events grouped by date for calendar view
+  // Get events grouped by date for calendar view (uses Pacific timezone for grouping)
   const getCalendarEventsByDate = useCallback(() => {
     const grouped = {};
+    const pacificDateFmt = new Intl.DateTimeFormat('en-CA', {
+      timeZone: PACIFIC_TZ,
+      year: 'numeric', month: '2-digit', day: '2-digit'
+    });
     myCalendar.forEach(event => {
       const eventDate = event.start ? new Date(event.start) : (event.date ? new Date(event.date) : null);
-      if (!eventDate) return;
-      const dateKey = eventDate.toDateString();
+      if (!eventDate || isNaN(eventDate.getTime())) return;
+      // Use Pacific timezone for date grouping to avoid midnight boundary issues
+      const dateKey = pacificDateFmt.format(eventDate);
       if (!grouped[dateKey]) {
         grouped[dateKey] = [];
       }
       grouped[dateKey].push({ ...event, _sortDate: eventDate });
     });
     return Object.entries(grouped)
-      .sort((a, b) => new Date(a[0]) - new Date(b[0]))
+      .sort((a, b) => a[0].localeCompare(b[0]))
       .map(([date, events]) => ({
-        date: new Date(date),
+        date: new Date(date + 'T12:00:00'),
         events: events.sort((a, b) => a._sortDate - b._sortDate)
       }));
   }, [myCalendar]);

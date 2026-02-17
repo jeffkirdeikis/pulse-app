@@ -346,7 +346,8 @@ export function useSubmissions(user, { showToast, userClaimedBusinesses, updateA
       showToast?.('Submission approved and published!', 'success');
       // Refresh event/deal lists so the approved item appears immediately
       onDataRefresh?.();
-    } catch (_err) {
+    } catch (err) {
+      console.error('Approval error:', err);
       showToast?.('Failed to approve. Please try again.', 'error');
     }
   }, [pendingSubmissions, user?.id, showToast, onDataRefresh]);

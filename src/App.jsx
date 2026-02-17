@@ -297,9 +297,12 @@ export default function PulseApp() {
     }
   }, [session?.user?.id]);
 
-  // Cleanup claim cooldown timer on unmount
+  // Cleanup timers on unmount
   useEffect(() => {
-    return () => { if (claimCooldownTimerRef.current) clearInterval(claimCooldownTimerRef.current); };
+    return () => {
+      if (claimCooldownTimerRef.current) clearInterval(claimCooldownTimerRef.current);
+      if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    };
   }, []);
 
   // Fetch notifications on login + subscribe to real-time updates
@@ -876,9 +879,9 @@ export default function PulseApp() {
       const isTyping = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.target.isContentEditable;
 
       if (e.key === 'Escape') {
-        if (showBookingConfirmation) { handleBookingConfirmation(false); return; }
+        if (showBookingConfirmation) { handleBookingConfirmationRef.current(false); return; }
         if (showImageCropper) { setShowImageCropper(false); return; }
-        if (showBookingSheet) { closeBookingSheet(); return; }
+        if (showBookingSheet) { closeBookingSheetRef.current(); return; }
         if (showContactSheet) { setShowContactSheet(false); setContactBusiness(null); setContactSubject(''); setContactMessage(''); return; }
         if (showEditEventModal) { setShowEditEventModal(false); setEditingEvent(null); return; }
         if (showEditVenueModal) { setShowEditVenueModal(false); return; }
@@ -1390,6 +1393,12 @@ export default function PulseApp() {
     ).length;
   }, [dbEvents, currentSection, currentTime]);
 
+  // Memoized deals filter (must be before tabCounts which depends on it)
+  const filteredDeals = useMemo(() => filterDealsUtil(
+    dbDeals,
+    { searchQuery, filters, getVenueName }
+  ), [dbDeals, searchQuery, filters]);
+
   // Memoize tab counts to avoid breaking ConsumerHeader memoization
   const tabCounts = useMemo(() => ({
     classes: dbEvents.filter(e => e.eventType === 'class' && e.start >= currentTime).length,
@@ -1595,12 +1604,6 @@ export default function PulseApp() {
       </>
     );
   };
-
-  // Memoized deals filter
-  const filteredDeals = useMemo(() => filterDealsUtil(
-    dbDeals,
-    { searchQuery, filters, getVenueName }
-  ), [dbDeals, searchQuery, filters]);
 
   // Create notification when user saves an event/deal (for reminders)
   const createSaveNotification = useCallback((type, name, id) => {
@@ -2559,7 +2562,8 @@ export default function PulseApp() {
             if (installPromptEvent) {
               installPromptEvent.prompt();
               const result = await installPromptEvent.userChoice;
-              if (result.outcome === 'accepted') setShowInstallBanner(false);
+              // Hide banner regardless of outcome — prompt event is exhausted after use
+              setShowInstallBanner(false);
               setInstallPromptEvent(null);
             }
           }} style={{

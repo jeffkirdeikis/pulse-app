@@ -58,6 +58,8 @@ export function useAppData() {
 
   // Cache timestamps to prevent duplicate API requests within 30s
   const fetchTimestamps = useRef({ services: 0, events: 0, deals: 0 });
+  // Ref to track if services have been loaded (avoids stale closure in visibilitychange)
+  const servicesLoadedRef = useRef(false);
 
   // Force-refresh: resets cache timestamp so the next fetch always hits the API.
   // Use for pull-to-refresh / admin approval. Visibility-change uses the normal
@@ -74,7 +76,7 @@ export function useAppData() {
   // Fetch services from Supabase
   const fetchServices = async (force = false) => {
     const now = Date.now();
-    if (!force && now - fetchTimestamps.current.services < CACHE_TTL && services.length > 0) return;
+    if (!force && now - fetchTimestamps.current.services < CACHE_TTL && servicesLoadedRef.current) return;
     fetchTimestamps.current.services = now;
 
     setServicesLoading(true);
@@ -106,6 +108,7 @@ export function useAppData() {
     }));
 
     setServices(mappedServices);
+    servicesLoadedRef.current = mappedServices.length > 0;
     setServicesLoading(false);
   };
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { setUser as setSentryUser, clearUser as clearSentryUser } from '../lib/sentry';
 
@@ -64,6 +64,9 @@ export function useUserData() {
   // Claimed businesses
   const [userClaimedBusinesses, setUserClaimedBusinesses] = useState([]);
 
+  // Guard against double-fetch on initial load (getSession + onAuthStateChange both fire)
+  const lastFetchedUserIdRef = useRef(null);
+
   // Listen to auth changes
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -73,6 +76,7 @@ export function useUserData() {
       }
       setSession(session);
       if (session?.user) {
+        lastFetchedUserIdRef.current = session.user.id;
         fetchUserData(session.user.id, session.user);
       } else {
         setLoading(false);
@@ -92,8 +96,14 @@ export function useUserData() {
       }
       setSession(session);
       if (session?.user) {
+        // Skip duplicate fetch if getSession already handled this user
+        if (event === 'INITIAL_SESSION' && lastFetchedUserIdRef.current === session.user.id) {
+          return;
+        }
+        lastFetchedUserIdRef.current = session.user.id;
         fetchUserData(session.user.id, session.user);
       } else if (event === 'SIGNED_OUT' || !session) {
+        lastFetchedUserIdRef.current = null;
         resetUserData();
       }
     });
