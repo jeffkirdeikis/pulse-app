@@ -1399,6 +1399,7 @@
           border: 1px solid var(--border-light);
           overflow: hidden;
           animation: slideInDown 0.2s ease-out;
+          z-index: 1000;
         }
         
         @keyframes slideInDown {
@@ -2902,8 +2903,8 @@
           background: transparent;
           border: none;
           padding: 8px;
-          min-width: 36px;
-          min-height: 36px;
+          min-width: 44px;
+          min-height: 44px;
           cursor: pointer;
           transition: all 0.2s ease;
           display: flex;
@@ -2921,8 +2922,8 @@
           background: transparent;
           border: none;
           padding: 8px;
-          min-width: 36px;
-          min-height: 36px;
+          min-width: 44px;
+          min-height: 44px;
           cursor: pointer;
           transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
           display: flex;
@@ -7309,12 +7310,12 @@
           backdrop-filter: blur(12px);
           -webkit-backdrop-filter: blur(12px);
           border: none;
-          width: 32px;
-          height: 32px;
-          min-width: 32px;
-          min-height: 32px;
-          max-width: 32px;
-          max-height: 32px;
+          width: 36px;
+          height: 36px;
+          min-width: 36px;
+          min-height: 36px;
+          max-width: 36px;
+          max-height: 36px;
           border-radius: 50%;
           display: flex;
           align-items: center;
@@ -12894,12 +12895,12 @@
           .deal-close {
             top: 12px;
             right: 12px;
-            width: 32px;
-            height: 32px;
-            min-width: 32px;
-            min-height: 32px;
-            max-width: 32px;
-            max-height: 32px;
+            width: 36px;
+            height: 36px;
+            min-width: 36px;
+            min-height: 36px;
+            max-width: 36px;
+            max-height: 36px;
           }
 
           .event-hero,
@@ -13453,8 +13454,8 @@
           }
 
           .header-btn-icon {
-            width: 36px;
-            height: 36px;
+            width: 40px;
+            height: 40px;
           }
 
           .pulse-icon-premium {
@@ -13519,8 +13520,8 @@
           }
 
           .header-btn-icon {
-            width: 34px;
-            height: 34px;
+            width: 38px;
+            height: 38px;
           }
 
           .pulse-icon-premium {
@@ -13840,7 +13841,7 @@
   position: fixed;
   bottom: 24px;
   right: 24px;
-  z-index: 999;
+  z-index: 1001;
   width: 380px;
   max-width: calc(100vw - 32px);
   background: white;
@@ -14532,7 +14533,8 @@ h2.results-count {
   border: none;
   color: var(--text-tertiary);
   font-size: 13px;
-  padding: 3px 0;
+  padding: 8px 0;
+  min-height: 36px;
   cursor: pointer;
   transition: color 0.15s;
 }
