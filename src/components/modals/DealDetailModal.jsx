@@ -73,7 +73,7 @@ const DealDetailModal = memo(function DealDetailModal({
   const relatedDeals = getRelatedDeals(deal, allDeals || []);
 
   return (
-    <div className="modal-overlay deal-modal-overlay" role="dialog" aria-modal="true" aria-label="Deal details" onClick={onClose}>
+    <div className="modal-overlay deal-modal-overlay" role="dialog" aria-modal="true" aria-label="Deal details" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="deal-detail-modal" onClick={(e) => e.stopPropagation()}>
         <button type="button" className="close-btn deal-close" onClick={onClose} aria-label="Close">
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{display: 'block'}} aria-hidden="true">

@@ -36,7 +36,7 @@ const SubmissionModal = memo(function SubmissionModal({
 }) {
   const focusTrapRef = useFocusTrap();
   return (
-    <div className="modal-overlay submission-modal-overlay" role="dialog" aria-modal="true" aria-label="Submit event" onClick={onClose}>
+    <div className="modal-overlay submission-modal-overlay" role="dialog" aria-modal="true" aria-label="Submit event" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="submission-modal" ref={focusTrapRef} onClick={(e) => e.stopPropagation()}>
         <button type="button" className="close-btn submission-close" onClick={onClose} aria-label="Close"><X size={24} /></button>
 

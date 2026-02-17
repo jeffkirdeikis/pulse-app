@@ -47,7 +47,7 @@ const NotificationsPanel = memo(function NotificationsPanel({
   // ESC key is handled by the global keyboard handler in App.jsx — no local handler needed
 
   return (
-    <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Notifications" onClick={onClose}>
+    <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Notifications" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="notifications-panel" onClick={(e) => e.stopPropagation()}>
         <div className="notif-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

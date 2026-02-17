@@ -75,7 +75,12 @@ const DealsGrid = React.memo(function DealsGrid({
       {dealsLoading ? <SkeletonCards count={6} /> :
       <div className="deals-grid">
         <AnimatePresence>
-        {filteredDeals.map((deal, index) => (
+        {filteredDeals.map((deal, index) => {
+          const savingsDisplay = getDealSavingsDisplay(deal);
+          const venueName = getVenueName(deal.venueId, deal);
+          const smartTitle = generateSmartDealTitle(deal, venueName);
+          const saved = isItemSavedLocal('deal', deal.id);
+          return (
           <motion.div
             key={deal.id}
             className="deal-card card-enter"
@@ -94,15 +99,15 @@ const DealsGrid = React.memo(function DealsGrid({
             ref={(el) => dealCardRefs.current[index] = el}
           >
             {/* Prominent savings badge at top */}
-            {getDealSavingsDisplay(deal) && (
-              <div className={`deal-savings-badge savings-${getDealSavingsDisplay(deal).type}`}>
-                {getDealSavingsDisplay(deal).text}
+            {savingsDisplay && (
+              <div className={`deal-savings-badge savings-${savingsDisplay.type}`}>
+                {savingsDisplay.text}
               </div>
             )}
 
             <div className="deal-card-header-new">
               <div className="deal-title-section">
-                <h3 title={generateSmartDealTitle(deal, getVenueName(deal.venueId, deal))}>{generateSmartDealTitle(deal, getVenueName(deal.venueId, deal))}</h3>
+                <h3 title={smartTitle}>{smartTitle}</h3>
                 {deal.verified && (
                   <div
                     className="verified-badge-premium"
@@ -121,7 +126,7 @@ const DealsGrid = React.memo(function DealsGrid({
                   <div className="detail-icon venue-icon">
                     <MapPin size={16} />
                   </div>
-                  <span className="detail-text" title={getVenueName(deal.venueId, deal)}>{getVenueName(deal.venueId, deal)}</span>
+                  <span className="detail-text" title={venueName}>{venueName}</span>
                 </div>
               </div>
 
@@ -143,19 +148,20 @@ const DealsGrid = React.memo(function DealsGrid({
 
             <button
               type="button"
-              className={`save-star-btn ${isItemSavedLocal('deal', deal.id) ? 'saved' : ''}`}
+              className={`save-star-btn ${saved ? 'saved' : ''}`}
               onClick={(e) => {
                 e.stopPropagation();
-                toggleSave(deal.id, 'deal', deal.title, { venue: getVenueName(deal.venueId, deal) });
+                toggleSave(deal.id, 'deal', deal.title, { venue: venueName });
               }}
-              data-tooltip={isItemSavedLocal('deal', deal.id) ? "Saved" : "Save"}
-              aria-label={isItemSavedLocal('deal', deal.id) ? "Remove from saved" : "Save to favorites"}
+              data-tooltip={saved ? "Saved" : "Save"}
+              aria-label={saved ? "Remove from saved" : "Save to favorites"}
             >
-              <Star size={24} fill={isItemSavedLocal('deal', deal.id) ? "#f59e0b" : "none"} stroke={isItemSavedLocal('deal', deal.id) ? "#f59e0b" : "#9ca3af"} strokeWidth={2} />
+              <Star size={24} fill={saved ? "#f59e0b" : "none"} stroke={saved ? "#f59e0b" : "#9ca3af"} strokeWidth={2} />
             </button>
             <ChevronRight className="deal-chevron" size={20} />
           </motion.div>
-        ))}
+          );
+        })}
         </AnimatePresence>
       </div>}
 

@@ -27,7 +27,7 @@ const AdminPanelModal = memo(function AdminPanelModal({
     }
   }, [adminTab]);
   return (
-    <div className="modal-overlay admin-modal-overlay" role="dialog" aria-modal="true" aria-label="Admin panel" onClick={() => onClose()}>
+    <div className="modal-overlay admin-modal-overlay" role="dialog" aria-modal="true" aria-label="Admin panel" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
         <button type="button" className="close-btn admin-close" onClick={() => onClose()} aria-label="Close"><X size={24} /></button>
 

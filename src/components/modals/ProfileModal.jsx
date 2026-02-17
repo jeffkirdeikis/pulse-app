@@ -48,7 +48,7 @@ const ProfileModal = memo(function ProfileModal({
 }) {
   const focusTrapRef = useFocusTrap();
   return (
-    <div className="modal-overlay profile-modal-overlay" role="dialog" aria-modal="true" aria-label="Profile" onClick={() => onClose()}>
+    <div className="modal-overlay profile-modal-overlay" role="dialog" aria-modal="true" aria-label="Profile" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="profile-modal" ref={focusTrapRef} onClick={(e) => e.stopPropagation()}>
         <button type="button" className="close-btn profile-close" onClick={() => onClose()} aria-label="Close"><X size={24} /></button>
 

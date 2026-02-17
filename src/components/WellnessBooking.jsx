@@ -819,7 +819,7 @@ function ProviderDetailModal({ provider, slots, onClose, onSlotClick, onBook, ha
   const disciplineLabel = DISCIPLINES.find(d => d.key === provider.discipline)?.label || provider.discipline;
 
   return (
-    <div className="wb-modal-overlay" onClick={onClose}>
+    <div className="wb-modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="wb-provider-modal" onClick={(e) => e.stopPropagation()}>
         <button type="button" className="wb-modal-close" onClick={onClose} aria-label="Close">
           <X size={20} />
@@ -912,7 +912,7 @@ function AlertSetupModal({ provider, days, setDays, timeRange, setTimeRange, onS
   };
 
   return (
-    <div className="wb-modal-overlay" onClick={onClose}>
+    <div className="wb-modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="wb-alert-modal" onClick={(e) => e.stopPropagation()}>
         <button type="button" className="wb-modal-close" onClick={onClose} aria-label="Close">
           <X size={20} />

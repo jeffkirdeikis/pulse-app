@@ -62,7 +62,7 @@ const EventDetailModal = memo(function EventDetailModal({
   };
 
   return (
-    <div className="modal-overlay event-modal-overlay" role="dialog" aria-modal="true" aria-label="Event details" onClick={onClose}>
+    <div className="modal-overlay event-modal-overlay" role="dialog" aria-modal="true" aria-label="Event details" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <motion.div
         className="event-detail-modal"
         onClick={(e) => e.stopPropagation()}
