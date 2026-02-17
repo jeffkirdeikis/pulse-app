@@ -1,7 +1,7 @@
 // Booking systems lookup - maps venue names to their booking URLs
 // Sources: Mindbody, WellnessLiving, JaneApp scrapers
 
-export const BOOKING_SYSTEMS = {
+const BOOKING_SYSTEMS = {
   // Mindbody Widget API
   'Shala Yoga': {
     type: 'mindbody',

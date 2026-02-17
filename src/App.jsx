@@ -351,6 +351,7 @@ export default function PulseApp() {
       setUnverifiedContent({ events: unvEvents || [], deals: unvDeals || [] });
     } catch (err) {
       console.error('Error fetching admin stats:', err);
+      showToast('Failed to load admin data', 'error');
     }
   }, [user?.isAdmin]);
 
@@ -504,6 +505,7 @@ export default function PulseApp() {
     } catch (err) {
       if (requestId !== analyticsRequestRef.current) return;
       console.error('Error fetching analytics:', err);
+      showToast('Failed to load analytics', 'error');
       setBusinessAnalytics(null);
     } finally {
       if (requestId === analyticsRequestRef.current) setAnalyticsLoading(false);

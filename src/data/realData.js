@@ -8045,8 +8045,4 @@ const expandRecurringEvents = (baseEvents) => {
 // Expand the events
 REAL_DATA.events = expandRecurringEvents(REAL_DATA.events);
 
-// Re-export deal helpers from canonical source
-import { generateSmartDealTitle, generateEnhancedDealDescription } from '../utils/dealHelpers';
-
-// Export everything
-export { REAL_DATA, SERVICE_CATEGORIES, expandRecurringEvents, generateSmartDealTitle, generateEnhancedDealDescription };
+export { REAL_DATA };

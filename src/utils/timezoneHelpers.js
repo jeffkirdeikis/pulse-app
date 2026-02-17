@@ -1,9 +1,6 @@
 // All dates/times in this app are in Squamish (Pacific) time, regardless of user's location.
 export const PACIFIC_TZ = 'America/Vancouver';
 
-/** Format options for displaying dates/times always in Pacific timezone */
-export const PACIFIC_DATE_OPTS = { timeZone: PACIFIC_TZ };
-
 /** Get current Date adjusted to Pacific timezone */
 export function getPacificNow() {
   const pacificStr = new Date().toLocaleString('en-US', { timeZone: PACIFIC_TZ });

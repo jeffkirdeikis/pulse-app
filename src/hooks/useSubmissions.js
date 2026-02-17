@@ -391,6 +391,7 @@ export function useSubmissions(user, { showToast, userClaimedBusinesses, updateA
       }
     } catch (err) {
       console.error('Failed to load submissions:', err);
+      showToast?.('Failed to load submissions', 'error');
     }
   }, [user?.id]);
 

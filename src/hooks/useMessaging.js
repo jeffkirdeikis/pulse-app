@@ -55,6 +55,7 @@ export function useMessaging(user, { showToast, onAuthRequired, activeBusiness, 
       setConversations(data || []);
     } catch (err) {
       console.error('Error fetching conversations:', err);
+      showToast?.('Failed to load messages. Please try again.', 'error');
       setConversations([]);
     } finally {
       setConversationsLoading(false);
@@ -79,6 +80,7 @@ export function useMessaging(user, { showToast, onAuthRequired, activeBusiness, 
       });
     } catch (err) {
       console.error('Error fetching messages:', err);
+      showToast?.('Failed to load messages. Please try again.', 'error');
       setConversationMessages([]);
     } finally {
       setMessagesLoading(false);
@@ -213,6 +215,7 @@ export function useMessaging(user, { showToast, onAuthRequired, activeBusiness, 
       setBusinessConversations(data || []);
     } catch (err) {
       console.error('Error fetching business inbox:', err);
+      showToast?.('Failed to load inbox. Please try again.', 'error');
       setBusinessConversations([]);
     } finally {
       setBusinessConversationsLoading(false);
@@ -237,6 +240,7 @@ export function useMessaging(user, { showToast, onAuthRequired, activeBusiness, 
       });
     } catch (err) {
       console.error('Error fetching business messages:', err);
+      showToast?.('Failed to load messages. Please try again.', 'error');
       setBusinessMessages([]);
     } finally {
       setBusinessMessagesLoading(false);

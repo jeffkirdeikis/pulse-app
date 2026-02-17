@@ -211,15 +211,6 @@ export const calculateDealScore = (deal) => {
   return score;
 };
 
-// Get deal tier for visual badges
-export const getDealTier = (deal) => {
-  const score = calculateDealScore(deal);
-  if (score >= 80) return { tier: 'hot', label: '\u{1F525} Hot Deal', color: '#ef4444' };
-  if (score >= 50) return { tier: 'great', label: '\u{1F48E} Great Value', color: '#8b5cf6' };
-  if (score >= 30) return { tier: 'good', label: '\u2713 Good Deal', color: '#10b981' };
-  return null;
-};
-
 // Get prominent savings text for deal cards (e.g., "40% OFF", "SAVE $50")
 export const getDealSavingsDisplay = (deal) => {
   const discountValue = deal.discountValue || deal.discount_value || 0;

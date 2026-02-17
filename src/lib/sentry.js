@@ -68,17 +68,6 @@ export function captureError(error, context = {}) {
 }
 
 /**
- * Capture a message/event
- */
-export function captureMessage(message, level = 'info') {
-  if (import.meta.env.VITE_SENTRY_DSN) {
-    Sentry.captureMessage(message, level);
-  } else {
-    if (import.meta.env.DEV) console.log(`[${level}]`, message);
-  }
-}
-
-/**
  * Set user context for error reports
  */
 export function setUser(user) {
