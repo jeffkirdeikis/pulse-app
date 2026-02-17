@@ -18,7 +18,7 @@ const BookingSheet = memo(function BookingSheet({
 }) {
   if (!bookingEvent) return null;
   return (
-    <div className="modal-overlay booking-sheet-overlay" role="dialog" aria-modal="true" aria-label="Book class" onClick={onClose}>
+    <div className="modal-overlay booking-sheet-overlay" role="dialog" aria-modal="true" aria-label="Book class" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className={`booking-bottom-sheet ${bookingStep === 'iframe' ? 'full-height' : ''}`} onClick={(e) => e.stopPropagation()}>
         <div className="sheet-handle" />
         <button type="button" className="close-btn sheet-close" onClick={onClose} aria-label="Close">

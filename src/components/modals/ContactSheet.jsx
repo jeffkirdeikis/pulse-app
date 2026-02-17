@@ -13,7 +13,7 @@ const ContactSheet = memo(function ContactSheet({
 }) {
   if (!contactBusiness) return null;
   return (
-    <div className="modal-overlay contact-sheet-overlay" role="dialog" aria-modal="true" aria-label="Contact business" onClick={() => onClose()}>
+    <div className="modal-overlay contact-sheet-overlay" role="dialog" aria-modal="true" aria-label="Contact business" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="contact-bottom-sheet" onClick={(e) => e.stopPropagation()}>
         <div className="sheet-handle" />
         <button type="button" className="close-btn sheet-close" onClick={() => onClose()} aria-label="Close">

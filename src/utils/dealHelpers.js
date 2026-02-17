@@ -228,7 +228,7 @@ export const getDealSavingsDisplay = (deal) => {
     return { text: `${Math.round(discountValue)}% OFF`, type: 'percent' };
   }
   if (savingsPercent > 0) {
-    return { text: `${savingsPercent}% OFF`, type: 'percent' };
+    return { text: `${Math.round(savingsPercent)}% OFF`, type: 'percent' };
   }
 
   // Check for dollar savings

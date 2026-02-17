@@ -1341,7 +1341,7 @@ export default function PulseApp() {
     const sectionEvents = dbEvents.filter(e =>
       currentSection === 'classes' ? e.eventType === 'class' :
       currentSection === 'events' ? e.eventType === 'event' : true
-    ).filter(e => e.start >= now);
+    ).filter(e => e.start instanceof Date && !isNaN(e.start.getTime()) && e.start >= now);
     sectionEvents.forEach(e => {
       const y = e.start.getFullYear();
       const m = String(e.start.getMonth() + 1).padStart(2, '0');
@@ -1358,6 +1358,7 @@ export default function PulseApp() {
     const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000);
     return dbEvents.filter(e =>
       (currentSection === 'classes' ? e.eventType === 'class' : currentSection === 'events' ? e.eventType === 'event' : true) &&
+      e.start instanceof Date && !isNaN(e.start.getTime()) &&
       e.start >= twoHoursAgo && e.start <= now
     ).length;
   }, [dbEvents, currentSection, currentTime]);
@@ -1367,6 +1368,7 @@ export default function PulseApp() {
     const now = currentTime;
     return dbEvents.filter(e =>
       (currentSection === 'classes' ? e.eventType === 'class' : currentSection === 'events' ? e.eventType === 'event' : true) &&
+      e.start instanceof Date && !isNaN(e.start.getTime()) &&
       e.start >= now && e.price?.toLowerCase() === 'free'
     ).length;
   }, [dbEvents, currentSection, currentTime]);
@@ -1389,6 +1391,7 @@ export default function PulseApp() {
     const startCutoff = isWeekend ? now : friday;
     return dbEvents.filter(e =>
       (currentSection === 'classes' ? e.eventType === 'class' : currentSection === 'events' ? e.eventType === 'event' : true) &&
+      e.start instanceof Date && !isNaN(e.start.getTime()) &&
       e.start >= startCutoff && e.start < monday
     ).length;
   }, [dbEvents, currentSection, currentTime]);
@@ -1614,7 +1617,7 @@ export default function PulseApp() {
       `You saved this ${type}. We'll remind you before it starts.`,
       { [`${type}Id`]: id }
     );
-  }, [session, createNotification]);
+  }, [session?.user?.id, createNotification]);
 
   const toggleSave = useCallback(async (id, type, name = '', data = {}) => {
     const itemKey = `${type}-${id}`;
