@@ -28,7 +28,7 @@ function toGCalDateStr(date) {
 export function useCalendar({ myCalendar, isAuthenticated, session, registerForEvent, refreshUserData, getVenueName, showToast, onCalendarAdd }) {
   // Generate Google Calendar URL
   const generateGoogleCalendarUrl = useCallback((event) => {
-    if (!event || !event.start || isNaN(event.start.getTime())) return '';
+    if (!event || !event.title || !event.start || isNaN(event.start.getTime())) return '';
     const startDate = toGCalDateStr(event.start);
     const endDate = event.end && !isNaN(event.end.getTime()) ? toGCalDateStr(event.end) : startDate;
     const title = encodeURIComponent(event.title);

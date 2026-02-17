@@ -550,9 +550,13 @@ export function useUserData() {
     }
   };
 
-  // Sign out
+  // Sign out — always clear local state even if Supabase call fails
   const signOut = async () => {
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.error('Sign out error:', err);
+    }
     resetUserData();
     setSession(null);
   };
