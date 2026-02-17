@@ -166,14 +166,14 @@ export function useSubmissions(user, { showToast, userClaimedBusinesses, updateA
         const response = await fetch(cropperImage);
         const blob = await response.blob();
         const file = new File([blob], 'avatar.jpg', { type: 'image/jpeg' });
-        const { error } = await updateAvatar?.(file);
-        showToast?.(error ? 'Error uploading avatar. Please try again.' : 'Profile photo updated!');
+        const result = await updateAvatar?.(file);
+        showToast?.(result?.error ? 'Error uploading avatar. Please try again.' : 'Profile photo updated!');
       } else if (cropperType === 'profileCover') {
         const response = await fetch(cropperImage);
         const blob = await response.blob();
         const file = new File([blob], 'cover.jpg', { type: 'image/jpeg' });
-        const { error } = await updateCoverPhoto?.(file);
-        showToast?.(error ? 'Error uploading cover photo. Please try again.' : 'Cover photo updated!');
+        const result = await updateCoverPhoto?.(file);
+        showToast?.(result?.error ? 'Error uploading cover photo. Please try again.' : 'Cover photo updated!');
       }
     } catch (err) {
       if (import.meta.env.DEV) console.error('[handleCropComplete]', err);
@@ -284,7 +284,7 @@ export function useSubmissions(user, { showToast, userClaimedBusinesses, updateA
   const approveSubmission = useCallback(async (submissionId) => {
     try {
       const submission = pendingSubmissions.find(s => s.id === submissionId);
-      if (!submission) return;
+      if (!submission?.data) return;
 
       // Insert the event/deal FIRST, then mark as approved (atomic: if insert fails, status stays pending)
       if (submission.type === 'event' || submission.type === 'class') {

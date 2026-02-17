@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { PACIFIC_TZ } from '../utils/timezoneHelpers';
 import { getBookingUrl, getBookingType } from '../utils/bookingHelpers';
 
@@ -21,6 +21,12 @@ export function useBooking({ getVenueName, venues, trackAnalytics, addToCalendar
   const [bookingStep, setBookingStep] = useState('iframe');
   const [showBookingConfirmation, setShowBookingConfirmation] = useState(false);
   const [bookingRequestMessage, setBookingRequestMessage] = useState('');
+  const openMessagesTimerRef = useRef(null);
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => { if (openMessagesTimerRef.current) clearTimeout(openMessagesTimerRef.current); };
+  }, []);
 
   // Get business info for an event, including booking URL from lookup
   const getBusinessForEvent = useCallback((event) => {
@@ -120,7 +126,7 @@ export function useBooking({ getVenueName, venues, trackAnalytics, addToCalendar
 
       if (conversationId) {
         await trackAnalytics('message_received', business.id, eventSnapshot.id);
-        setTimeout(() => openMessages(), 1500);
+        openMessagesTimerRef.current = setTimeout(() => openMessages(), 1500);
       } else {
         // startConversation returned null — request failed silently
         showToast('Failed to send request. Please try again.', 'error');
