@@ -156,11 +156,12 @@ export const calculateDealScore = (deal) => {
   let score = 0;
 
   // Extract discount info from various fields
-  const discountValue = deal.discountValue || deal.discount_value || 0;
+  const discountValue = deal.discountValue ?? deal.discount_value ?? 0;
   const discountType = deal.discountType || deal.discount_type || '';
-  const savingsPercent = deal.savingsPercent || 0;
-  const originalPrice = deal.originalPrice || deal.original_price || 0;
-  const dealPrice = deal.dealPrice || deal.deal_price || 0;
+  const savingsPercent = deal.savingsPercent ?? 0;
+  const originalPrice = deal.originalPrice ?? deal.original_price ?? 0;
+  const dealPrice = deal.dealPrice ?? deal.deal_price ?? 0;
+  const hasDealPrice = deal.dealPrice != null || deal.deal_price != null;
   const title = (deal.title || '').toLowerCase();
   const discount = (deal.discount || '').toLowerCase();
 
@@ -175,8 +176,8 @@ export const calculateDealScore = (deal) => {
   const parsedDollar = dollarMatch ? parseInt(dollarMatch[1]) : 0;
   const effectiveDollar = discountValue > 0 && discountType === 'fixed' ? discountValue : parsedDollar;
 
-  // Calculate actual savings if we have prices
-  const actualSavings = originalPrice && dealPrice ? originalPrice - dealPrice : 0;
+  // Calculate actual savings if we have prices (hasDealPrice distinguishes "free" from "unknown")
+  const actualSavings = originalPrice > 0 && hasDealPrice ? originalPrice - dealPrice : 0;
 
   // Score based on percentage discount
   if (effectivePercent >= 50) score += 100;
@@ -213,11 +214,12 @@ export const calculateDealScore = (deal) => {
 
 // Get prominent savings text for deal cards (e.g., "40% OFF", "SAVE $50")
 export const getDealSavingsDisplay = (deal) => {
-  const discountValue = deal.discountValue || deal.discount_value || 0;
+  const discountValue = deal.discountValue ?? deal.discount_value ?? 0;
   const discountType = deal.discountType || deal.discount_type || '';
-  const savingsPercent = deal.savingsPercent || 0;
-  const originalPrice = deal.originalPrice || deal.original_price || 0;
-  const dealPrice = deal.dealPrice || deal.deal_price || 0;
+  const savingsPercent = deal.savingsPercent ?? 0;
+  const originalPrice = deal.originalPrice ?? deal.original_price ?? 0;
+  const dealPrice = deal.dealPrice ?? deal.deal_price ?? 0;
+  const hasDealPrice = deal.dealPrice != null || deal.deal_price != null;
   const title = (deal.title || '').toLowerCase();
   const discount = (deal.discount || '').toLowerCase();
 
@@ -233,7 +235,7 @@ export const getDealSavingsDisplay = (deal) => {
   if (discountType === 'fixed' && discountValue > 0) {
     return { text: `SAVE $${Math.round(discountValue)}`, type: 'dollar' };
   }
-  if (originalPrice && dealPrice && originalPrice > dealPrice) {
+  if (originalPrice > 0 && hasDealPrice && originalPrice > dealPrice) {
     const savings = Math.round(originalPrice - dealPrice);
     return { text: `SAVE $${savings}`, type: 'dollar' };
   }

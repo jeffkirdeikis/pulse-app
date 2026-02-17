@@ -18,7 +18,9 @@ export function filterEvents(allEvents, { currentSection, filters, searchQuery, 
   let filtered = [...allEvents];
 
   // Filter out bad data - titles that are just booking status, not actual class names
+  // Also filter out events with missing/invalid start dates to prevent downstream crashes
   filtered = filtered.filter(e => {
+    if (!e.start || !(e.start instanceof Date) || isNaN(e.start.getTime())) return false;
     const title = e.title || '';
     if (/^\(\d+\s+Reserved,\s+\d+\s+Open\)$/.test(title)) return false;
     if (title.length < 3) return false;
@@ -119,7 +121,7 @@ export function filterEvents(allEvents, { currentSection, filters, searchQuery, 
     filtered = filtered.filter(e => {
       if (!e.ageGroup?.includes('Kids')) return false;
 
-      if (kidsAgeRange[0] !== 0 || kidsAgeRange[1] !== 18) {
+      if (kidsAgeRange && (kidsAgeRange[0] !== 0 || kidsAgeRange[1] !== 18)) {
         const text = `${e.title || ''} ${e.description || ''}`.toLowerCase();
 
         // Check for prenatal
@@ -204,7 +206,9 @@ export function filterDeals(allDeals, { searchQuery, filters, getVenueName }) {
   const now = getPacificNow();
   filtered = filtered.filter(deal => {
     if (!deal.validUntil) return true; // No expiry = always valid
-    return new Date(deal.validUntil) >= now;
+    const expiryDate = new Date(deal.validUntil);
+    if (isNaN(expiryDate.getTime())) return true; // Unparseable expiry = treat as valid
+    return expiryDate >= now;
   });
 
   if (searchQuery?.trim()) {
