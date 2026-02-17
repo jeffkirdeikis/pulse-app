@@ -35,6 +35,7 @@ const EditVenueModal = memo(function EditVenueModal({
             placeholder="Business name"
             value={editVenueForm.name}
             onChange={(e) => setEditVenueForm({...editVenueForm, name: e.target.value})}
+            maxLength={200}
           />
         </div>
         <div className="claim-form-group full">
@@ -45,6 +46,7 @@ const EditVenueModal = memo(function EditVenueModal({
             placeholder="Street address"
             value={editVenueForm.address}
             onChange={(e) => setEditVenueForm({...editVenueForm, address: e.target.value})}
+            maxLength={300}
           />
         </div>
         <div className="claim-form-group">
@@ -55,6 +57,7 @@ const EditVenueModal = memo(function EditVenueModal({
             placeholder="(604) 555-1234"
             value={editVenueForm.phone}
             onChange={(e) => setEditVenueForm({...editVenueForm, phone: e.target.value})}
+            maxLength={20}
           />
         </div>
         <div className="claim-form-group">
@@ -65,6 +68,7 @@ const EditVenueModal = memo(function EditVenueModal({
             placeholder="contact@business.com"
             value={editVenueForm.email}
             onChange={(e) => setEditVenueForm({...editVenueForm, email: e.target.value})}
+            maxLength={254}
           />
         </div>
         <div className="claim-form-group">
@@ -75,6 +79,7 @@ const EditVenueModal = memo(function EditVenueModal({
             placeholder="https://..."
             value={editVenueForm.website}
             onChange={(e) => setEditVenueForm({...editVenueForm, website: e.target.value})}
+            maxLength={500}
           />
         </div>
         <div className="claim-form-group">
@@ -85,6 +90,7 @@ const EditVenueModal = memo(function EditVenueModal({
             placeholder="e.g., Fitness, Restaurant"
             value={editVenueForm.category}
             onChange={(e) => setEditVenueForm({...editVenueForm, category: e.target.value})}
+            maxLength={100}
           />
         </div>
       </div>

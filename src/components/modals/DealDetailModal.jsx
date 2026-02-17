@@ -185,7 +185,7 @@ const DealDetailModal = memo(function DealDetailModal({
             </h2>
             <div className="related-deals-grid">
               {relatedDeals.slice(0, 3).map(rd => (
-                <div key={rd.id} className="related-deal-card" role="button" tabIndex={0} onClick={() => onSelectDeal(rd)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelectDeal(rd); } }}>
+                <div key={rd.id} className="related-deal-card" role="button" tabIndex={0} onClick={() => onSelectDeal?.(rd)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelectDeal?.(rd); } }}>
                   <div className="related-deal-content">
                     <h4 className="related-deal-title">
                       {generateSmartDealTitle(rd, getVenueName(rd.venueId, rd))}

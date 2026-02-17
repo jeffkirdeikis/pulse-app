@@ -222,8 +222,8 @@ const BusinessDashboard = memo(function BusinessDashboard({
                   </div>
                 </div>
                 <div className="header-text">
-                  <h1>{activeBusiness.name}</h1>
-                  <p className="header-subtitle">{activeBusiness.address}</p>
+                  <h1>{activeBusiness.name || 'Unnamed Business'}</h1>
+                  <p className="header-subtitle">{activeBusiness.address || ''}</p>
                 </div>
               </div>
               <div className="header-right">

@@ -61,7 +61,7 @@ const ServiceDetailModal = memo(function ServiceDetailModal({
               <div className="rating-score">{service.rating}</div>
               <div className="rating-stars">
                 {[1, 2, 3, 4, 5].map(star => (
-                  <Star key={star} size={16} fill={star <= Math.round(service.rating) ? '#fbbf24' : 'none'} stroke="#fbbf24" />
+                  <Star key={star} size={16} fill={star <= Math.round(service.rating || 0) ? '#fbbf24' : 'none'} stroke="#fbbf24" />
                 ))}
               </div>
               <div className="rating-reviews">{service.reviews?.toLocaleString() || 0} Google reviews</div>

@@ -67,10 +67,8 @@ const ImageCropperModal = memo(function ImageCropperModal({
               img.dataset.dragging = 'false';
               img.style.cursor = 'grab';
               img.style.transition = 'transform 0.1s ease-out'; // Re-enable transition
-              setCropPosition({ 
-                x: parseFloat(img.dataset.currentX || cropPosition.x), 
-                y: parseFloat(img.dataset.currentY || cropPosition.y) 
-              });
+              const pX = parseFloat(img.dataset.currentX); const pY = parseFloat(img.dataset.currentY);
+              setCropPosition({ x: isNaN(pX) ? cropPosition.x : pX, y: isNaN(pY) ? cropPosition.y : pY });
             }
           }}
           onMouseLeave={(e) => {
@@ -79,10 +77,8 @@ const ImageCropperModal = memo(function ImageCropperModal({
               img.dataset.dragging = 'false';
               img.style.cursor = 'grab';
               img.style.transition = 'transform 0.1s ease-out'; // Re-enable transition
-              setCropPosition({ 
-                x: parseFloat(img.dataset.currentX || cropPosition.x), 
-                y: parseFloat(img.dataset.currentY || cropPosition.y) 
-              });
+              const pX = parseFloat(img.dataset.currentX); const pY = parseFloat(img.dataset.currentY);
+              setCropPosition({ x: isNaN(pX) ? cropPosition.x : pX, y: isNaN(pY) ? cropPosition.y : pY });
             }
           }}
           onTouchStart={(e) => {
@@ -112,10 +108,8 @@ const ImageCropperModal = memo(function ImageCropperModal({
             if (img.dataset.dragging === 'true') {
               img.dataset.dragging = 'false';
               img.style.transition = 'transform 0.1s ease-out'; // Re-enable transition
-              setCropPosition({ 
-                x: parseFloat(img.dataset.currentX || cropPosition.x), 
-                y: parseFloat(img.dataset.currentY || cropPosition.y) 
-              });
+              const pX = parseFloat(img.dataset.currentX); const pY = parseFloat(img.dataset.currentY);
+              setCropPosition({ x: isNaN(pX) ? cropPosition.x : pX, y: isNaN(pY) ? cropPosition.y : pY });
             }
           }}
           ref={frameRef}

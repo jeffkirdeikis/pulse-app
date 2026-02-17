@@ -323,7 +323,7 @@ const ClaimBusinessModal = memo(function ClaimBusinessModal({
 
               <div className="claim-modal-actions">
                 <button className="claim-cancel-btn" onClick={onClose}>Cancel</button>
-                <button className="claim-submit-btn" onClick={handleClaimBusiness} disabled={claimSubmitting}>
+                <button className="claim-submit-btn" onClick={handleClaimBusiness} disabled={claimSubmitting || !claimFormData.businessName?.trim() || !claimFormData.ownerName?.trim() || !claimFormData.email?.trim()}>
                   {claimSubmitting ? 'Submitting...' : claimVerificationMethod === 'document' ? 'Submit with Documents' : 'Submit Claim'}
                 </button>
               </div>

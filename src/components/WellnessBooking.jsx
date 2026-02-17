@@ -571,7 +571,7 @@ function SkeletonLoading() {
 }
 
 function EmptyState({ hasProviders, selectedDate, onSetAlert, dateCounts, onSelectDate }) {
-  const dateObj = new Date(selectedDate + 'T12:00:00');
+  const dateObj = selectedDate ? new Date(selectedDate + 'T12:00:00') : new Date();
   const dateStr = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 
   // Find the next date with availability
