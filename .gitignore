@@ -27,14 +27,21 @@ dist-ssr
 # Claude memory files
 **/.claude/CLAUDE.md
 **/CLAUDE.md
-!CLAUDE.md
-!CLAUDE-ARCHIVE.md
+!/CLAUDE.md
+!/CLAUDE-ARCHIVE.md
 
 # Test artifacts
 test-results/
 qa-reports/screenshots/
+qa-reports/*.json
+qa-modal-test-*.cjs
+qa-visual.cjs
+test-mobile.cjs
 *.png
 !public/*.png
+
+# Debug scripts
+scripts/debug-*.js
 
 # Data files
 *.zip
