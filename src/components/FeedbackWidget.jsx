@@ -202,7 +202,7 @@ const FeedbackWidget = memo(function FeedbackWidget() {
                       <div className="feedback-screenshot-preview">
                         <img src={screenshot.preview} alt="preview" />
                         <span className="feedback-screenshot-name">{screenshot.name}</span>
-                        <button onClick={() => { setScreenshot(null); setScreenshotFile(null); }} className="feedback-screenshot-remove" aria-label="Remove screenshot">
+                        <button type="button" onClick={() => { setScreenshot(null); setScreenshotFile(null); }} className="feedback-screenshot-remove" aria-label="Remove screenshot">
                           <X size={14} />
                         </button>
                       </div>

@@ -148,7 +148,7 @@ const ClaimBusinessModal = memo(function ClaimBusinessModal({
                 />
                 {claimSearchQuery.length >= 2 && !claimSelectedBusiness && (
                   <div style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid #e5e7eb', borderRadius: '8px', marginTop: '4px', background: '#fff' }}>
-                    {services.filter(s => s.name?.toLowerCase().includes(claimSearchQuery.toLowerCase())).slice(0, 8).map(biz => (
+                    {(services || []).filter(s => s.name?.toLowerCase().includes(claimSearchQuery.toLowerCase())).slice(0, 8).map(biz => (
                       <div key={biz.id} style={{ padding: '10px 14px', cursor: 'pointer', borderBottom: '1px solid #f3f4f6', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
                         role="button"
                         tabIndex={0}
@@ -168,7 +168,7 @@ const ClaimBusinessModal = memo(function ClaimBusinessModal({
                         <CheckCircle size={16} style={{ color: '#9ca3af' }} />
                       </div>
                     ))}
-                    {services.filter(s => s.name?.toLowerCase().includes(claimSearchQuery.toLowerCase())).length === 0 && (
+                    {(services || []).filter(s => s.name?.toLowerCase().includes(claimSearchQuery.toLowerCase())).length === 0 && (
                       <div style={{ padding: '12px 14px', color: '#6b7280', textAlign: 'center' }}>No businesses found</div>
                     )}
                   </div>
@@ -177,7 +177,7 @@ const ClaimBusinessModal = memo(function ClaimBusinessModal({
                   <div style={{ marginTop: '8px', padding: '10px 14px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <CheckCircle size={16} style={{ color: '#16a34a' }} />
                     <span style={{ fontWeight: 600, color: '#166534' }}>{claimSelectedBusiness.name}</span>
-                    <button onClick={() => { setClaimSelectedBusiness(null); setClaimSearchQuery(''); }} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer' }}><X size={14} /></button>
+                    <button type="button" onClick={() => { setClaimSelectedBusiness(null); setClaimSearchQuery(''); }} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer' }} aria-label="Clear selection"><X size={14} /></button>
                   </div>
                 )}
                 <p style={{ fontSize: '12px', color: '#9ca3af', marginTop: '6px' }}>Select from the directory above, or fill in the form below for unlisted businesses</p>

@@ -42,11 +42,11 @@ const ServicesGrid = React.memo(function ServicesGrid({
         const timeText = formatResponseTime(pd.response_time_minutes);
         return { type: 'response', text: `⚡ Responds in ${timeText}` };
       }
-      if (pd.testimonial) {
+      if (pd.testimonial?.quote) {
         const quote = pd.testimonial.quote.length > 40
           ? pd.testimonial.quote.substring(0, 40) + '...'
           : pd.testimonial.quote;
-        return { type: 'testimonial', text: `💬 "${quote}" — ${pd.testimonial.author}` };
+        return { type: 'testimonial', text: `💬 "${quote}"${pd.testimonial.author ? ` — ${pd.testimonial.author}` : ''}` };
       }
       if (pd.satisfaction_rate >= 95) {
         return { type: 'satisfaction', text: `✅ ${pd.satisfaction_rate}% satisfaction rate` };

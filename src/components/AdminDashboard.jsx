@@ -244,7 +244,7 @@ const AdminDashboard = memo(function AdminDashboard({
               </div>
               {impersonateSearchQuery.length > 1 && (
                 <div className="admin-search-dropdown">
-                  {services
+                  {(services || [])
                     .filter(s => s.name?.toLowerCase().includes(impersonateSearchQuery.toLowerCase()))
                     .slice(0, 8)
                     .map(venue => (
@@ -258,7 +258,7 @@ const AdminDashboard = memo(function AdminDashboard({
                       </div>
                     ))
                   }
-                  {services.filter(s => s.name?.toLowerCase().includes(impersonateSearchQuery.toLowerCase())).length === 0 && (
+                  {(services || []).filter(s => s.name?.toLowerCase().includes(impersonateSearchQuery.toLowerCase())).length === 0 && (
                     <div className="admin-search-empty">No businesses found</div>
                   )}
                 </div>
@@ -546,7 +546,7 @@ const AdminDashboard = memo(function AdminDashboard({
 
         <div className="venues-grid-admin">
           {(() => {
-            const filtered = services
+            const filtered = (services || [])
               .filter(s => !adminSearchQuery || s.name?.toLowerCase().includes(adminSearchQuery.toLowerCase()) || (s.category && s.category.toLowerCase().includes(adminSearchQuery.toLowerCase())))
               .filter(s => !adminCategoryFilter || s.category === adminCategoryFilter)
               .filter(s => {

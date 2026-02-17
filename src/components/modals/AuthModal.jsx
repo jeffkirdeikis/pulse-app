@@ -223,19 +223,19 @@ const AuthModal = memo(function AuthModal({ onClose, onSuccess }) {
           </form>
           <div className="auth-switch">
             {authMode === 'forgotPassword' ? (
-              <p>Remember your password? <button onClick={() => { setAuthMode('signin'); setAuthError(''); setFieldErrors({}); }}>Sign In</button></p>
+              <p>Remember your password? <button type="button" onClick={() => { setAuthMode('signin'); setAuthError(''); setFieldErrors({}); }}>Sign In</button></p>
             ) : authMode === 'signin' ? (
-              <p>Don't have an account? <button onClick={() => { setAuthMode('signup'); setAuthError(''); setFieldErrors({}); }}>Sign Up</button></p>
+              <p>Don't have an account? <button type="button" onClick={() => { setAuthMode('signup'); setAuthError(''); setFieldErrors({}); }}>Sign Up</button></p>
             ) : (
-              <p>Already have an account? <button onClick={() => { setAuthMode('signin'); setAuthError(''); setFieldErrors({}); }}>Sign In</button></p>
+              <p>Already have an account? <button type="button" onClick={() => { setAuthMode('signin'); setAuthError(''); setFieldErrors({}); }}>Sign In</button></p>
             )}
           </div>
         </div>
         <div className="auth-modal-footer">
           <p>By continuing, you agree to our{' '}
-            <button onClick={() => setLegalModal('terms')} style={{ background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', padding: 0, font: 'inherit', textDecoration: 'underline' }}>Terms of Service</button>
+            <button type="button" onClick={() => setLegalModal('terms')} style={{ background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', padding: 0, font: 'inherit', textDecoration: 'underline' }}>Terms of Service</button>
             {' '}and{' '}
-            <button onClick={() => setLegalModal('privacy')} style={{ background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', padding: 0, font: 'inherit', textDecoration: 'underline' }}>Privacy Policy</button>
+            <button type="button" onClick={() => setLegalModal('privacy')} style={{ background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', padding: 0, font: 'inherit', textDecoration: 'underline' }}>Privacy Policy</button>
           </p>
         </div>
       </div>

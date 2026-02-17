@@ -7310,12 +7310,12 @@
           backdrop-filter: blur(12px);
           -webkit-backdrop-filter: blur(12px);
           border: none;
-          width: 36px;
-          height: 36px;
-          min-width: 36px;
-          min-height: 36px;
-          max-width: 36px;
-          max-height: 36px;
+          width: 44px;
+          height: 44px;
+          min-width: 44px;
+          min-height: 44px;
+          max-width: 44px;
+          max-height: 44px;
           border-radius: 50%;
           display: flex;
           align-items: center;
@@ -12895,12 +12895,12 @@
           .deal-close {
             top: 12px;
             right: 12px;
-            width: 36px;
-            height: 36px;
-            min-width: 36px;
-            min-height: 36px;
-            max-width: 36px;
-            max-height: 36px;
+            width: 44px;
+            height: 44px;
+            min-width: 44px;
+            min-height: 44px;
+            max-width: 44px;
+            max-height: 44px;
           }
 
           .event-hero,

@@ -323,6 +323,7 @@ const FilterSection = React.memo(function FilterSection({
                     }
                   }}
                   className="age-slider age-slider-min"
+                  aria-label="Minimum age"
                 />
                 <input
                   type="range"
@@ -336,6 +337,7 @@ const FilterSection = React.memo(function FilterSection({
                     }
                   }}
                   className="age-slider age-slider-max"
+                  aria-label="Maximum age"
                 />
               </div>
 
