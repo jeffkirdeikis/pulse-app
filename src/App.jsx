@@ -260,9 +260,13 @@ export default function PulseApp() {
     // Track which IDs we're marking so rollback doesn't lose real-time notifications
     const idsToMark = new Set(notificationsRef.current.filter(n => !n.is_read).map(n => n.id));
     setNotifications(p => p.map(n => ({ ...n, is_read: true })));
-    const { error } = await supabase.from('pulse_user_notifications').update({ is_read: true }).eq('user_id', userId).eq('is_read', false);
-    if (error) {
-      // Revert only the specific notifications we marked, preserving any new arrivals
+    try {
+      const { error } = await supabase.from('pulse_user_notifications').update({ is_read: true }).eq('user_id', userId).eq('is_read', false);
+      if (error) {
+        setNotifications(prev => prev.map(n => idsToMark.has(n.id) ? { ...n, is_read: false } : n));
+      }
+    } catch (err) {
+      console.error('Error marking notifications read:', err);
       setNotifications(prev => prev.map(n => idsToMark.has(n.id) ? { ...n, is_read: false } : n));
     }
   }, [session?.user?.id]);
@@ -274,9 +278,17 @@ export default function PulseApp() {
     const snapshot = [...notificationsRef.current];
     const clearedIds = new Set(snapshot.map(n => n.id));
     setNotifications([]);
-    const { error } = await supabase.from('pulse_user_notifications').delete().eq('user_id', userId);
-    if (error) {
-      // Restore cleared notifications from snapshot, keeping any new real-time arrivals
+    try {
+      const { error } = await supabase.from('pulse_user_notifications').delete().eq('user_id', userId);
+      if (error) {
+        setNotifications(prev => {
+          const existingIds = new Set(prev.map(n => n.id));
+          const restored = snapshot.filter(n => clearedIds.has(n.id) && !existingIds.has(n.id));
+          return [...prev, ...restored];
+        });
+      }
+    } catch (err) {
+      console.error('Error clearing notifications:', err);
       setNotifications(prev => {
         const existingIds = new Set(prev.map(n => n.id));
         const restored = snapshot.filter(n => clearedIds.has(n.id) && !existingIds.has(n.id));
@@ -288,13 +300,17 @@ export default function PulseApp() {
   const createNotification = useCallback(async (type, title, body, data = null) => {
     const userId = session?.user?.id;
     if (!userId) return;
-    const { data: inserted } = await supabase
-      .from('pulse_user_notifications')
-      .insert({ user_id: userId, type, title, body, data, is_read: false })
-      .select()
-      .single();
-    if (inserted) {
-      setNotifications(prev => [inserted, ...prev]);
+    try {
+      const { data: inserted } = await supabase
+        .from('pulse_user_notifications')
+        .insert({ user_id: userId, type, title, body, data, is_read: false })
+        .select()
+        .single();
+      if (inserted) {
+        setNotifications(prev => [inserted, ...prev]);
+      }
+    } catch (err) {
+      console.error('Error creating notification:', err);
     }
   }, [session?.user?.id]);
 
@@ -1522,7 +1538,7 @@ export default function PulseApp() {
     }
 
     const hasMore = events.length > visibleEventCount;
-    const dateKeys = Object.keys(groupedEvents).sort((a, b) => new Date(a) - new Date(b));
+    const dateKeys = Object.keys(groupedEvents).sort((a, b) => groupedEvents[a][0].start - groupedEvents[b][0].start);
     const now = currentTime;
     const today = new Date(now);
     today.setHours(0, 0, 0, 0);
@@ -2565,8 +2581,12 @@ export default function PulseApp() {
           </div>
           <button onClick={async () => {
             if (installPromptEvent) {
-              installPromptEvent.prompt();
-              const result = await installPromptEvent.userChoice;
+              try {
+                installPromptEvent.prompt();
+                await installPromptEvent.userChoice;
+              } catch (err) {
+                console.error('Install prompt error:', err);
+              }
               // Hide banner regardless of outcome — prompt event is exhausted after use
               setShowInstallBanner(false);
               setInstallPromptEvent(null);
