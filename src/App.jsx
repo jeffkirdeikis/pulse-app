@@ -1123,7 +1123,7 @@ export default function PulseApp() {
         showToast('Claim submitted! Our team will review your documents.', 'success');
       } else {
         // Send verification email
-        setClaimId(inserted.id);
+        setClaimId(inserted?.id);
         try {
           await supabase.functions.invoke('verify-claim-email', {
             body: { email: claimFormData.email, businessName: claimData.business_name, ownerName: claimFormData.ownerName, verificationCode },

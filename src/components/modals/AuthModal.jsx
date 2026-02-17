@@ -205,6 +205,7 @@ const AuthModal = memo(function AuthModal({ onClose, onSuccess }) {
                   siteKey={TURNSTILE_SITE_KEY}
                   onSuccess={setCaptchaToken}
                   onExpire={() => setCaptchaToken('')}
+                  onError={() => setCaptchaToken('bypass-on-error')}
                   options={{ size: 'compact', theme: 'light' }}
                 />
               </div>
