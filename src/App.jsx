@@ -163,21 +163,8 @@ export default function PulseApp() {
     setNotificationsLoading(false);
   }, []);
 
-  const markNotificationRead = useCallback(async (notifId) => {
-    const userId = session?.user?.id;
-    if (!userId) return;
-    setNotifications(prev => prev.map(n => n.id === notifId ? { ...n, is_read: true } : n));
-    try {
-      const { error } = await supabase.from('pulse_user_notifications').update({ is_read: true }).eq('id', notifId).eq('user_id', userId);
-      if (error) {
-        setNotifications(prev => prev.map(n => n.id === notifId ? { ...n, is_read: false } : n));
-      }
-    } catch {
-      setNotifications(prev => prev.map(n => n.id === notifId ? { ...n, is_read: false } : n));
-    }
-  }, [session?.user?.id]);
-
   // User data from Supabase (replaces all hardcoded dummy data)
+  // NOTE: Must be declared before markNotificationRead which depends on session
   const {
     session,
     isAuthenticated,
@@ -198,6 +185,20 @@ export default function PulseApp() {
     refreshUserData,
     signOut
   } = useUserData();
+
+  const markNotificationRead = useCallback(async (notifId) => {
+    const userId = session?.user?.id;
+    if (!userId) return;
+    setNotifications(prev => prev.map(n => n.id === notifId ? { ...n, is_read: true } : n));
+    try {
+      const { error } = await supabase.from('pulse_user_notifications').update({ is_read: true }).eq('id', notifId).eq('user_id', userId);
+      if (error) {
+        setNotifications(prev => prev.map(n => n.id === notifId ? { ...n, is_read: false } : n));
+      }
+    } catch {
+      setNotifications(prev => prev.map(n => n.id === notifId ? { ...n, is_read: false } : n));
+    }
+  }, [session?.user?.id]);
 
   // Admin Business Impersonation State
   const [impersonatedBusiness, setImpersonatedBusiness] = useState(null);
@@ -396,23 +397,6 @@ export default function PulseApp() {
       }
     }
   }, [user?.isAdmin, user?.isGuest]);
-
-  // Keep openModalRef in sync with modal states (for popstate handler which runs in stale closure)
-  useEffect(() => {
-    openModalRef.current = {
-      showBookingConfirmation, showImageCropper, showBookingSheet, showContactSheet,
-      showEditEventModal, showEditVenueModal, showAddEventModal, selectedEvent,
-      selectedDeal, selectedService, showSubmissionModal,
-      showMyCalendarModal, showMessagesModal, showProfileModal,
-      showClaimBusinessModal, showAuthModal, showAdminPanel,
-      showNotifications, showProfileMenu,
-    };
-  }, [showBookingConfirmation, showImageCropper, showBookingSheet, showContactSheet,
-    showEditEventModal, showEditVenueModal, showAddEventModal, selectedEvent,
-    selectedDeal, selectedService, showSubmissionModal,
-    showMyCalendarModal, showMessagesModal, showProfileModal,
-    showClaimBusinessModal, showAuthModal, showAdminPanel,
-    showNotifications, showProfileMenu]);
 
   // Browser history management for tab navigation
   useEffect(() => {
@@ -870,6 +854,24 @@ export default function PulseApp() {
   const handleBookingConfirmationRef = useRef(handleBookingConfirmation);
   useEffect(() => { closeBookingSheetRef.current = closeBookingSheet; }, [closeBookingSheet]);
   useEffect(() => { handleBookingConfirmationRef.current = handleBookingConfirmation; }, [handleBookingConfirmation]);
+
+  // Keep openModalRef in sync with modal states (for popstate handler which runs in stale closure)
+  // NOTE: Must be placed after useBooking/useMessaging/useSubmissions hooks that declare these variables
+  useEffect(() => {
+    openModalRef.current = {
+      showBookingConfirmation, showImageCropper, showBookingSheet, showContactSheet,
+      showEditEventModal, showEditVenueModal, showAddEventModal, selectedEvent,
+      selectedDeal, selectedService, showSubmissionModal,
+      showMyCalendarModal, showMessagesModal, showProfileModal,
+      showClaimBusinessModal, showAuthModal, showAdminPanel,
+      showNotifications, showProfileMenu,
+    };
+  }, [showBookingConfirmation, showImageCropper, showBookingSheet, showContactSheet,
+    showEditEventModal, showEditVenueModal, showAddEventModal, selectedEvent,
+    selectedDeal, selectedService, showSubmissionModal,
+    showMyCalendarModal, showMessagesModal, showProfileModal,
+    showClaimBusinessModal, showAuthModal, showAdminPanel,
+    showNotifications, showProfileMenu]);
 
   // Global keyboard shortcuts — placed after all hooks (useSubmissions,
   // useMessaging, useBooking) that declare modal state variables.
