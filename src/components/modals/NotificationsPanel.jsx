@@ -68,7 +68,7 @@ const NotificationsPanel = memo(function NotificationsPanel({
                 <Trash2 size={16} />
               </button>
             )}
-            <button className="notif-close-btn" onClick={onClose}>
+            <button className="notif-close-btn" onClick={onClose} aria-label="Close">
               <X size={18} />
             </button>
           </div>

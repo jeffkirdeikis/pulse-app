@@ -29,7 +29,7 @@ const AdminPanelModal = memo(function AdminPanelModal({
   return (
     <div className="modal-overlay admin-modal-overlay" role="dialog" aria-modal="true" aria-label="Admin panel" onClick={() => onClose()}>
       <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
-        <button className="close-btn admin-close" onClick={() => onClose()}><X size={24} /></button>
+        <button className="close-btn admin-close" onClick={() => onClose()} aria-label="Close"><X size={24} /></button>
 
         <div className="admin-header">
           <div className="admin-header-content">
@@ -48,27 +48,27 @@ const AdminPanelModal = memo(function AdminPanelModal({
         </div>
 
         <div className="admin-content">
-          <div className="admin-tabs">
-            <button className={`admin-tab ${adminTab === 'pending' ? 'active' : ''}`} onClick={() => setAdminTab('pending')}>
+          <div className="admin-tabs" role="tablist">
+            <button role="tab" aria-selected={adminTab === 'pending'} className={`admin-tab ${adminTab === 'pending' ? 'active' : ''}`} onClick={() => setAdminTab('pending')}>
               Pending
               {pendingSubmissions.filter(s => s.status === 'pending').length > 0 && (
                 <span className="tab-badge">{pendingSubmissions.filter(s => s.status === 'pending').length}</span>
               )}
             </button>
-            <button className={`admin-tab ${adminTab === 'approved' ? 'active' : ''}`} onClick={() => setAdminTab('approved')}>
+            <button role="tab" aria-selected={adminTab === 'approved'} className={`admin-tab ${adminTab === 'approved' ? 'active' : ''}`} onClick={() => setAdminTab('approved')}>
               Approved
               {pendingSubmissions.filter(s => s.status === 'approved').length > 0 && (
                 <span className="tab-badge">{pendingSubmissions.filter(s => s.status === 'approved').length}</span>
               )}
             </button>
-            <button className={`admin-tab ${adminTab === 'rejected' ? 'active' : ''}`} onClick={() => setAdminTab('rejected')}>
+            <button role="tab" aria-selected={adminTab === 'rejected'} className={`admin-tab ${adminTab === 'rejected' ? 'active' : ''}`} onClick={() => setAdminTab('rejected')}>
               Rejected
               {pendingSubmissions.filter(s => s.status === 'rejected').length > 0 && (
                 <span className="tab-badge">{pendingSubmissions.filter(s => s.status === 'rejected').length}</span>
               )}
             </button>
-            <button className={`admin-tab ${adminTab === 'feedback' ? 'active' : ''}`} onClick={() => setAdminTab('feedback')}>
-              <MessageSquare size={14} />
+            <button role="tab" aria-selected={adminTab === 'feedback'} className={`admin-tab ${adminTab === 'feedback' ? 'active' : ''}`} onClick={() => setAdminTab('feedback')}>
+              <MessageSquare size={14} aria-hidden="true" />
               Feedback
             </button>
           </div>

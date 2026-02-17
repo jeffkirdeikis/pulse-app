@@ -17,7 +17,7 @@ const EditEventModal = memo(function EditEventModal({
   <div className="claim-modal-premium" onClick={(e) => e.stopPropagation()}>
     <div className="modal-header-premium">
       <h2>Edit {editingEvent.eventType === 'class' ? 'Class' : 'Event'}</h2>
-      <button className="modal-close-btn" onClick={() => { onClose(); }}><X size={20} /></button>
+      <button className="modal-close-btn" onClick={() => { onClose(); }} aria-label="Close"><X size={20} /></button>
     </div>
     <div className="modal-body-premium">
       <div className="form-group">

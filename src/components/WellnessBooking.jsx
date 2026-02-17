@@ -807,7 +807,7 @@ function ProviderDetailModal({ provider, slots, onClose, onSlotClick, onBook, ha
   return (
     <div className="wb-modal-overlay" onClick={onClose}>
       <div className="wb-provider-modal" onClick={(e) => e.stopPropagation()}>
-        <button className="wb-modal-close" onClick={onClose}>
+        <button className="wb-modal-close" onClick={onClose} aria-label="Close">
           <X size={20} />
         </button>
 
@@ -898,7 +898,7 @@ function AlertSetupModal({ provider, days, setDays, timeRange, setTimeRange, onS
   return (
     <div className="wb-modal-overlay" onClick={onClose}>
       <div className="wb-alert-modal" onClick={(e) => e.stopPropagation()}>
-        <button className="wb-modal-close" onClick={onClose}>
+        <button className="wb-modal-close" onClick={onClose} aria-label="Close">
           <X size={20} />
         </button>
         <div className="wb-alert-header">

@@ -50,7 +50,7 @@ const ProfileModal = memo(function ProfileModal({
   return (
     <div className="modal-overlay profile-modal-overlay" role="dialog" aria-modal="true" aria-label="Profile" onClick={() => onClose()}>
       <div className="profile-modal" ref={focusTrapRef} onClick={(e) => e.stopPropagation()}>
-        <button className="close-btn profile-close" onClick={() => onClose()}><X size={24} /></button>
+        <button className="close-btn profile-close" onClick={() => onClose()} aria-label="Close"><X size={24} /></button>
 
         {/* Hidden file inputs for profile images */}
         <input 
@@ -110,25 +110,25 @@ const ProfileModal = memo(function ProfileModal({
         </div>
 
         {/* Profile Tabs */}
-        <div className="profile-tabs">
-          <button className={`profile-tab ${profileTab === 'overview' ? 'active' : ''}`} onClick={() => setProfileTab('overview')}>
-            <Users size={16} />
+        <div className="profile-tabs" role="tablist">
+          <button role="tab" aria-selected={profileTab === 'overview'} className={`profile-tab ${profileTab === 'overview' ? 'active' : ''}`} onClick={() => setProfileTab('overview')}>
+            <Users size={16} aria-hidden="true" />
             <span>Overview</span>
           </button>
-          <button className={`profile-tab ${profileTab === 'activity' ? 'active' : ''}`} onClick={() => setProfileTab('activity')}>
-            <Clock size={16} />
+          <button role="tab" aria-selected={profileTab === 'activity'} className={`profile-tab ${profileTab === 'activity' ? 'active' : ''}`} onClick={() => setProfileTab('activity')}>
+            <Clock size={16} aria-hidden="true" />
             <span>Activity</span>
           </button>
-          <button className={`profile-tab ${profileTab === 'saved' ? 'active' : ''}`} onClick={() => setProfileTab('saved')}>
-            <Heart size={16} />
+          <button role="tab" aria-selected={profileTab === 'saved'} className={`profile-tab ${profileTab === 'saved' ? 'active' : ''}`} onClick={() => setProfileTab('saved')}>
+            <Heart size={16} aria-hidden="true" />
             <span>Saved</span>
           </button>
-          <button className={`profile-tab ${profileTab === 'businesses' ? 'active' : ''}`} onClick={() => { onClose(); setView('business'); }}>
-            <Building size={16} />
+          <button role="tab" aria-selected={profileTab === 'businesses'} className={`profile-tab ${profileTab === 'businesses' ? 'active' : ''}`} onClick={() => { onClose(); setView('business'); }}>
+            <Building size={16} aria-hidden="true" />
             <span>My Businesses</span>
           </button>
-          <button className={`profile-tab ${profileTab === 'settings' ? 'active' : ''}`} onClick={() => setProfileTab('settings')}>
-            <SlidersHorizontal size={16} />
+          <button role="tab" aria-selected={profileTab === 'settings'} className={`profile-tab ${profileTab === 'settings' ? 'active' : ''}`} onClick={() => setProfileTab('settings')}>
+            <SlidersHorizontal size={16} aria-hidden="true" />
             <span>Settings</span>
           </button>
         </div>
@@ -351,24 +351,24 @@ const ProfileModal = memo(function ProfileModal({
           {/* Saved Tab */}
           {profileTab === 'saved' && (
             <div className="profile-saved">
-              <div className="saved-tabs">
-                <button className={`saved-tab ${!savedItemsFilter || savedItemsFilter === 'event' ? 'active' : ''}`} onClick={() => setSavedItemsFilter('event')}>
-                  <Calendar size={14} />
+              <div className="saved-tabs" role="tablist">
+                <button role="tab" aria-selected={!savedItemsFilter || savedItemsFilter === 'event'} className={`saved-tab ${!savedItemsFilter || savedItemsFilter === 'event' ? 'active' : ''}`} onClick={() => setSavedItemsFilter('event')}>
+                  <Calendar size={14} aria-hidden="true" />
                   Events
                   <span className="saved-count">{savedItems.filter(s => s.type === 'event').length + localSavedItems.filter(s => s.type === 'event').length}</span>
                 </button>
-                <button className={`saved-tab ${savedItemsFilter === 'class' ? 'active' : ''}`} onClick={() => setSavedItemsFilter('class')}>
-                  <Sparkles size={14} />
+                <button role="tab" aria-selected={savedItemsFilter === 'class'} className={`saved-tab ${savedItemsFilter === 'class' ? 'active' : ''}`} onClick={() => setSavedItemsFilter('class')}>
+                  <Sparkles size={14} aria-hidden="true" />
                   Classes
                   <span className="saved-count">{savedItems.filter(s => s.type === 'class').length + localSavedItems.filter(s => s.type === 'class').length}</span>
                 </button>
-                <button className={`saved-tab ${savedItemsFilter === 'deal' ? 'active' : ''}`} onClick={() => setSavedItemsFilter('deal')}>
-                  <Percent size={14} />
+                <button role="tab" aria-selected={savedItemsFilter === 'deal'} className={`saved-tab ${savedItemsFilter === 'deal' ? 'active' : ''}`} onClick={() => setSavedItemsFilter('deal')}>
+                  <Percent size={14} aria-hidden="true" />
                   Deals
                   <span className="saved-count">{savedItems.filter(s => s.type === 'deal').length + localSavedItems.filter(s => s.type === 'deal').length}</span>
                 </button>
-                <button className={`saved-tab ${savedItemsFilter === 'business' ? 'active' : ''}`} onClick={() => setSavedItemsFilter('business')}>
-                  <Building size={14} />
+                <button role="tab" aria-selected={savedItemsFilter === 'business'} className={`saved-tab ${savedItemsFilter === 'business' ? 'active' : ''}`} onClick={() => setSavedItemsFilter('business')}>
+                  <Building size={14} aria-hidden="true" />
                   Businesses
                   <span className="saved-count">{savedItems.filter(s => s.type === 'business').length + localSavedItems.filter(s => s.type === 'business').length}</span>
                 </button>

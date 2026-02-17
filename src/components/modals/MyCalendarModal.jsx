@@ -18,7 +18,7 @@ const MyCalendarModal = memo(function MyCalendarModal({
   return (
     <div className="modal-overlay calendar-modal-overlay" role="dialog" aria-modal="true" aria-label="My calendar" onClick={() => onClose()}>
       <div className="calendar-modal" onClick={(e) => e.stopPropagation()}>
-        <button className="close-btn calendar-close" onClick={() => onClose()}><X size={24} /></button>
+        <button className="close-btn calendar-close" onClick={() => onClose()} aria-label="Close"><X size={24} /></button>
 
         {/* Calendar Header */}
         <div className="calendar-header">

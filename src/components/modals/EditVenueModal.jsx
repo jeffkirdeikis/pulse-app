@@ -15,7 +15,7 @@ const EditVenueModal = memo(function EditVenueModal({
   return (
 <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Edit venue" onClick={() => { onClose(); }}>
   <div className="claim-modal-premium" onClick={(e) => e.stopPropagation()}>
-    <button className="claim-modal-close" onClick={() => { onClose(); }}><X size={24} /></button>
+    <button className="claim-modal-close" onClick={() => { onClose(); }} aria-label="Close"><X size={24} /></button>
 
     <div className="claim-modal-header">
       <div className="claim-modal-icon">

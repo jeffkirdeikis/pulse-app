@@ -821,8 +821,10 @@ const BusinessDashboard = memo(function BusinessDashboard({
           <div className="premium-section inbox-section">
             <div className="section-header-premium">
               <h2>📬 Inbox</h2>
-              <div className="inbox-tabs">
+              <div className="inbox-tabs" role="tablist">
                 <button
+                  role="tab"
+                  aria-selected={businessInboxTab === 'bookings'}
                   className={`inbox-tab ${businessInboxTab === 'bookings' ? 'active' : ''}`}
                   onClick={() => {
                     setBusinessInboxTab('bookings');
@@ -835,6 +837,8 @@ const BusinessDashboard = memo(function BusinessDashboard({
                   )}
                 </button>
                 <button
+                  role="tab"
+                  aria-selected={businessInboxTab === 'messages'}
                   className={`inbox-tab ${businessInboxTab === 'messages' ? 'active' : ''}`}
                   onClick={() => {
                     setBusinessInboxTab('messages');

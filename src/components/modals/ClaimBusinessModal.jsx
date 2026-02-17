@@ -63,7 +63,7 @@ const ClaimBusinessModal = memo(function ClaimBusinessModal({
   return (
     <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Claim business" onClick={onClose}>
       <div className="claim-modal-premium" ref={focusTrapRef} onClick={(e) => e.stopPropagation()}>
-        <button className="claim-modal-close" onClick={onClose}><X size={24} /></button>
+        <button className="claim-modal-close" onClick={onClose} aria-label="Close"><X size={24} /></button>
 
         {/* Purple Gradient Header */}
         <div className="claim-modal-header">

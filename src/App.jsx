@@ -1927,7 +1927,7 @@ export default function PulseApp() {
           {showAddEventModal && (
             <motion.div key="add-event" className="modal-overlay" role="dialog" aria-modal="true" aria-label="Add event" onClick={closeAddEventModal} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
               <motion.div className="modal-content add-event-modal" onClick={(e) => e.stopPropagation()} initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 20 }} transition={{ type: 'spring', stiffness: 400, damping: 30 }}>
-                <button className="close-btn" onClick={closeAddEventModal}><X size={24} /></button>
+                <button className="close-btn" onClick={closeAddEventModal} aria-label="Close"><X size={24} /></button>
                 <div className="modal-header-premium">
                   <Plus size={32} className="modal-icon" />
                   <h2>Add Your Event</h2>
