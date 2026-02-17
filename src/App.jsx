@@ -45,6 +45,17 @@ import { filterEvents as filterEventsUtil, filterDeals as filterDealsUtil } from
 import { PACIFIC_TZ, getPacificNow } from './utils/timezoneHelpers';
 import './styles/pulse-app.css';
 
+const AGE_RANGE_OPTIONS = [
+  { label: 'Prenatal', min: -1, max: 0 },
+  { label: '0-1', min: 0, max: 1 },
+  { label: '1-2', min: 1, max: 2 },
+  { label: '2-5', min: 2, max: 5 },
+  { label: '5-7', min: 5, max: 7 },
+  { label: '7-10', min: 7, max: 10 },
+  { label: '10-13', min: 10, max: 13 },
+  { label: '13-18', min: 13, max: 18 }
+];
+
 export default function PulseApp() {
   const [view, setView] = useState('consumer');
   const [currentSection, setCurrentSection] = useState('classes'); // classes, events, deals, services, wellness - DEFAULT TO CLASSES
@@ -106,6 +117,7 @@ export default function PulseApp() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
+  const openNotifications = useCallback(() => setShowNotifications(true), []);
 
   // Helper function to show toast messages
   const showToast = useCallback((message, type = 'info', duration = 3000) => {
@@ -677,17 +689,6 @@ export default function PulseApp() {
   useEffect(() => {
     try { localStorage.setItem('pulse-kids-age', JSON.stringify(kidsAgeRange)); } catch {}
   }, [kidsAgeRange]);
-
-  const ageRangeOptions = [
-    { label: 'Prenatal', min: -1, max: 0 },
-    { label: '0-1', min: 0, max: 1 },
-    { label: '1-2', min: 1, max: 2 },
-    { label: '2-5', min: 2, max: 5 },
-    { label: '5-7', min: 5, max: 7 },
-    { label: '7-10', min: 7, max: 10 },
-    { label: '10-13', min: 10, max: 13 },
-    { label: '13-18', min: 13, max: 18 }
-  ];
 
   // Venue editing state
   const [showEditVenueModal, setShowEditVenueModal] = useState(false);
@@ -1754,7 +1755,7 @@ export default function PulseApp() {
             setShowAuthModal={setShowAuthModal}
             openMessages={openMessages}
             showToast={showToast}
-            onOpenNotifications={() => setShowNotifications(true)}
+            onOpenNotifications={openNotifications}
             unreadNotifCount={unreadNotifCount}
             searchSuggestions={searchSuggestions}
             tabCounts={tabCounts}
@@ -1769,7 +1770,7 @@ export default function PulseApp() {
               setShowFilters={setShowFilters}
               kidsAgeRange={kidsAgeRange}
               setKidsAgeRange={setKidsAgeRange}
-              ageRangeOptions={ageRangeOptions}
+              ageRangeOptions={AGE_RANGE_OPTIONS}
               categories={categories}
               getAvailableTimeSlots={getAvailableTimeSlots}
               hasFreeItems={hasFreeItems}

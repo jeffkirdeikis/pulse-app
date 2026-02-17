@@ -79,7 +79,7 @@ const ProfileModal = memo(function ProfileModal({
           <div className="profile-hero-body">
             <div className="profile-avatar-wrapper">
               <div className="profile-avatar-large">
-                {user.avatar ? <img src={user.avatar} alt={user.name ? `${user.name}'s avatar` : 'Profile photo'} /> : (user.name?.trim() ? user.name.trim().split(/\s+/).filter(Boolean).map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'U' : 'U')}
+                {user.avatar ? <img src={user.avatar} alt={user.name ? `${user.name}'s avatar` : 'Profile photo'} loading="lazy" width="80" height="80" /> : (user.name?.trim() ? user.name.trim().split(/\s+/).filter(Boolean).map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'U' : 'U')}
                 <button className="avatar-edit-btn" aria-label="Change profile photo" onClick={() => document.getElementById('profile-avatar-input').click()}>
                   <Camera size={14} />
                 </button>
