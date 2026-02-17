@@ -285,6 +285,12 @@ export function useSubmissions(user, { showToast, userClaimedBusinesses, updateA
     try {
       const submission = pendingSubmissions.find(s => s.id === submissionId);
       if (!submission?.data) return;
+      // Guard: don't re-approve an already-approved submission (prevents duplicate inserts
+      // if the previous approval's status update failed but the event insert succeeded)
+      if (submission.status === 'approved') {
+        showToast?.('Already approved', 'info');
+        return;
+      }
 
       // Insert the event/deal FIRST, then mark as approved (atomic: if insert fails, status stays pending)
       if (submission.type === 'event' || submission.type === 'class') {
@@ -327,7 +333,13 @@ export function useSubmissions(user, { showToast, userClaimedBusinesses, updateA
         if (insertError) throw insertError;
       }
 
-      // Only mark as approved AFTER successful insert
+      // Optimistic local update: mark as approved in UI immediately after insert succeeds.
+      // This prevents re-approval if the DB status update below fails.
+      setPendingSubmissions(prev =>
+        prev.map(s => s.id === submissionId ? { ...s, status: 'approved' } : s)
+      );
+
+      // Persist approval status to database
       const { error: updateError } = await supabase
         .from('pending_items')
         .update({

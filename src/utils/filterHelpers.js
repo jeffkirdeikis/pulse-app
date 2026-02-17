@@ -175,7 +175,8 @@ export function filterEvents(allEvents, { currentSection, filters, searchQuery, 
   if (filters.price === 'free') {
     filtered = filtered.filter(e => typeof e.price === 'string' && e.price.toLowerCase() === 'free');
   } else if (filters.price === 'paid') {
-    filtered = filtered.filter(e => e.price && (typeof e.price !== 'string' || e.price.toLowerCase() !== 'free'));
+    // Show everything except explicitly "free" items — null/unknown pricing is included
+    filtered = filtered.filter(e => !e.price || typeof e.price !== 'string' || e.price.toLowerCase() !== 'free');
   }
 
   // Sort by featured, then by date
@@ -206,7 +207,11 @@ export function filterDeals(allDeals, { searchQuery, filters, getVenueName }) {
   const now = getPacificNow();
   filtered = filtered.filter(deal => {
     if (!deal.validUntil) return true; // No expiry = always valid
-    const expiryDate = new Date(deal.validUntil);
+    // Parse as local date parts to avoid UTC midnight shift
+    // (new Date("2026-02-17") = UTC midnight = 4 PM PST Feb 16, causing early expiry)
+    const parts = String(deal.validUntil).split(/[-T]/);
+    if (parts.length < 3) return true; // Unparseable = treat as valid
+    const expiryDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]), 23, 59, 59);
     if (isNaN(expiryDate.getTime())) return true; // Unparseable expiry = treat as valid
     return expiryDate >= now;
   });

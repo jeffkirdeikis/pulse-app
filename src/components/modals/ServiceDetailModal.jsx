@@ -160,7 +160,7 @@ const ServiceDetailModal = memo(function ServiceDetailModal({
             {/* Rating Display */}
             <div className="rating-display">
               <div className="rating-score">
-                <span className="rating-number">{service.rating || '\u2014'}</span>
+                <span className="rating-number">{service.rating != null ? service.rating : '\u2014'}</span>
                 <div className="rating-meta">
                   <div className="rating-stars-row">
                     {[1, 2, 3, 4, 5].map(star => (
