@@ -22,10 +22,13 @@ const DealDetailModal = memo(function DealDetailModal({
   const redeemingRef = useRef(false);
   if (!deal) return null;
 
+  const venueName = getVenueName(deal.venueId, deal);
+  const saved = isItemSavedLocal('deal', deal.id);
+
   const handleShare = async () => {
     const shareData = {
       title: deal.title,
-      text: `Check out this deal: ${deal.title} at ${getVenueName(deal.venueId, deal) || 'a local business'}`,
+      text: `Check out this deal: ${deal.title} at ${venueName || 'a local business'}`,
       url: window.location.href
     };
     try {
@@ -63,7 +66,7 @@ const DealDetailModal = memo(function DealDetailModal({
         showToast('Could not process redemption. Please try again.', 'error');
         return;
       }
-      showToast(`Redemption code: ${redemptionCode} - Show this to ${getVenueName(deal.venueId, deal)}!`, 'info', 5000);
+      showToast(`Redemption code: ${redemptionCode} - Show this to ${venueName}!`, 'info', 5000);
     } finally {
       redeemingRef.current = false;
       setRedeeming(false);
@@ -92,10 +95,10 @@ const DealDetailModal = memo(function DealDetailModal({
                 </span>
               </div>
             )}
-            <h1 className="deal-hero-title">{generateSmartDealTitle(deal, getVenueName(deal.venueId, deal))}</h1>
+            <h1 className="deal-hero-title">{generateSmartDealTitle(deal, venueName)}</h1>
             <div className="deal-hero-venue">
               <MapPin size={16} />
-              <span>{getVenueName(deal.venueId, deal)}</span>
+              <span>{venueName}</span>
             </div>
           </div>
         </div>
@@ -115,20 +118,20 @@ const DealDetailModal = memo(function DealDetailModal({
         <div className="deal-quick-actions">
           <button
             type="button"
-            className={`quick-action-btn ${isItemSavedLocal('deal', deal.id) ? 'saved' : ''}`}
+            className={`quick-action-btn ${saved ? 'saved' : ''}`}
             onClick={() => toggleSave(deal.id, 'deal', deal.title, { business: deal.venueName })}
           >
-            <div className={`quick-action-icon save ${isItemSavedLocal('deal', deal.id) ? 'saved' : ''}`}>
-              <Star size={20} fill={isItemSavedLocal('deal', deal.id) ? 'currentColor' : 'none'} />
+            <div className={`quick-action-icon save ${saved ? 'saved' : ''}`}>
+              <Star size={20} fill={saved ? 'currentColor' : 'none'} />
             </div>
-            <span>{isItemSavedLocal('deal', deal.id) ? 'Saved' : 'Save'}</span>
+            <span>{saved ? 'Saved' : 'Save'}</span>
           </button>
           <button type="button" className="quick-action-btn" onClick={handleShare}>
             <div className="quick-action-icon share"><Share2 size={20} /></div>
             <span>Share</span>
           </button>
           <a
-            href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(getVenueName(deal.venueId, deal) + ' Squamish BC')}`}
+            href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(venueName + ' Squamish BC')}`}
             target="_blank" rel="noopener noreferrer" className="quick-action-btn"
           >
             <div className="quick-action-icon directions"><Navigation size={20} /></div>
@@ -140,7 +143,7 @@ const DealDetailModal = memo(function DealDetailModal({
         <div className="deal-section">
           <h2 className="deal-section-title">About This Deal</h2>
           <p className="deal-about-text">
-            {generateEnhancedDealDescription(deal, getVenueName(deal.venueId, deal))}
+            {generateEnhancedDealDescription(deal, venueName)}
           </p>
         </div>
 
@@ -152,7 +155,7 @@ const DealDetailModal = memo(function DealDetailModal({
               <div className="deal-detail-icon venue-icon"><Building size={20} /></div>
               <div className="deal-detail-content">
                 <span className="deal-detail-label">Location</span>
-                <span className="deal-detail-value">{getVenueName(deal.venueId, deal)}</span>
+                <span className="deal-detail-value">{venueName}</span>
               </div>
             </div>
             {deal.schedule && (
@@ -182,7 +185,7 @@ const DealDetailModal = memo(function DealDetailModal({
         {relatedDeals.length > 0 && (
           <div className="deal-section">
             <h2 className="deal-section-title">
-              More from {getVenueName(deal.venueId, deal)}
+              More from {venueName}
             </h2>
             <div className="related-deals-grid">
               {relatedDeals.slice(0, 3).map(rd => (
@@ -213,7 +216,7 @@ const DealDetailModal = memo(function DealDetailModal({
             Redeem Deal
           </button>
           <a
-            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(getVenueName(deal.venueId, deal) + ' Squamish BC')}`}
+            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(venueName + ' Squamish BC')}`}
             target="_blank" rel="noopener noreferrer" className="deal-cta-btn secondary"
           >
             <MapPin size={18} />

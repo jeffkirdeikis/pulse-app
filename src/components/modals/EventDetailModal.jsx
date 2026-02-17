@@ -28,11 +28,15 @@ const EventDetailModal = memo(function EventDetailModal({
   if (!event) return null;
 
   const itemType = event.eventType === 'class' ? 'class' : 'event';
+  const saved = isItemSavedLocal(itemType, event.id);
+  const inCalendar = isInMyCalendar?.(event.id);
+  const venueName = getVenueName(event.venueId, event);
+  const venueVerified = isVerified(event.venueId);
 
   const handleShare = async () => {
     const shareData = {
       title: event.title,
-      text: `Check out ${event.title} at ${getVenueName(event.venueId, event)}`,
+      text: `Check out ${event.title} at ${venueName}`,
       url: window.location.href
     };
     try {
@@ -109,8 +113,8 @@ const EventDetailModal = memo(function EventDetailModal({
             <h1 className="event-hero-title">{event.title}</h1>
             <div className="event-hero-venue">
               <MapPin size={16} />
-              <span>{getVenueName(event.venueId, event)}</span>
-              {isVerified(event.venueId) && (
+              <span>{venueName}</span>
+              {venueVerified && (
                 <div className="venue-verified-badge">
                   <Check size={12} />
                 </div>
@@ -140,18 +144,18 @@ const EventDetailModal = memo(function EventDetailModal({
           </div>
           <button
             type="button"
-            className={`add-calendar-btn ${isInMyCalendar?.(event.id) ? 'added' : ''}`}
+            className={`add-calendar-btn ${inCalendar ? 'added' : ''}`}
             onClick={() => addToCalendar?.(event)}
             style={{
               width: '44px', height: '44px', minWidth: '44px',
-              background: isInMyCalendar?.(event.id) ? '#dcfce7' : '#ffffff',
-              border: isInMyCalendar?.(event.id) ? '2px solid #bbf7d0' : '2px solid #c7d2fe',
+              background: inCalendar ? '#dcfce7' : '#ffffff',
+              border: inCalendar ? '2px solid #bbf7d0' : '2px solid #c7d2fe',
               borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center',
               cursor: 'pointer', flexShrink: 0, boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
             }}
           >
-            <div style={{ color: isInMyCalendar?.(event.id) ? '#047857' : '#4f46e5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              {isInMyCalendar?.(event.id) ? <Check size={22} strokeWidth={3} /> : <CalendarPlus size={22} strokeWidth={2} />}
+            <div style={{ color: inCalendar ? '#047857' : '#4f46e5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {inCalendar ? <Check size={22} strokeWidth={3} /> : <CalendarPlus size={22} strokeWidth={2} />}
             </div>
           </button>
         </div>
@@ -166,20 +170,20 @@ const EventDetailModal = memo(function EventDetailModal({
           )}
           <button
             type="button"
-            className={`quick-action-btn ${isItemSavedLocal(itemType, event.id) ? 'saved' : ''}`}
-            onClick={() => toggleSave(event.id, itemType, event.title, { venue: event.venueName, date: event.start })}
+            className={`quick-action-btn ${saved ? 'saved' : ''}`}
+            onClick={() => toggleSave(event.id, itemType, event.title, { venue: venueName, date: event.start })}
           >
-            <div className={`quick-action-icon save ${isItemSavedLocal(itemType, event.id) ? 'saved' : ''}`}>
-              <Star size={20} fill={isItemSavedLocal(itemType, event.id) ? 'currentColor' : 'none'} />
+            <div className={`quick-action-icon save ${saved ? 'saved' : ''}`}>
+              <Star size={20} fill={saved ? 'currentColor' : 'none'} />
             </div>
-            <span>{isItemSavedLocal(itemType, event.id) ? 'Saved' : 'Save'}</span>
+            <span>{saved ? 'Saved' : 'Save'}</span>
           </button>
           <button type="button" className="quick-action-btn" onClick={handleShare}>
             <div className="quick-action-icon share"><Share2 size={20} /></div>
             <span>Share</span>
           </button>
           <a
-            href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(getVenueName(event.venueId, event) + ' Squamish BC')}`}
+            href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(venueName + ' Squamish BC')}`}
             target="_blank" rel="noopener noreferrer" className="quick-action-btn"
           >
             <div className="quick-action-icon directions"><Navigation size={20} /></div>
@@ -213,7 +217,7 @@ const EventDetailModal = memo(function EventDetailModal({
               <div className="event-detail-icon venue-icon"><Building size={20} /></div>
               <div className="event-detail-content">
                 <span className="event-detail-label">Venue</span>
-                <span className="event-detail-value">{getVenueName(event.venueId, event)}</span>
+                <span className="event-detail-value">{venueName}</span>
               </div>
             </div>
             <div className="event-detail-card">
@@ -252,13 +256,13 @@ const EventDetailModal = memo(function EventDetailModal({
           )}
           <button
             type="button"
-            className={`event-cta-btn ${event.eventType === 'class' ? 'secondary' : 'primary'} ${isInMyCalendar?.(event.id) ? 'added' : ''}`}
+            className={`event-cta-btn ${event.eventType === 'class' ? 'secondary' : 'primary'} ${inCalendar ? 'added' : ''}`}
             onClick={() => addToCalendar?.(event)}
           >
-            {isInMyCalendar?.(event.id) ? (<><Check size={18} /> Added to Calendar</>) : (<><Calendar size={18} /> Add to Calendar</>)}
+            {inCalendar ? (<><Check size={18} /> Added to Calendar</>) : (<><Calendar size={18} /> Add to Calendar</>)}
           </button>
           <a
-            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(getVenueName(event.venueId, event) + ' Squamish BC')}`}
+            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(venueName + ' Squamish BC')}`}
             target="_blank" rel="noopener noreferrer" className="event-cta-btn secondary"
           >
             <MapPin size={18} />
