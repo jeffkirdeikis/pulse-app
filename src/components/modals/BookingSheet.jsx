@@ -104,6 +104,7 @@ const BookingSheet = memo(function BookingSheet({
                 value={bookingRequestMessage}
                 onChange={(e) => setBookingRequestMessage(e.target.value)}
                 rows={3}
+                maxLength={2000}
               />
             </div>
 

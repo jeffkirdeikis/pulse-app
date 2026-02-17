@@ -135,12 +135,15 @@ const MessagesModal = memo(function MessagesModal({
                 onChange={(e) => setMessageInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && messageInput.trim() && !sendingMessage && sendMessage()}
                 autoComplete="off"
+                maxLength={2000}
+                aria-label="Message"
               />
               <button
                 type="button"
                 className="send-btn"
                 onClick={sendMessage}
                 disabled={!messageInput.trim() || sendingMessage}
+                aria-label="Send message"
               >
                 <Send size={20} />
               </button>

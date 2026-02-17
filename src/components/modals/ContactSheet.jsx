@@ -45,6 +45,7 @@ const ContactSheet = memo(function ContactSheet({
               value={contactMessage}
               onChange={(e) => setContactMessage(e.target.value)}
               rows={4}
+              maxLength={5000}
             />
           </div>
           <button

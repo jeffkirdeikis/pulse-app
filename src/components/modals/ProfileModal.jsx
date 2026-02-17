@@ -755,25 +755,25 @@ const ProfileModal = memo(function ProfileModal({
                   <div className="setting-item">
                     <div className="setting-info">
                       <label>Full Name</label>
-                      <input type="text" value={user.name} onChange={(e) => setUser(prev => ({ ...prev, name: e.target.value }))} autoComplete="name" />
+                      <input type="text" value={user.name} onChange={(e) => setUser(prev => ({ ...prev, name: e.target.value }))} autoComplete="name" maxLength={100} />
                     </div>
                   </div>
                   <div className="setting-item">
                     <div className="setting-info">
                       <label>Email</label>
-                      <input type="email" value={user.email} onChange={(e) => setUser(prev => ({ ...prev, email: e.target.value }))} autoComplete="email" />
+                      <input type="email" value={user.email} onChange={(e) => setUser(prev => ({ ...prev, email: e.target.value }))} autoComplete="email" maxLength={254} />
                     </div>
                   </div>
                   <div className="setting-item">
                     <div className="setting-info">
                       <label>Phone</label>
-                      <input type="tel" value={user.phone} placeholder="Add phone number" onChange={(e) => setUser(prev => ({ ...prev, phone: e.target.value }))} autoComplete="tel" />
+                      <input type="tel" value={user.phone} placeholder="Add phone number" onChange={(e) => setUser(prev => ({ ...prev, phone: e.target.value }))} autoComplete="tel" maxLength={20} />
                     </div>
                   </div>
                   <div className="setting-item">
                     <div className="setting-info">
                       <label>Bio</label>
-                      <textarea value={user.bio} onChange={(e) => setUser(prev => ({ ...prev, bio: e.target.value }))} rows={3} />
+                      <textarea value={user.bio} onChange={(e) => setUser(prev => ({ ...prev, bio: e.target.value }))} rows={3} maxLength={500} />
                     </div>
                   </div>
                 </div>
