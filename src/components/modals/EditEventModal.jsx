@@ -13,7 +13,7 @@ const EditEventModal = memo(function EditEventModal({
   const [saving, setSaving] = React.useState(false);
   if (!editingEvent) return null;
   return (
-<div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Edit event" onClick={() => { onClose(); }}>
+<div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Edit event" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
   <div className="claim-modal-premium" onClick={(e) => e.stopPropagation()}>
     <div className="modal-header-premium">
       <h2>Edit {editingEvent.eventType === 'class' ? 'Class' : 'Event'}</h2>

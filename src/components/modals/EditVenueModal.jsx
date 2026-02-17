@@ -13,7 +13,7 @@ const EditVenueModal = memo(function EditVenueModal({
   const [saving, setSaving] = React.useState(false);
   if (!editingVenue) return null;
   return (
-<div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Edit venue" onClick={() => { onClose(); }}>
+<div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Edit venue" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
   <div className="claim-modal-premium" onClick={(e) => e.stopPropagation()}>
     <button type="button" className="claim-modal-close" onClick={() => { onClose(); }} aria-label="Close"><X size={24} /></button>
 

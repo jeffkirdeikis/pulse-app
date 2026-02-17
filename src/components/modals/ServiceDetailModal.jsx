@@ -36,7 +36,7 @@ const ServiceDetailModal = memo(function ServiceDetailModal({
   };
 
   return (
-    <div className="modal-overlay service-modal-overlay" role="dialog" aria-modal="true" aria-label="Service details" onClick={handleClose}>
+    <div className="modal-overlay service-modal-overlay" role="dialog" aria-modal="true" aria-label="Service details" onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}>
       <div className="service-detail-modal" onClick={(e) => e.stopPropagation()}>
         <button type="button" className="close-btn service-close" onClick={handleClose} aria-label="Close"><X size={24} /></button>
 

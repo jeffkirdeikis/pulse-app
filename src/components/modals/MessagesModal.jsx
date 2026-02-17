@@ -25,7 +25,7 @@ const MessagesModal = memo(function MessagesModal({
   }, [conversationMessages]);
 
   return (
-    <div className="modal-overlay messages-modal-overlay" role="dialog" aria-modal="true" aria-label="Messages" onClick={() => { onClose(); setCurrentConversation(null); }}>
+    <div className="modal-overlay messages-modal-overlay" role="dialog" aria-modal="true" aria-label="Messages" onClick={(e) => { if (e.target === e.currentTarget) { onClose(); setCurrentConversation(null); } }}>
       <div className="messages-modal" onClick={(e) => e.stopPropagation()}>
         <button type="button" className="close-btn messages-close" onClick={() => { onClose(); setCurrentConversation(null); }} aria-label="Close">
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">

@@ -29,7 +29,7 @@ const ImageCropperModal = memo(function ImageCropperModal({
   }, [setCropZoom]);
   if (!cropperImage) return null;
   return (
-<div className="cropper-overlay-global" onClick={() => { onClose(); }}>
+<div className="cropper-overlay-global" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
   <div className="cropper-modal" onClick={(e) => e.stopPropagation()}>
     <div className="cropper-header">
       <h3>{cropperType === 'profileAvatar' ? 'Crop Profile Photo' : cropperType === 'profileCover' ? 'Crop Cover Photo' : 'Crop Image'}</h3>

@@ -37,7 +37,7 @@ export function useCardAnimation(cardRefs, visibleClass, deps = [], { checkIniti
 
       observerRef.current = observer;
 
-      cardRefs.current.forEach((card) => {
+      (cardRefs.current || []).forEach((card) => {
         if (card) {
           observer.observe(card);
           if (checkInitial) {
