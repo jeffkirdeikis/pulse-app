@@ -416,9 +416,12 @@ export function useUserData() {
     if (!file.type.startsWith('image/') || file.type === 'image/svg+xml') {
       return { error: 'Only image files (PNG, JPG, GIF, WebP) are allowed' };
     }
+    if (file.size > 5 * 1024 * 1024) {
+      return { error: 'Image too large (max 5MB)' };
+    }
 
-    const fileExt = file.name.split('.').pop().toLowerCase().replace(/[^a-z0-9]/g, '');
-    const safeExt = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExt) ? fileExt : 'png';
+    const mimeToExt = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif' };
+    const safeExt = mimeToExt[file.type] || 'png';
     const fileName = `${session.user.id}/avatar.${safeExt}`;
 
     const { error: uploadError } = await supabase.storage
@@ -448,9 +451,12 @@ export function useUserData() {
     if (!file.type.startsWith('image/') || file.type === 'image/svg+xml') {
       return { error: 'Only image files (PNG, JPG, GIF, WebP) are allowed' };
     }
+    if (file.size > 10 * 1024 * 1024) {
+      return { error: 'Image too large (max 10MB)' };
+    }
 
-    const fileExt = file.name.split('.').pop().toLowerCase().replace(/[^a-z0-9]/g, '');
-    const safeExt = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExt) ? fileExt : 'png';
+    const mimeToExt = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif' };
+    const safeExt = mimeToExt[file.type] || 'png';
     const fileName = `${session.user.id}/cover.${safeExt}`;
 
     const { error: uploadError } = await supabase.storage

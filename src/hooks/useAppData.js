@@ -196,6 +196,11 @@ export function useAppData() {
         let endDate;
         if (event.end_time) {
           let [endHours, endMinutes] = event.end_time.split(':').map(Number);
+          // Guard against NaN from unparseable end time strings
+          if (isNaN(endHours) || isNaN(endMinutes)) {
+            endHours = hours + 1;
+            endMinutes = minutes;
+          }
           // Same correction for end time: midnight through 4 AM
           if (endHours >= 0 && endHours <= 4) {
             endHours = 10;

@@ -10,7 +10,7 @@ export const generateSmartDealTitle = (deal, venueName = '') => {
   const isGeneric = genericTitles.some(g => title.toLowerCase().trim() === g);
 
   // Check if title already looks good (has price/value and is reasonable length)
-  const hasGoodValue = /\$\d+|\d+%|free|half price|bogo/i.test(title);
+  const hasGoodValue = /\$\d+|\d+%|\bfree\b|\bhalf\s+price\b|\bbogo\b/i.test(title);
   if (hasGoodValue && title.length <= 45 && !isGeneric) {
     return title;
   }

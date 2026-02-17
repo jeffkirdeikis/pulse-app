@@ -175,7 +175,8 @@ export function useSubmissions(user, { showToast, userClaimedBusinesses, updateA
         const { error } = await updateCoverPhoto?.(file);
         showToast?.(error ? 'Error uploading cover photo. Please try again.' : 'Cover photo updated!');
       }
-    } catch {
+    } catch (err) {
+      if (import.meta.env.DEV) console.error('[handleCropComplete]', err);
       showToast?.('Failed to process image. Please try again.', 'error');
     }
 
@@ -383,7 +384,8 @@ export function useSubmissions(user, { showToast, userClaimedBusinesses, updateA
       const { data, error } = await supabase
         .from('pending_items')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(200);
 
       if (error) throw error;
 

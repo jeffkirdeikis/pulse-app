@@ -49,7 +49,7 @@ export function useCalendar({ myCalendar, isAuthenticated, session, registerForE
           id: event.id,
           eventType: event.eventType || 'event',
           title: event.title,
-          date: event.start && !isNaN(event.start.getTime()) ? event.start.toISOString().split('T')[0] : event.date,
+          date: event.start && !isNaN(event.start.getTime()) ? `${event.start.getFullYear()}-${String(event.start.getMonth() + 1).padStart(2, '0')}-${String(event.start.getDate()).padStart(2, '0')}` : event.date,
           time: event.start && !isNaN(event.start.getTime()) ? event.start.toLocaleTimeString('en-US', { timeZone: PACIFIC_TZ, hour: 'numeric', minute: '2-digit' }) : event.time,
           venue: getVenueName(event.venueId, event),
           address: event.location || event.address || '',

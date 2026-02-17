@@ -24,6 +24,7 @@ export function useMessaging(user, { showToast, onAuthRequired, activeBusiness, 
   const [sendingMessage, setSendingMessage] = useState(false);
   const sendingMessageRef = useRef(false);
   const [sendingBusinessReply, setSendingBusinessReply] = useState(false);
+  const sendingBusinessReplyRef = useRef(false);
 
   // Contact sheet state
   const [showContactSheet, setShowContactSheet] = useState(false);
@@ -249,9 +250,10 @@ export function useMessaging(user, { showToast, onAuthRequired, activeBusiness, 
     }
   }, []);
 
-  // Send reply from business
+  // Send reply from business (ref guard prevents duplicate sends from double-click or real-time echo)
   const sendBusinessReply = useCallback(async () => {
-    if (!businessReplyInput.trim() || !selectedBusinessConversation || !activeBusiness?.id || sendingBusinessReply) return;
+    if (!businessReplyInput.trim() || !selectedBusinessConversation || !activeBusiness?.id || sendingBusinessReplyRef.current) return;
+    sendingBusinessReplyRef.current = true;
     setSendingBusinessReply(true);
     try {
       const businessId = activeBusiness?.id;
@@ -268,13 +270,18 @@ export function useMessaging(user, { showToast, onAuthRequired, activeBusiness, 
       console.error('Error sending reply:', err);
       showToast?.('Failed to send reply. Please try again.', 'error');
     } finally {
+      sendingBusinessReplyRef.current = false;
       setSendingBusinessReply(false);
     }
-  }, [businessReplyInput, selectedBusinessConversation, activeBusiness?.id, sendingBusinessReply, fetchBusinessMessages, showToast]);
+  }, [businessReplyInput, selectedBusinessConversation, activeBusiness?.id, fetchBusinessMessages, showToast]);
 
   // Mark conversation as resolved
   const markConversationResolved = useCallback(async (conversationId) => {
     if (!activeBusiness?.id) return;
+    // Optimistic: remove from list immediately for snappy UX
+    const previousConversations = businessConversations;
+    setBusinessConversations(prev => prev.filter(c => c.id !== conversationId));
+    setSelectedBusinessConversation(null);
     try {
       const { error } = await supabase
         .from('conversations')
@@ -284,18 +291,17 @@ export function useMessaging(user, { showToast, onAuthRequired, activeBusiness, 
       if (error) throw error;
 
       showToast?.('Conversation resolved', 'success');
-      // Optimistically remove resolved conversation from list
-      setBusinessConversations(prev => prev.filter(c => c.id !== conversationId));
-      setSelectedBusinessConversation(null);
-      // Also refresh from server
+      // Also refresh from server for consistency
       if (activeBusiness?.id) {
         fetchBusinessInbox(activeBusiness.id, businessInboxTab === 'bookings' ? 'booking' : 'general');
       }
     } catch (err) {
       console.error('Error marking resolved:', err);
+      // Rollback optimistic update on failure
+      setBusinessConversations(previousConversations);
       showToast?.('Failed to resolve conversation', 'error');
     }
-  }, [activeBusiness?.id, businessInboxTab, fetchBusinessInbox, showToast]);
+  }, [activeBusiness?.id, businessConversations, businessInboxTab, fetchBusinessInbox, showToast]);
 
   // Clear business inbox state (used when exiting impersonation)
   const clearBusinessInbox = useCallback(() => {

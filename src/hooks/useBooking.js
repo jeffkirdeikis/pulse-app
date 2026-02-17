@@ -34,7 +34,7 @@ export function useBooking({ getVenueName, venues, trackAnalytics, addToCalendar
       name: venueName,
       booking_url: bookingUrl,
       booking_type: bookingType,
-      ...venue
+      ...(venue || {})
     };
   }, [getVenueName, venues]);
 
