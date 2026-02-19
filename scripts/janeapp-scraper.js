@@ -35,6 +35,7 @@ const CLINICS = [
   { slug: 'peakintegratedhealth', name: 'Peak Integrated Health' },
   { slug: 'anchorsquamish', name: 'Anchor Health & Wellness' },
   { slug: 'twr', name: 'The Wellness Room', bookingPath: '/locations/clinic-tantalus-rd-location/book' },
+  { slug: 'seedsquamish', name: 'Seed Studio', bookingPath: '/locations/seed-studio/book' },
 ];
 
 /**
@@ -832,7 +833,14 @@ async function main() {
   }
 }
 
-main().catch(err => {
-  console.error('Fatal error:', err);
-  process.exit(1);
-});
+// Export for use by scrape-reliable-sources.js orchestrator
+export { scrapeClinic, CLINICS, upsertSlots, getProviderMap };
+
+// Run standalone if invoked directly
+import { fileURLToPath } from 'url';
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  main().catch(err => {
+    console.error('Fatal error:', err);
+    process.exit(1);
+  });
+}

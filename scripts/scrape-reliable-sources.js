@@ -33,6 +33,7 @@ import {
 } from './lib/reliable-sources.js';
 import { scrapePerfectMindCalendars } from './scrape-perfectmind.js';
 import { scrapeMarianaTekClasses } from './scrape-marianatek.js';
+import { scrapeClinic as scrapeJaneAppClinic, CLINICS as JANEAPP_CLINICS, upsertSlots as upsertJaneAppSlots, getProviderMap as getJaneAppProviderMap } from './janeapp-scraper.js';
 import {
   detectProviderChange,
   applyProviderSwitch,
@@ -397,19 +398,30 @@ async function scrapeMindbodyClassic(source, browser) {
       console.log(`   ⚠️ Unexpected URL after navigation: ${currentUrl} (may be transient)`);
     }
 
-    // Click on the correct tab
+    // Click on the correct tab.
+    // Mindbody Classic triggers full-page navigation on tab clicks,
+    // so we must use Promise.all with waitForNavigation.
     if (source.tab_id) {
-      const tabClicked = await page.evaluate((tabId) => {
-        const tabs = document.querySelectorAll('li[onclick]');
-        for (const tab of tabs) {
-          const onclick = tab.getAttribute('onclick') || '';
-          if (onclick.includes('tabID=' + tabId)) {
-            tab.click();
-            return true;
-          }
-        }
-        return false;
-      }, source.tab_id);
+      let tabClicked = false;
+      try {
+        const [, result] = await Promise.all([
+          page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 }).catch(() => {}),
+          page.evaluate((tabId) => {
+            const tabs = document.querySelectorAll('li[onclick]');
+            for (const tab of tabs) {
+              const onclick = tab.getAttribute('onclick') || '';
+              if (onclick.includes('tabID=' + tabId)) {
+                tab.click();
+                return true;
+              }
+            }
+            return false;
+          }, source.tab_id)
+        ]);
+        tabClicked = !!result;
+      } catch {
+        // Tab click may not trigger navigation on some studios
+      }
       if (!tabClicked) {
         console.warn(`   ⚠️ Tab ID ${source.tab_id} not found — scraping default tab`);
         await telegramAlert(`⚠️ ${source.name}: Tab ID ${source.tab_id} not found on Mindbody Classic page. Scraping default tab.`);
@@ -441,33 +453,47 @@ async function scrapeMindbodyClassic(source, browser) {
       const weekClasses = parseClassicSchedule(text, source);
       allClasses.push(...weekClasses);
 
+      // Click "next week" button to navigate forward.
+      // Mindbody Classic triggers full-page navigation on week arrows,
+      // so we must use Promise.all with waitForNavigation to avoid
+      // "Execution context was destroyed" errors.
       if (week < WEEKS_TO_SCRAPE - 1) {
-        const clicked = await page.evaluate(() => {
-          const weekArrowRight = document.querySelector('#week-arrow-r');
-          if (weekArrowRight) {
-            weekArrowRight.click();
-            return 'week-arrow-r';
-          }
-          // Fallback selectors for navigation resilience
-          const fallbackSelectors = [
-            '.date-arrow-r',
-            'a[href*="fw=1"]',
-            '.next-week',
-            '[class*="arrow-right"]',
-            '[class*="next"]',
-            'a[title*="Next"]',
-            '.fa-chevron-right',
-            '.fa-arrow-right'
-          ];
-          for (const sel of fallbackSelectors) {
-            const btn = document.querySelector(sel);
-            if (btn) {
-              btn.click();
-              return sel;
-            }
-          }
-          return null;
-        });
+        let clicked = false;
+        try {
+          const [, result] = await Promise.all([
+            page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 15000 }).catch(() => {}),
+            page.evaluate(() => {
+              const weekArrowRight = document.querySelector('#week-arrow-r');
+              if (weekArrowRight) {
+                weekArrowRight.click();
+                return 'week-arrow-r';
+              }
+              // Fallback selectors for navigation resilience
+              const fallbackSelectors = [
+                '.date-arrow-r',
+                'a[href*="fw=1"]',
+                '.next-week',
+                '[class*="arrow-right"]',
+                '[class*="next"]',
+                'a[title*="Next"]',
+                '.fa-chevron-right',
+                '.fa-arrow-right'
+              ];
+              for (const sel of fallbackSelectors) {
+                const btn = document.querySelector(sel);
+                if (btn) {
+                  btn.click();
+                  return sel;
+                }
+              }
+              return null;
+            })
+          ]);
+          clicked = !!result;
+        } catch {
+          // Navigation may have completed before evaluate returned
+          clicked = true;
+        }
 
         if (clicked) {
           await new Promise(r => setTimeout(r, 3000));
@@ -1067,6 +1093,55 @@ async function scrapeSendMoreGetBeta(source, browser) {
 }
 
 // ============================================================
+// JANEAPP SCRAPER (Healthcare/Wellness bookings)
+// ============================================================
+
+/**
+ * Scrape a JaneApp source using the dedicated janeapp-scraper module.
+ * JaneApp data goes to pulse_availability_slots (different from classes table).
+ * Matches source by studio_id (slug) against janeapp CLINICS list.
+ */
+async function scrapeJaneApp(source, browser) {
+  console.log(`\n📍 ${source.name} (JaneApp)`);
+  console.log('-'.repeat(50));
+
+  const slug = source.studio_id;
+  const clinic = JANEAPP_CLINICS.find(c => c.slug === slug);
+
+  if (!clinic) {
+    const msg = `JaneApp clinic slug "${slug}" not found in CLINICS list — add it to janeapp-scraper.js`;
+    console.error(`   ❌ ${msg}`);
+    stats.errors.push({ source: source.name, error: msg });
+    sourceResults.push({ name: source.name, classesFound: 0, classesAdded: 0, error: msg });
+    await recordScrapeFailure(source.name, msg);
+    return { classesFound: 0, classesAdded: 0 };
+  }
+
+  try {
+    const providerMap = await getJaneAppProviderMap();
+    const slots = await scrapeJaneAppClinic(browser, clinic);
+
+    if (slots.length > 0) {
+      await upsertJaneAppSlots(slots, providerMap);
+    }
+
+    console.log(`   ✅ Found: ${slots.length} availability slots`);
+    stats.sourcesSuccessful++;
+    // Track as classesFound for zero-result detection (slots are the equivalent)
+    sourceResults.push({ name: source.name, classesFound: slots.length, classesAdded: slots.length, error: null });
+    await recordScrapeSuccess(source.name, slots.length);
+    return { classesFound: slots.length, classesAdded: slots.length };
+
+  } catch (error) {
+    console.error(`   ❌ Error: ${error.message}`);
+    stats.errors.push({ source: source.name, error: error.message });
+    sourceResults.push({ name: source.name, classesFound: 0, classesAdded: 0, error: error.message });
+    await recordScrapeFailure(source.name, error.message);
+    return { classesFound: 0, classesAdded: 0 };
+  }
+}
+
+// ============================================================
 // RE-SCRAPE HELPER (for provider change auto-switch)
 // ============================================================
 
@@ -1101,6 +1176,10 @@ async function reScrapeSource(source, browser) {
       return await scrapePerfectMindCalendars(source, browser);
     case 'marianatek':
       return await scrapeMarianaTekClasses(source);
+    case 'janeapp': {
+      await scrapeJaneApp(source, browser);
+      return null;
+    }
     default:
       throw new Error(`No scraper for booking system: ${source.booking_system}`);
   }
@@ -1179,6 +1258,9 @@ async function main() {
           await recordScrapeSuccess(source.name, mtResult.classesFound);
           break;
         }
+        case 'janeapp':
+          await scrapeJaneApp(source, browser);
+          break;
         default:
           console.log(`\n⚠️  Unknown booking system: ${source.booking_system} for ${source.name}`);
           stats.errors.push({ source: source.name, error: `Unknown booking system: ${source.booking_system}` });

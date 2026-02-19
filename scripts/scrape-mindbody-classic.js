@@ -28,14 +28,15 @@ const CLASSIC_STUDIOS = [
     address: '38930-C Mid Way, Squamish, BC',
     category: 'Fitness'
   },
-  {
-    name: 'Seed Studio',
-    studioId: '5729485',
-    tabId: '7',
-    scheduleUrl: 'https://clients.mindbodyonline.com/classic/mainclass?studioid=5729485&tabID=7',
-    address: '38173 Cleveland Ave, Squamish, BC',
-    category: 'Yoga & Pilates'
-  },
+  // Seed Studio moved to JaneApp (Feb 2026) — now scraped via janeapp-scraper.js
+  // {
+  //   name: 'Seed Studio',
+  //   studioId: '5729485',
+  //   tabId: '7',
+  //   scheduleUrl: 'https://clients.mindbodyonline.com/classic/mainclass?studioid=5729485&tabID=7',
+  //   address: '38173 Cleveland Ave, Squamish, BC',
+  //   category: 'Yoga & Pilates'
+  // },
   {
     name: 'Mountain Fitness Center',
     studioId: '265219',

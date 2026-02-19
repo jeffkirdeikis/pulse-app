@@ -26,14 +26,16 @@ import {
 const DAYS_TO_SCRAPE = 30;
 
 // Studios using brandedweb Mindbody widgets
+// NOTE: Oxygen Yoga moved to WellnessLiving (Feb 2026). Widget ID 5922581a2 returns 404.
+// Now scraped via WellnessLiving in scrape-reliable-sources.js.
 const BRANDEDWEB_STUDIOS = [
-  {
-    name: 'Oxygen Yoga & Fitness Squamish',
-    widgetId: '5922581a2',
-    scheduleUrl: 'https://brandedweb-next.mindbodyonline.com/components/widgets/schedules/view/5922581a2/schedule',
-    address: '38085 Second Ave, Squamish, BC',
-    category: 'Yoga & Pilates'
-  }
+  // {
+  //   name: 'Oxygen Yoga & Fitness Squamish',
+  //   widgetId: '5922581a2',
+  //   scheduleUrl: 'https://brandedweb-next.mindbodyonline.com/components/widgets/schedules/view/5922581a2/schedule',
+  //   address: '38085 Second Ave, Squamish, BC',
+  //   category: 'Yoga & Pilates'
+  // }
 ];
 
 const stats = {

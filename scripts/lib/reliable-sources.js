@@ -118,19 +118,20 @@ export const RELIABLE_SOURCES = [
     verified: true,
     notes: 'Barbell/strength training - navigate weeks for full schedule'
   },
+  // Seed Studio moved from mindbody-classic to JaneApp (Feb 2026)
   {
     name: 'Seed Studio',
-    booking_system: 'mindbody-classic',
+    booking_system: 'janeapp',
     widget_id: null,
-    studio_id: '5729485',
-    tab_id: '7',
-    url: 'https://clients.mindbodyonline.com/classic/mainclass?studioid=5729485&tabID=7',
+    studio_id: 'seedsquamish',
+    tab_id: null,
+    url: 'https://seedsquamish.janeapp.com',
     address: '38173 Cleveland Ave, Squamish, BC',
     category: 'Yoga & Pilates',
     scrape_frequency: 'daily',
     priority: 9,
     verified: true,
-    notes: 'Yoga and pilates studio'
+    notes: 'Pilates, massage, acupuncture — switched from mindbody-classic to JaneApp Feb 2026'
   },
   {
     name: 'Mountain Fitness Center',
@@ -196,18 +197,20 @@ export const RELIABLE_SOURCES = [
   // ========================================
   // BRANDEDWEB (Mindbody branded widgets)
   // ========================================
+  // Oxygen Yoga moved from brandedweb to WellnessLiving (Feb 2026)
+  // Old widget ID 5922581a2 now returns 404
   {
     name: 'Oxygen Yoga & Fitness Squamish',
-    booking_system: 'brandedweb',
-    widget_id: '5922581a2',
+    booking_system: 'wellnessliving',
+    widget_id: null,
     studio_id: null,
-    url: 'https://brandedweb-next.mindbodyonline.com/components/widgets/schedules/view/5922581a2/schedule',
+    url: 'https://www.wellnessliving.com/schedule/oxygen_yoga__fitness_squamish',
     address: '38085 Second Ave, Squamish, BC',
     category: 'Yoga & Pilates',
     scrape_frequency: 'daily',
     priority: 8,
     verified: true,
-    notes: 'Hot yoga and fitness'
+    notes: 'Hot yoga and fitness — switched from brandedweb to WellnessLiving Feb 2026'
   },
 
   // ========================================
