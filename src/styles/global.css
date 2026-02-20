@@ -1,0 +1,63 @@
+        /* ========== GLOBAL RESETS ========== */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        #root { width: 100%; }
+
+        /* Screen-reader only utility */
+        .sr-only {
+          position: absolute;
+          width: 1px;
+          height: 1px;
+          padding: 0;
+          margin: -1px;
+          overflow: hidden;
+          clip: rect(0, 0, 0, 0);
+          white-space: nowrap;
+          border: 0;
+        }
+
+        /* Skip to main content link */
+        .skip-link {
+          position: absolute;
+          top: -100px;
+          left: 16px;
+          background: var(--color-primary);
+          color: var(--text-inverse);
+          padding: 12px 24px;
+          border-radius: var(--radius-md);
+          font-weight: 600;
+          font-size: var(--text-md);
+          z-index: var(--z-top);
+          text-decoration: none;
+          transition: var(--transition-fast);
+        }
+        .skip-link:focus {
+          top: 16px;
+          outline: 2px solid var(--color-primary);
+          outline-offset: 2px;
+        }
+
+        /* Global focus-visible styles for interactive elements */
+        button:focus-visible,
+        a:focus-visible,
+        input:focus-visible,
+        select:focus-visible,
+        textarea:focus-visible,
+        [tabindex]:focus-visible,
+        [role="button"]:focus-visible,
+        [role="tab"]:focus-visible {
+          outline: 2px solid var(--color-primary-light);
+          outline-offset: 2px;
+        }
+
+        /* Body scroll lock when modal is open */
+        body.modal-open {
+          overflow: hidden;
+        }
+
+        .pulse-app { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif; background: var(--bg-primary); min-height: 100vh; color: var(--text-primary); width: 100%; max-width: 100vw; }
+        .view-switcher { position: fixed; top: 20px; right: 20px; background: var(--bg-primary); border: 1px solid var(--border-light); border-radius: var(--radius-lg); padding: 6px; display: flex; gap: 6px; z-index: var(--z-header); box-shadow: var(--shadow-lg); }
+        .view-switcher button { background: transparent; border: none; color: var(--text-primary); padding: 10px 16px; min-height: 44px; border-radius: var(--radius-md); font-size: var(--text-base); font-weight: 600; cursor: pointer; transition: var(--transition-normal); }
+        .view-switcher button:hover { background: var(--bg-hover); }
+        .view-switcher button:active { transform: scale(0.97); }
+        .view-switcher button.active { background: var(--color-primary); color: var(--text-inverse); box-shadow: 0 2px 8px var(--color-primary-shadow); }
+        .consumer-view { max-width: 420px; margin: 0 auto; background: var(--bg-primary); min-height: 100vh; box-shadow: 0 0 0 1px var(--border-light); }

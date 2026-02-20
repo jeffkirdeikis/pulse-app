@@ -1,0 +1,22 @@
+/* Pulse App — CSS Module Orchestrator
+   Vite resolves @import at build time, producing one concatenated bundle. */
+
+@import './design-system.css';
+@import './global.css';
+@import './header.css';
+@import './notifications.css';
+@import './banner.css';
+@import './filters.css';
+@import './cards.css';
+@import './business-portal.css';
+@import './admin-portal.css';
+@import './modals.css';
+@import './submission-modal.css';
+@import './admin-modal.css';
+@import './profile-modal.css';
+@import './calendar-modal.css';
+@import './deal-detail.css';
+@import './service-detail.css';
+@import './responsive.css';
+@import './animations.css';
+@import './utilities.css';

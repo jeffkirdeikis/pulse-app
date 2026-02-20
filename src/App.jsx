@@ -43,7 +43,7 @@ import { REAL_DATA } from './data/realData';
 import { normalizeDealCategory } from './utils/dealHelpers';
 import { filterEvents as filterEventsUtil, filterDeals as filterDealsUtil } from './utils/filterHelpers';
 import { PACIFIC_TZ, getPacificNow } from './utils/timezoneHelpers';
-import './styles/pulse-app.css';
+import './styles/index.css';
 
 // Constants — extracted from inline magic numbers
 const PAGE_SIZE = 50;
