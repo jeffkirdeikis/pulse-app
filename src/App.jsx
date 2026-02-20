@@ -16,6 +16,7 @@ import ServicesGrid from './components/ServicesGrid';
 import DealsGrid from './components/DealsGrid';
 import FilterSection from './components/FilterSection';
 import ConsumerHeader from './components/ConsumerHeader';
+import DeepLinkHandler from './components/DeepLinkHandler';
 import ProfileMenu from './components/ProfileMenu';
 import WellnessBooking from './components/WellnessBooking';
 import EventDetailModal from './components/modals/EventDetailModal';
@@ -120,6 +121,35 @@ export default function PulseApp() {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [selectedDeal, setSelectedDeal] = useState(null);
   const [selectedService, setSelectedService] = useState(null);
+
+  // Deep-link-aware select/close for detail modals
+  const selectEvent = useCallback((evt) => {
+    setSelectedEvent(evt);
+    if (evt) navigate(`/events/${evt.id}`);
+  }, [navigate]);
+  const closeEvent = useCallback(() => {
+    setSelectedEvent(null);
+    const section = currentSection === 'events' ? 'events' : 'classes';
+    navigate(`/${section}`);
+  }, [navigate, currentSection]);
+
+  const selectDeal = useCallback((deal) => {
+    setSelectedDeal(deal);
+    if (deal) navigate(`/deals/${deal.id}`);
+  }, [navigate]);
+  const closeDeal = useCallback(() => {
+    setSelectedDeal(null);
+    navigate('/deals');
+  }, [navigate]);
+
+  const selectService = useCallback((svc) => {
+    setSelectedService(svc);
+    if (svc) navigate(`/services/${svc.id}`);
+  }, [navigate]);
+  const closeService = useCallback(() => {
+    setSelectedService(null);
+    navigate('/services');
+  }, [navigate]);
   // Refresh current time every 5 minutes so filters stay fresh for long-idle sessions
   const [currentTime, setCurrentTime] = useState(() => getPacificNow());
   useEffect(() => {
@@ -292,6 +322,7 @@ export default function PulseApp() {
     services, servicesLoading, fetchServices,
     dbEvents, eventsLoading, eventsRefreshKey, setEventsRefreshKey, forceRefreshEvents,
     dbDeals, dealsLoading, dealsRefreshKey, setDealsRefreshKey, forceRefreshDeals,
+    fetchEventById, fetchDealById, fetchServiceById,
   } = useAppData();
 
   // Route prefetching for instant detail navigation
@@ -474,9 +505,9 @@ export default function PulseApp() {
     if (m.showEditEventModal) { setShowEditEventModal(false); setEditingEvent(null); return; }
     if (m.showEditVenueModal) { setShowEditVenueModal(false); return; }
     if (m.showAddEventModal) { setShowAddEventModal(false); return; }
-    if (m.selectedEvent) { setSelectedEvent(null); return; }
-    if (m.selectedDeal) { setSelectedDeal(null); return; }
-    if (m.selectedService) { setSelectedService(null); return; }
+    if (m.selectedEvent) { closeEvent(); return; }
+    if (m.selectedDeal) { closeDeal(); return; }
+    if (m.selectedService) { closeService(); return; }
     if (m.showSubmissionModal) { setShowSubmissionModal(false); return; }
     if (m.showMyCalendarModal) { setShowMyCalendarModal(false); return; }
     if (m.showMessagesModal) { setShowMessagesModal(false); setCurrentConversation(null); setMessageInput(''); return; }
@@ -924,9 +955,9 @@ export default function PulseApp() {
         if (showEditVenueModal) { setShowEditVenueModal(false); return; }
         if (showAddEventModal) { setShowAddEventModal(false); return; }
         if (showSubmissionModal) { setShowSubmissionModal(false); return; }
-        if (selectedEvent) { setSelectedEvent(null); return; }
-        if (selectedDeal) { setSelectedDeal(null); return; }
-        if (selectedService) { setSelectedService(null); return; }
+        if (selectedEvent) { closeEvent(); return; }
+        if (selectedDeal) { closeDeal(); return; }
+        if (selectedService) { closeService(); return; }
         if (showMyCalendarModal) { setShowMyCalendarModal(false); return; }
         if (showMessagesModal) { setShowMessagesModal(false); setCurrentConversation(null); setMessageInput(''); return; }
         if (showAuthModal) { setShowAuthModal(false); return; }
@@ -1615,7 +1646,7 @@ export default function PulseApp() {
                     </div>
                     {periodEvents.map((event) => {
                       const currentIndex = globalEventIndex++;
-                      return <EventCard key={event.id} event={event} index={currentIndex} ref={(el) => eventCardRefs.current[currentIndex] = el} venues={REAL_DATA.venues} isItemSavedLocal={isItemSavedLocal} toggleSave={toggleSave} getVenueName={getVenueName} onSelect={setSelectedEvent} onBookClick={handleBookClick} onPrefetch={prefetchEvent} addToCalendar={addToCalendar} isInMyCalendar={isInMyCalendar} showToast={showToast} searchQuery={searchQuery} compact={compactMode} currentTime={currentTime} />;
+                      return <EventCard key={event.id} event={event} index={currentIndex} ref={(el) => eventCardRefs.current[currentIndex] = el} venues={REAL_DATA.venues} isItemSavedLocal={isItemSavedLocal} toggleSave={toggleSave} getVenueName={getVenueName} onSelect={selectEvent} onBookClick={handleBookClick} onPrefetch={prefetchEvent} addToCalendar={addToCalendar} isInMyCalendar={isInMyCalendar} showToast={showToast} searchQuery={searchQuery} compact={compactMode} currentTime={currentTime} />;
                     })}
                   </React.Fragment>
                 );
@@ -1623,7 +1654,7 @@ export default function PulseApp() {
             }
             return dayEvents.map((event) => {
               const currentIndex = globalEventIndex++;
-              return <EventCard key={event.id} event={event} index={currentIndex} ref={(el) => eventCardRefs.current[currentIndex] = el} venues={REAL_DATA.venues} isItemSavedLocal={isItemSavedLocal} toggleSave={toggleSave} getVenueName={getVenueName} onSelect={setSelectedEvent} onBookClick={handleBookClick} onPrefetch={prefetchEvent} addToCalendar={addToCalendar} isInMyCalendar={isInMyCalendar} showToast={showToast} searchQuery={searchQuery} compact={compactMode} currentTime={currentTime} />;
+              return <EventCard key={event.id} event={event} index={currentIndex} ref={(el) => eventCardRefs.current[currentIndex] = el} venues={REAL_DATA.venues} isItemSavedLocal={isItemSavedLocal} toggleSave={toggleSave} getVenueName={getVenueName} onSelect={selectEvent} onBookClick={handleBookClick} onPrefetch={prefetchEvent} addToCalendar={addToCalendar} isInMyCalendar={isInMyCalendar} showToast={showToast} searchQuery={searchQuery} compact={compactMode} currentTime={currentTime} />;
             });
           })()}
         </div>
@@ -1780,9 +1811,12 @@ export default function PulseApp() {
   return (
     <div className="pulse-app">
       <HashRedirect />
-      {/* Catch-all: redirect bare root to /classes */}
+      {/* Route definitions — deep link routes open detail modals */}
       <Routes>
         <Route path="/" element={<Navigate to="/classes" replace />} />
+        <Route path="/events/:id" element={<DeepLinkHandler type="event" fetchById={fetchEventById} onSelect={setSelectedEvent} showToast={showToast} />} />
+        <Route path="/deals/:id" element={<DeepLinkHandler type="deal" fetchById={fetchDealById} onSelect={setSelectedDeal} showToast={showToast} />} />
+        <Route path="/services/:id" element={<DeepLinkHandler type="service" fetchById={fetchServiceById} onSelect={setSelectedService} showToast={showToast} />} />
         <Route path="*" element={null} />
       </Routes>
       <a href="#main-content" className="skip-link">Skip to content</a>
@@ -1909,7 +1943,7 @@ export default function PulseApp() {
                     getVenueName={getVenueName}
                     isItemSavedLocal={isItemSavedLocal}
                     toggleSave={toggleSave}
-                    onSelectDeal={setSelectedDeal}
+                    onSelectDeal={selectDeal}
                     onPrefetch={prefetchDeal}
                   />
                 ) : currentSection === 'services' ? (
@@ -1932,7 +1966,7 @@ export default function PulseApp() {
                         serviceCategoryFilter={serviceCategoryFilter}
                         setServiceCategoryFilter={setServiceCategoryFilter}
                         serviceCardRefs={serviceCardRefs}
-                        onSelectService={setSelectedService}
+                        onSelectService={selectService}
                         onPrefetch={prefetchService}
                       />
                     )}
@@ -2231,11 +2265,11 @@ export default function PulseApp() {
                 setShowNotifications(false);
                 if (notif.data?.eventId) {
                   const evt = dbEvents.find(e => e.id === notif.data.eventId);
-                  if (evt) { setSelectedEvent(evt); }
+                  if (evt) { selectEvent(evt); }
                   else { showToast('This event is no longer available'); }
                 } else if (notif.data?.dealId) {
                   const deal = dbDeals.find(d => d.id === notif.data.dealId);
-                  if (deal) { setSelectedDeal(deal); }
+                  if (deal) { selectDeal(deal); }
                   else { showToast('This deal is no longer available'); }
                 }
               }}
@@ -2484,7 +2518,7 @@ export default function PulseApp() {
         <motion.div key="event-modal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} style={{ position: 'fixed', inset: 0, zIndex: 1000 }}>
         <EventDetailModal
           event={selectedEvent}
-          onClose={() => setSelectedEvent(null)}
+          onClose={closeEvent}
           getVenueName={getVenueName}
           isVerified={isVerified}
           isInMyCalendar={isInMyCalendar}
@@ -2504,12 +2538,12 @@ export default function PulseApp() {
         <motion.div key="deal-modal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} style={{ position: 'fixed', inset: 0, zIndex: 1000 }}>
         <DealDetailModal
           deal={selectedDeal}
-          onClose={() => setSelectedDeal(null)}
+          onClose={closeDeal}
           getVenueName={getVenueName}
           isItemSavedLocal={isItemSavedLocal}
           toggleSave={toggleSave}
           showToast={showToast}
-          onSelectDeal={setSelectedDeal}
+          onSelectDeal={selectDeal}
           session={session}
           onAuthRequired={() => setShowAuthModal(true)}
           supabase={supabase}
@@ -2525,7 +2559,7 @@ export default function PulseApp() {
         <motion.div key="service-modal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} style={{ position: 'fixed', inset: 0, zIndex: 1000 }}>
         <ServiceDetailModal
           service={selectedService}
-          onClose={() => setSelectedService(null)}
+          onClose={closeService}
           isItemSavedLocal={isItemSavedLocal}
           toggleSave={toggleSave}
           showToast={showToast}

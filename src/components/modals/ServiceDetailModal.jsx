@@ -1,7 +1,7 @@
 import React, { memo, useState } from 'react';
 import {
   CheckCircle, ChevronRight, Globe, Mail, MapPin, Navigation,
-  Phone, Star, Users, Wrench, X
+  Phone, Share2, Star, Users, Wrench, X
 } from 'lucide-react';
 
 function getSafeWebsiteUrl(url) {
@@ -28,6 +28,24 @@ const ServiceDetailModal = memo(function ServiceDetailModal({
 
   if (!service) return null;
   const safeWebsite = getSafeWebsiteUrl(service.website);
+
+  const handleShare = async () => {
+    const shareData = {
+      title: service.name,
+      text: `Check out ${service.name} in Squamish`,
+      url: window.location.href
+    };
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(`${shareData.text} - ${shareData.url}`);
+        showToast('Link copied to clipboard!', 'success');
+      }
+    } catch (err) {
+      // User cancelled share or share failed
+    }
+  };
 
   const handleClose = () => {
     setUserServiceRating(0);
@@ -102,6 +120,10 @@ const ServiceDetailModal = memo(function ServiceDetailModal({
               <Star size={20} fill={isItemSavedLocal('service', service.id) ? 'currentColor' : 'none'} />
             </div>
             <span>{isItemSavedLocal('service', service.id) ? 'Saved' : 'Save'}</span>
+          </button>
+          <button type="button" className="quick-action-btn" onClick={handleShare}>
+            <div className="quick-action-icon share"><Share2 size={20} /></div>
+            <span>Share</span>
           </button>
         </div>
 

@@ -311,9 +311,103 @@ export function useAppData() {
     fetchDeals();
   }, [dealsRefreshKey]);
 
+  // Single-item fetchers for deep links
+  const fetchEventById = useCallback(async (id) => {
+    // First check local cache
+    const cached = dbEvents.find(e => e.id === id);
+    if (cached) return cached;
+    // Fetch from DB
+    const { data, error } = await supabase
+      .from('events')
+      .select('id, title, event_type, venue_id, venue_name, venue_address, start_date, start_time, end_time, tags, category, description, is_free, price, price_description, featured, image_url, view_count, created_at')
+      .eq('id', id)
+      .single();
+    if (error || !data) return null;
+    const event = data;
+    const timeUnknown = !event.start_time;
+    let startTimeStr = event.start_time || '09:00';
+    let [hours, minutes] = startTimeStr.split(':').map(Number);
+    if (isNaN(hours) || isNaN(minutes)) { hours = 9; minutes = 0; }
+    if (hours >= 0 && hours <= 4) { hours = 9; minutes = 0; }
+    const fixedStartTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+    const startDate = pacificDate(event.start_date, fixedStartTime);
+    let endDate;
+    if (event.end_time) {
+      let [endHours, endMinutes] = event.end_time.split(':').map(Number);
+      if (isNaN(endHours) || isNaN(endMinutes)) { endHours = hours + 1; endMinutes = minutes; }
+      if (endHours >= 0 && endHours <= 4) { endHours = 10; endMinutes = 0; }
+      const fixedEndTime = `${String(endHours).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}`;
+      endDate = pacificDate(event.start_date, fixedEndTime);
+    } else {
+      const endHour = hours >= 23 ? 23 : hours + 1;
+      const endMin = hours >= 23 ? 59 : minutes;
+      endDate = pacificDate(event.start_date, `${String(endHour).padStart(2, '0')}:${String(endMin).padStart(2, '0')}`);
+    }
+    return {
+      id: event.id, title: event.title,
+      eventType: event.event_type === 'class' ? 'class' : 'event',
+      venueId: event.venue_id || null, venueName: event.venue_name || 'Squamish',
+      venueAddress: event.venue_address || 'Squamish, BC',
+      start: startDate, end: endDate,
+      tags: event.tags || [event.category || 'Community'],
+      category: event.category ? event.category.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : 'Community',
+      ageGroup: inferAgeGroup(event.title, event.description),
+      price: event.is_free ? 'Free' : (event.price > 0 ? `$${event.price}` : (event.price_description && !/^see (venue|studio) for pricing$/i.test(event.price_description) ? event.price_description : 'See venue for pricing')),
+      recurrence: 'none', description: event.description || '',
+      featured: event.featured || false, image: event.image_url,
+      viewCount: event.view_count || 0, createdAt: event.created_at || null,
+      businessId: event.venue_id || null, timeUnknown
+    };
+  }, [dbEvents]);
+
+  const fetchDealById = useCallback(async (id) => {
+    const cached = dbDeals.find(d => d.id === id);
+    if (cached) return cached;
+    const { data: deal, error } = await supabase
+      .from('deals')
+      .select('id, title, business_id, business_name, business_address, category, description, discount_type, discount_value, original_price, deal_price, valid_until, terms_conditions, image_url, featured, schedule')
+      .eq('id', id)
+      .single();
+    if (error || !deal) return null;
+    return {
+      id: deal.id, title: deal.title,
+      venueId: deal.business_id || null, venueName: deal.business_name || 'Local Business',
+      venueAddress: deal.business_address || 'Squamish, BC',
+      category: deal.category || 'Other', description: deal.description || '',
+      discountType: deal.discount_type, discountValue: deal.discount_value,
+      originalPrice: deal.original_price, dealPrice: deal.deal_price,
+      discount: deal.discount_type === 'percent' ? `${deal.discount_value}% off` :
+                deal.discount_type === 'fixed' ? `$${deal.discount_value} off` :
+                deal.discount_type === 'bogo' ? 'Buy One Get One' :
+                deal.discount_type === 'free_item' ? 'Free Item' : 'Special Offer',
+      validUntil: deal.valid_until, terms: deal.terms_conditions || '',
+      image: deal.image_url, featured: deal.featured || false,
+      schedule: deal.schedule || ''
+    };
+  }, [dbDeals]);
+
+  const fetchServiceById = useCallback(async (id) => {
+    const cached = services.find(s => s.id === id);
+    if (cached) return cached;
+    const { data: business, error } = await supabase
+      .from('businesses')
+      .select('id, name, category, address, google_rating, google_reviews, phone, website, email, logo_url')
+      .eq('id', id)
+      .single();
+    if (error || !business) return null;
+    return {
+      id: business.id, name: business.name,
+      category: business.category || 'Other', address: business.address || '',
+      rating: business.google_rating, reviews: business.google_reviews,
+      phone: business.phone || '', website: business.website || '',
+      email: business.email || '', logo_url: business.logo_url || null
+    };
+  }, [services]);
+
   return {
     services, servicesLoading, fetchServices,
     dbEvents, eventsLoading, eventsRefreshKey, setEventsRefreshKey, forceRefreshEvents,
     dbDeals, dealsLoading, dealsRefreshKey, setDealsRefreshKey, forceRefreshDeals,
+    fetchEventById, fetchDealById, fetchServiceById,
   };
 }
