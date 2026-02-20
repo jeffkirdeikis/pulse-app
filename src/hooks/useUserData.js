@@ -550,6 +550,34 @@ export function useUserData() {
     }
   };
 
+  // Delete account via edge function, then sign out
+  const deleteAccount = async () => {
+    if (!session?.user) return { error: 'Not authenticated' };
+
+    const { data, error } = await supabase.functions.invoke('delete-account');
+
+    if (error) {
+      console.error('Delete account error:', error);
+      return { error: error.message || 'Failed to delete account' };
+    }
+
+    // Check for non-2xx response embedded in data
+    if (data?.error) {
+      return { error: data.error };
+    }
+
+    // Clear all local state and sign out
+    resetUserData();
+    setSession(null);
+    try {
+      await supabase.auth.signOut();
+    } catch (_) {
+      // Already deleted server-side, local cleanup is what matters
+    }
+    localStorage.clear();
+    return { success: true };
+  };
+
   // Sign out — always clear local state even if Supabase call fails
   const signOut = async () => {
     try {
@@ -593,6 +621,7 @@ export function useUserData() {
     isItemSaved,
     registerForEvent,
     refreshUserData,
+    deleteAccount,
     signOut
   };
 }

@@ -11133,6 +11133,110 @@
           background: #fee2e2;
         }
 
+        .delete-account-confirm {
+          background: #fef2f2;
+          border: 1px solid #fecaca;
+          border-radius: 12px;
+          padding: 16px;
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+
+        .delete-warning {
+          display: flex;
+          gap: 12px;
+          align-items: flex-start;
+          color: #991b1b;
+        }
+
+        .delete-warning svg {
+          flex-shrink: 0;
+          margin-top: 2px;
+        }
+
+        .delete-warning strong {
+          display: block;
+          margin-bottom: 4px;
+          font-size: 14px;
+        }
+
+        .delete-warning p {
+          margin: 0;
+          font-size: 13px;
+          color: #b91c1c;
+          line-height: 1.5;
+        }
+
+        .delete-confirm-label {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          font-size: 13px;
+          color: #991b1b;
+          font-weight: 500;
+        }
+
+        .delete-confirm-input {
+          padding: 8px 12px;
+          border: 1px solid #fca5a5;
+          border-radius: 8px;
+          font-size: 14px;
+          font-family: inherit;
+          background: white;
+          color: #1f2937;
+          outline: none;
+          transition: border-color 0.2s;
+        }
+
+        .delete-confirm-input:focus {
+          border-color: #dc2626;
+          box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+        }
+
+        .delete-confirm-actions {
+          display: flex;
+          gap: 8px;
+          justify-content: flex-end;
+        }
+
+        .delete-cancel-btn {
+          padding: 8px 16px;
+          border: 1px solid #d1d5db;
+          border-radius: 8px;
+          background: white;
+          color: #374151;
+          font-size: 13px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .delete-cancel-btn:hover {
+          background: #f3f4f6;
+        }
+
+        .delete-confirm-btn {
+          padding: 8px 16px;
+          border: none;
+          border-radius: 8px;
+          background: #dc2626;
+          color: white;
+          font-size: 13px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .delete-confirm-btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
+        .delete-confirm-btn:not(:disabled):hover {
+          background: #b91c1c;
+        }
+
         /* Mobile Profile */
         @media (max-width: 600px) {
           .profile-modal {

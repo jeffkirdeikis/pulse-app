@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import React, { memo, useState } from 'react';
 import {
   Building, Calendar, Camera, Check, CheckCircle, Clock, Edit2,
   ExternalLink, Eye, Heart, Info, MapPin, Percent, Plus, Send,
@@ -45,8 +45,11 @@ const ProfileModal = memo(function ProfileModal({
   updateProfile,
   showToast,
   toggleSaveItem,
+  deleteAccount,
 }) {
   const focusTrapRef = useFocusTrap();
+  const [deleteStep, setDeleteStep] = useState(0); // 0=hidden, 1=confirm, 2=deleting
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
   return (
     <div className="modal-overlay profile-modal-overlay" role="dialog" aria-modal="true" aria-label="Profile" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="profile-modal" ref={focusTrapRef} onClick={(e) => e.stopPropagation()}>
@@ -935,12 +938,62 @@ const ProfileModal = memo(function ProfileModal({
               <div className="settings-section danger">
                 <h3>Danger Zone</h3>
                 <div className="danger-actions">
-                  <button type="button" className="danger-btn" onClick={() => {
-                    showToast('Please contact support to delete your account', 'info');
-                  }}>
-                    <Trash2 size={16} />
-                    Delete Account
-                  </button>
+                  {deleteStep === 0 && (
+                    <button type="button" className="danger-btn" onClick={() => setDeleteStep(1)}>
+                      <Trash2 size={16} />
+                      Delete Account
+                    </button>
+                  )}
+                  {deleteStep >= 1 && (
+                    <div className="delete-account-confirm">
+                      <div className="delete-warning">
+                        <Trash2 size={20} />
+                        <div>
+                          <strong>This action is permanent</strong>
+                          <p>Your profile, saved items, calendar entries, reviews, and all associated data will be permanently deleted. This cannot be undone.</p>
+                        </div>
+                      </div>
+                      <label className="delete-confirm-label">
+                        Type <strong>DELETE</strong> to confirm:
+                        <input
+                          type="text"
+                          value={deleteConfirmText}
+                          onChange={(e) => setDeleteConfirmText(e.target.value)}
+                          placeholder="DELETE"
+                          className="delete-confirm-input"
+                          disabled={deleteStep === 2}
+                          autoComplete="off"
+                        />
+                      </label>
+                      <div className="delete-confirm-actions">
+                        <button
+                          type="button"
+                          className="delete-cancel-btn"
+                          onClick={() => { setDeleteStep(0); setDeleteConfirmText(''); }}
+                          disabled={deleteStep === 2}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          className="delete-confirm-btn"
+                          disabled={deleteConfirmText !== 'DELETE' || deleteStep === 2}
+                          onClick={async () => {
+                            setDeleteStep(2);
+                            const result = await deleteAccount();
+                            if (result?.error) {
+                              showToast(result.error, 'error');
+                              setDeleteStep(1);
+                            } else {
+                              onClose();
+                            }
+                          }}
+                        >
+                          {deleteStep === 2 ? 'Deleting...' : 'Delete My Account'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

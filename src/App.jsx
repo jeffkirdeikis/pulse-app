@@ -183,6 +183,7 @@ export default function PulseApp() {
     isItemSaved,
     registerForEvent,
     refreshUserData,
+    deleteAccount,
     signOut
   } = useUserData();
 
@@ -2079,6 +2080,7 @@ export default function PulseApp() {
               updateProfile={updateProfile}
               showToast={showToast}
               toggleSaveItem={toggleSaveItem}
+              deleteAccount={deleteAccount}
             /></Suspense>
             </motion.div>
           )}
