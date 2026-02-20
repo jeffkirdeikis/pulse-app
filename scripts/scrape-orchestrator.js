@@ -135,12 +135,27 @@ async function detectBookingSystem(html, url) {
 // falls back to title+date+venue check for events without time.
 // LESSON (Feb 6, 2026): Must include start_time in dedup check to avoid
 // dropping same-title events at different times.
+// LESSON (Feb 19, 2026): AI extractors produce slightly different titles
+// ("Strong Start" vs "StrongStart BC Program"). Added proximity check:
+// if a non-AI event exists at same venue/date within 30 min, skip.
 async function isDuplicate(event) {
   // If the event has a start_time, use the shared utility which includes time in the check
   if (event.start_time) {
     // Normalize time format (shared utility expects HH:MM)
     const time = event.start_time.length > 5 ? event.start_time.slice(0, 5) : event.start_time;
-    return classExists(event.title, event.start_date, event.venue_name, time);
+    const exactMatch = await classExists(event.title, event.start_date, event.venue_name, time);
+    if (exactMatch) return true;
+
+    // Proximity check: if this is an AI-verified event, check for any non-AI event
+    // at the same venue/date within 30 minutes (different title, same program)
+    if (event.tags && event.tags.includes('ai-verified')) {
+      const nearby = await hasNearbyEvent(event.venue_name, event.start_date, time);
+      if (nearby) {
+        console.log(`      DEDUP (proximity): "${event.title}" skipped — similar event already at ${event.venue_name} on ${event.start_date} near ${time}`);
+        return true;
+      }
+    }
+    return false;
   }
 
   // Fallback for events without start_time: check title+date+venue
@@ -169,6 +184,46 @@ async function isDuplicate(event) {
     }
   } catch (e) {
     // If check fails, allow insertion (database constraints will catch real dupes)
+  }
+  return false;
+}
+
+// Check if a non-AI event already exists at the same venue/date within 30 min of the given time.
+// This catches fuzzy duplicates where AI extraction produces a slightly different title/time.
+async function hasNearbyEvent(venueName, date, time) {
+  try {
+    const [h, m] = time.split(':').map(Number);
+    const totalMin = h * 60 + m;
+    const loMin = Math.max(0, totalMin - 30);
+    const hiMin = totalMin + 30;
+    const loTime = `${String(Math.floor(loMin / 60)).padStart(2, '0')}:${String(loMin % 60).padStart(2, '0')}:00`;
+    const hiTime = `${String(Math.floor(hiMin / 60)).padStart(2, '0')}:${String(hiMin % 60).padStart(2, '0')}:00`;
+
+    const params = new URLSearchParams({
+      venue_name: `ilike.${venueName}`,
+      start_date: `eq.${date}`,
+      start_time: `gte.${loTime}`,
+      select: 'id,tags',
+      limit: '10'
+    });
+
+    const response = await fetch(
+      `${SUPABASE_URL}/rest/v1/events?${params}&start_time=lte.${encodeURIComponent(hiTime)}`,
+      {
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`
+        }
+      }
+    );
+
+    if (response.ok) {
+      const data = await response.json();
+      // Only count non-AI events as "already covered"
+      return data.some(e => !e.tags || !e.tags.includes('ai-verified'));
+    }
+  } catch (e) {
+    // On error, allow insertion
   }
   return false;
 }
