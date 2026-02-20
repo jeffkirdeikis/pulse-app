@@ -65,7 +65,7 @@ async function getBusinessByName(name) {
 async function checkDealExists(title, businessName) {
   try {
     const response = await fetch(
-      `${SUPABASE_URL}/rest/v1/deals?title=eq.${encodeURIComponent(title)}&business_name=eq.${encodeURIComponent(businessName)}`,
+      `${SUPABASE_URL}/rest/v1/deals?title=ilike.${encodeURIComponent(title)}&business_name=ilike.${encodeURIComponent(businessName)}`,
       { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }
     );
     const data = await response.json();

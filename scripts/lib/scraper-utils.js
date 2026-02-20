@@ -199,7 +199,7 @@ export function parseDateHeader(line, fallbackYear) {
  */
 export async function classExists(title, date, venueName, time) {
   try {
-    let url = `${SUPABASE_URL}/rest/v1/events?title=eq.${encodeURIComponent(title)}&start_date=eq.${date}&venue_name=eq.${encodeURIComponent(venueName)}`;
+    let url = `${SUPABASE_URL}/rest/v1/events?title=ilike.${encodeURIComponent(title)}&start_date=eq.${date}&venue_name=ilike.${encodeURIComponent(venueName)}`;
     if (time) {
       const normalizedTime = time.length === 5 ? `${time}:00` : time;
       url += `&start_time=eq.${encodeURIComponent(normalizedTime)}`;

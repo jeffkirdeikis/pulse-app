@@ -155,7 +155,7 @@ function parseTime(timeStr) {
  */
 async function classExists(title, date, studioName, time) {
   try {
-    let url = `${SUPABASE_URL}/rest/v1/events?title=eq.${encodeURIComponent(title)}&start_date=eq.${date}&venue_name=eq.${encodeURIComponent(studioName)}`;
+    let url = `${SUPABASE_URL}/rest/v1/events?title=ilike.${encodeURIComponent(title)}&start_date=eq.${date}&venue_name=ilike.${encodeURIComponent(studioName)}`;
     if (time) {
       const normalizedTime = time.length === 5 ? `${time}:00` : time;
       url += `&start_time=eq.${encodeURIComponent(normalizedTime)}`;

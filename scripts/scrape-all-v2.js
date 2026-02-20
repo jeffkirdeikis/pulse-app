@@ -281,7 +281,7 @@ async function insertEvent(event, business, isClass = false) {
 
   // Check for duplicate
   const checkResponse = await fetch(
-    `${SUPABASE_URL}/rest/v1/events?title=eq.${encodeURIComponent(event.title)}&venue_name=eq.${encodeURIComponent(business.name)}&limit=1`,
+    `${SUPABASE_URL}/rest/v1/events?title=ilike.${encodeURIComponent(event.title)}&venue_name=ilike.${encodeURIComponent(business.name)}&limit=1`,
     {
       headers: {
         'apikey': SUPABASE_KEY,
@@ -347,7 +347,7 @@ async function insertDeal(deal, business) {
 
   // Check for duplicate
   const checkResponse = await fetch(
-    `${SUPABASE_URL}/rest/v1/deals?title=eq.${encodeURIComponent(deal.title)}&business_name=eq.${encodeURIComponent(business.name)}&limit=1`,
+    `${SUPABASE_URL}/rest/v1/deals?title=ilike.${encodeURIComponent(deal.title)}&business_name=ilike.${encodeURIComponent(business.name)}&limit=1`,
     {
       headers: {
         'apikey': SUPABASE_KEY,

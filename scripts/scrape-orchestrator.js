@@ -146,9 +146,9 @@ async function isDuplicate(event) {
   // Fallback for events without start_time: check title+date+venue
   try {
     const params = new URLSearchParams({
-      title: `eq.${event.title}`,
+      title: `ilike.${event.title}`,
       start_date: `eq.${event.start_date}`,
-      venue_name: `eq.${event.venue_name}`,
+      venue_name: `ilike.${event.venue_name}`,
       select: 'id',
       limit: '1'
     });

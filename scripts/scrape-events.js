@@ -372,8 +372,8 @@ async function checkEventExists(title, date, isClass = false) {
   // For classes, just check title (they're ongoing, not date-specific)
   // For events, check title + date
   const query = isClass
-    ? `${SUPABASE_URL}/rest/v1/events?title=eq.${encodeURIComponent(title)}&event_type=eq.class`
-    : `${SUPABASE_URL}/rest/v1/events?title=eq.${encodeURIComponent(title)}&start_date=eq.${date}`;
+    ? `${SUPABASE_URL}/rest/v1/events?title=ilike.${encodeURIComponent(title)}&event_type=eq.class`
+    : `${SUPABASE_URL}/rest/v1/events?title=ilike.${encodeURIComponent(title)}&start_date=eq.${date}`;
 
   const response = await fetch(query, {
     headers: {
