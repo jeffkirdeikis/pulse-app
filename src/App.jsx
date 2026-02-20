@@ -99,10 +99,16 @@ export default function PulseApp() {
   const [searchQuery, setSearchQuery] = useState('');
 
   // Sync URL → state when location changes (browser back/forward)
+  // Skip section sync for detail routes (/events/123, /deals/456) so opening a
+  // class detail from the classes tab doesn't switch currentSection to 'events'
   useEffect(() => {
+    const segments = location.pathname.replace(/^\/+/, '').split('/');
+    const isDetailRoute = segments.length >= 2 && segments[1]; // e.g. /events/123
     const s = pathToState(location.pathname);
     setViewRaw(s.view);
-    setCurrentSectionRaw(s.section);
+    if (!isDetailRoute) {
+      setCurrentSectionRaw(s.section);
+    }
   }, [location.pathname]);
 
   // Wrappers that update both state AND URL
@@ -122,33 +128,60 @@ export default function PulseApp() {
   const [selectedDeal, setSelectedDeal] = useState(null);
   const [selectedService, setSelectedService] = useState(null);
 
+  // Save section + scroll position before opening detail modals so we can restore on close
+  const preModalStateRef = useRef(null);
+
   // Deep-link-aware select/close for detail modals
   const selectEvent = useCallback((evt) => {
+    if (evt) {
+      preModalStateRef.current = { section: currentSection, scrollY: window.scrollY };
+    }
     setSelectedEvent(evt);
     if (evt) navigate(`/events/${evt.id}`);
-  }, [navigate]);
+  }, [navigate, currentSection]);
   const closeEvent = useCallback(() => {
     setSelectedEvent(null);
-    const section = currentSection === 'events' ? 'events' : 'classes';
+    const saved = preModalStateRef.current;
+    const section = saved ? saved.section : (currentSection === 'events' ? 'events' : 'classes');
     navigate(`/${section}`);
+    if (saved) {
+      requestAnimationFrame(() => window.scrollTo(0, saved.scrollY));
+      preModalStateRef.current = null;
+    }
   }, [navigate, currentSection]);
 
   const selectDeal = useCallback((deal) => {
+    if (deal) {
+      preModalStateRef.current = { section: currentSection, scrollY: window.scrollY };
+    }
     setSelectedDeal(deal);
     if (deal) navigate(`/deals/${deal.id}`);
-  }, [navigate]);
+  }, [navigate, currentSection]);
   const closeDeal = useCallback(() => {
     setSelectedDeal(null);
+    const saved = preModalStateRef.current;
     navigate('/deals');
+    if (saved) {
+      requestAnimationFrame(() => window.scrollTo(0, saved.scrollY));
+      preModalStateRef.current = null;
+    }
   }, [navigate]);
 
   const selectService = useCallback((svc) => {
+    if (svc) {
+      preModalStateRef.current = { section: currentSection, scrollY: window.scrollY };
+    }
     setSelectedService(svc);
     if (svc) navigate(`/services/${svc.id}`);
-  }, [navigate]);
+  }, [navigate, currentSection]);
   const closeService = useCallback(() => {
     setSelectedService(null);
+    const saved = preModalStateRef.current;
     navigate('/services');
+    if (saved) {
+      requestAnimationFrame(() => window.scrollTo(0, saved.scrollY));
+      preModalStateRef.current = null;
+    }
   }, [navigate]);
   // Refresh current time every 5 minutes so filters stay fresh for long-idle sessions
   const [currentTime, setCurrentTime] = useState(() => getPacificNow());
