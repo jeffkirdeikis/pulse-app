@@ -45,15 +45,28 @@ export function useCalendar({ myCalendar, isAuthenticated, session, registerForE
 
     if (!isAlreadyInCalendar && isAuthenticated) {
       try {
+        // Build date as YYYY-MM-DD and time as HH:MM (24h) for PostgreSQL
+        let pgDate = event.date;
+        let pgTime = event.time;
+        if (event.start && !isNaN(event.start.getTime())) {
+          const parts = new Intl.DateTimeFormat('en-CA', {
+            timeZone: PACIFIC_TZ,
+            year: 'numeric', month: '2-digit', day: '2-digit',
+            hour: '2-digit', minute: '2-digit', hour12: false,
+          }).formatToParts(event.start);
+          const get = (type) => parts.find(p => p.type === type)?.value || '00';
+          pgDate = `${get('year')}-${get('month')}-${get('day')}`;
+          pgTime = `${get('hour')}:${get('minute')}`;
+        }
         const result = await registerForEvent({
+          ...event,
           id: event.id,
           eventType: event.eventType || 'event',
           title: event.title,
-          date: event.start && !isNaN(event.start.getTime()) ? `${event.start.getFullYear()}-${String(event.start.getMonth() + 1).padStart(2, '0')}-${String(event.start.getDate()).padStart(2, '0')}` : event.date,
-          time: event.start && !isNaN(event.start.getTime()) ? event.start.toLocaleTimeString('en-US', { timeZone: PACIFIC_TZ, hour: 'numeric', minute: '2-digit' }) : event.time,
+          date: pgDate,
+          time: pgTime,
           venue: getVenueName(event.venueId, event),
           address: event.location || event.address || '',
-          ...event
         });
         if (result?.error) throw result.error;
         showToast(`"${event.title}" added to My Calendar!`);
