@@ -245,9 +245,11 @@ async function runAuthenticatedTests(errors, warnings, screenshots) {
   const page = await browser.newPage();
   await page.setViewport({ width: 430, height: 932 });
 
-  // Inject session into localStorage before any JS runs
+  // Inject session into localStorage and block popups (window.open for Google Calendar)
   await page.evaluateOnNewDocument((key, payload) => {
     localStorage.setItem(key, payload);
+    // Prevent window.open from disrupting Puppeteer (calendar opens Google Calendar in new tab)
+    window.open = () => null;
   }, storageKey, sessionPayload);
 
   // Suppress expected console noise
