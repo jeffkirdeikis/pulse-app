@@ -206,7 +206,7 @@ const ConsumerHeader = React.memo(function ConsumerHeader({
               role="tab"
               aria-selected={currentSection === 'classes'}
               className={`banner-tab ${currentSection === 'classes' ? 'active' : ''}`}
-              onClick={() => { setCurrentSection('classes'); setServicesSubView('directory'); setFilters(f => ({...f, category: 'all'})); window.history.pushState({ section: 'classes' }, '', '#classes'); }}
+              onClick={() => { setCurrentSection('classes'); setServicesSubView('directory'); setFilters(f => ({...f, category: 'all'}));  }}
             >
               <Calendar size={18} />
               <span>Classes</span>
@@ -218,7 +218,7 @@ const ConsumerHeader = React.memo(function ConsumerHeader({
               role="tab"
               aria-selected={currentSection === 'events'}
               className={`banner-tab ${currentSection === 'events' ? 'active' : ''}`}
-              onClick={() => { setCurrentSection('events'); setServicesSubView('directory'); setFilters(f => ({...f, category: 'all'})); window.history.pushState({ section: 'events' }, '', '#events'); }}
+              onClick={() => { setCurrentSection('events'); setServicesSubView('directory'); setFilters(f => ({...f, category: 'all'}));  }}
             >
               <Star size={18} />
               <span>Events</span>
@@ -230,7 +230,7 @@ const ConsumerHeader = React.memo(function ConsumerHeader({
               role="tab"
               aria-selected={currentSection === 'deals'}
               className={`banner-tab ${currentSection === 'deals' ? 'active' : ''}`}
-              onClick={() => { setCurrentSection('deals'); setServicesSubView('directory'); setFilters(f => ({...f, category: 'all'})); window.history.pushState({ section: 'deals' }, '', '#deals'); }}
+              onClick={() => { setCurrentSection('deals'); setServicesSubView('directory'); setFilters(f => ({...f, category: 'all'}));  }}
             >
               <DollarSign size={18} />
               <span>Deals</span>
@@ -247,7 +247,7 @@ const ConsumerHeader = React.memo(function ConsumerHeader({
               role="tab"
               aria-selected={currentSection === 'services'}
               className={`banner-tab ${currentSection === 'services' ? 'active' : ''}`}
-              onClick={() => { setCurrentSection('services'); window.history.pushState({ section: 'services' }, '', '#services'); }}
+              onClick={() => { setCurrentSection('services');  }}
             >
               <Wrench size={18} />
               <span>Services</span>
@@ -258,7 +258,7 @@ const ConsumerHeader = React.memo(function ConsumerHeader({
               role="tab"
               aria-selected={currentSection === 'wellness'}
               className={`banner-tab ${currentSection === 'wellness' ? 'active' : ''}`}
-              onClick={() => { setCurrentSection('wellness'); window.history.pushState({ section: 'wellness' }, '', '#wellness'); }}
+              onClick={() => { setCurrentSection('wellness');  }}
             >
               <Heart size={18} />
               <span>Wellness</span>

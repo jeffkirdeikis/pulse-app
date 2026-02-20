@@ -1,5 +1,6 @@
 import { StrictMode, lazy, Suspense } from 'react'
 import { createRoot } from 'react-dom/client'
+import { BrowserRouter } from 'react-router-dom'
 import './index.css'
 import App from './App.jsx'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
@@ -12,17 +13,22 @@ const Analytics = lazy(() => import('@vercel/analytics/react').then(m => ({ defa
 initSentry()
 
 const isProduction = import.meta.env.PROD
+// In production, app is served at /squamish via Vercel rewrite.
+// In dev, serve from root.
+const basename = isProduction ? '/squamish' : ''
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <ErrorBoundary>
-      <App />
-      {isProduction && (
-        <Suspense fallback={null}>
-          <SpeedInsights />
-          <Analytics />
-        </Suspense>
-      )}
-    </ErrorBoundary>
+    <BrowserRouter basename={basename}>
+      <ErrorBoundary>
+        <App />
+        {isProduction && (
+          <Suspense fallback={null}>
+            <SpeedInsights />
+            <Analytics />
+          </Suspense>
+        )}
+      </ErrorBoundary>
+    </BrowserRouter>
   </StrictMode>,
 )

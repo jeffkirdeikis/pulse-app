@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo, Suspense, lazy } from 'react';
+import { Routes, Route, Navigate, useNavigate, useLocation, useParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowUp, Calendar, Check, X, Plus, CheckCircle, Moon, Percent, Sparkles, Sun, Sunset, LayoutList, List } from 'lucide-react';
 import { supabase } from './lib/supabase';
@@ -64,10 +65,57 @@ const AGE_RANGE_OPTIONS = [
   { label: '13-18', min: 13, max: 18 }
 ];
 
+// Map URL paths to internal section/view state
+function pathToState(pathname) {
+  const clean = pathname.replace(/^\/+/, '').split('/')[0] || '';
+  const sectionMap = { classes: 'classes', events: 'events', deals: 'deals', services: 'services', wellness: 'wellness' };
+  if (sectionMap[clean]) return { view: 'consumer', section: sectionMap[clean] };
+  if (clean === 'business') return { view: 'business', section: 'classes' };
+  if (clean === 'admin') return { view: 'admin', section: 'classes' };
+  return { view: 'consumer', section: 'classes' };
+}
+
+// Redirect legacy hash URLs (#classes, #events, etc.) to proper routes
+function HashRedirect() {
+  const location = useLocation();
+  const hash = location.hash.replace('#', '');
+  // Don't redirect OAuth callback hashes
+  if (hash.includes('access_token') || hash.includes('error_description')) return null;
+  const validSections = ['classes', 'events', 'deals', 'services', 'wellness'];
+  if (validSections.includes(hash)) {
+    return <Navigate to={`/${hash}`} replace />;
+  }
+  return null;
+}
+
 export default function PulseApp() {
-  const [view, setView] = useState('consumer');
-  const [currentSection, setCurrentSection] = useState('classes'); // classes, events, deals, services, wellness - DEFAULT TO CLASSES
+  const navigate = useNavigate();
+  const location = useLocation();
+  const routeState = pathToState(location.pathname);
+
+  const [view, setViewRaw] = useState(routeState.view);
+  const [currentSection, setCurrentSectionRaw] = useState(routeState.section);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Sync URL → state when location changes (browser back/forward)
+  useEffect(() => {
+    const s = pathToState(location.pathname);
+    setViewRaw(s.view);
+    setCurrentSectionRaw(s.section);
+  }, [location.pathname]);
+
+  // Wrappers that update both state AND URL
+  const setView = useCallback((v) => {
+    setViewRaw(v);
+    if (v === 'business') navigate('/business');
+    else if (v === 'admin') navigate('/admin');
+    else navigate('/classes');
+  }, [navigate]);
+
+  const setCurrentSection = useCallback((section) => {
+    setCurrentSectionRaw(section);
+    navigate(`/${section}`);
+  }, [navigate]);
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [selectedDeal, setSelectedDeal] = useState(null);
@@ -400,75 +448,45 @@ export default function PulseApp() {
     fetchAdminClaims();
   }, [fetchAdminClaims]);
 
-  // Handle /admin path route — auto-switch to admin view for admin users
+  // Handle /admin route — redirect non-admins
   useEffect(() => {
-    if (window.location.pathname === '/admin') {
-      if (user?.isAdmin) {
-        setView('admin');
-      } else if (user?.isGuest) {
-        // Guest on /admin — prompt sign in
+    if (location.pathname === '/admin' || location.pathname.startsWith('/admin')) {
+      if (user?.isGuest) {
         setShowAuthModal(true);
-      } else {
-        // Logged in but not admin — redirect to home
-        window.history.replaceState(null, '', '/');
+      } else if (!user?.isAdmin && !user?.isGuest) {
+        navigate('/classes', { replace: true });
       }
     }
-  }, [user?.isAdmin, user?.isGuest]);
+  }, [user?.isAdmin, user?.isGuest, location.pathname, navigate]);
 
-  // Browser history management for tab navigation
+  // Close modals on browser back/forward (React Router handles popstate,
+  // but we still need to close any open modals when the route changes)
+  const prevPathnameRef = useRef(location.pathname);
   useEffect(() => {
-    const hash = window.location.hash.replace('#', '');
-    const validSections = ['classes', 'events', 'deals', 'services', 'wellness'];
-    // Don't overwrite hash if it contains OAuth callback tokens
-    let authTimer;
-    if (hash.includes('access_token') || hash.includes('error_description')) {
-      // Let Supabase client handle the auth callback, then default to classes
-      authTimer = setTimeout(() => {
-        if (!window.location.hash.includes('access_token')) return;
-        window.history.replaceState({ section: 'classes' }, '', '#classes');
-      }, 2000);
-    } else if (validSections.includes(hash)) {
-      setCurrentSection(hash);
-    } else if (window.location.pathname !== '/admin') {
-      // Invalid hash — fix URL to default section (but not on /admin route)
-      setCurrentSection('classes');
-      window.history.replaceState({ section: 'classes' }, '', '#classes');
-    }
-    const handlePopState = (e) => {
-      // Close any open modals on back button (critical for mobile UX)
-      // Read from ref to avoid stale closure (this handler is created once on mount)
-      const m = openModalRef.current;
-      if (m.showBookingConfirmation) { handleBookingConfirmationRef.current(false); return; }
-      if (m.showImageCropper) { setShowImageCropper(false); return; }
-      if (m.showBookingSheet) { closeBookingSheetRef.current(); return; }
-      if (m.showContactSheet) { setShowContactSheet(false); setContactBusiness(null); setContactSubject(''); setContactMessage(''); return; }
-      if (m.showEditEventModal) { setShowEditEventModal(false); setEditingEvent(null); return; }
-      if (m.showEditVenueModal) { setShowEditVenueModal(false); return; }
-      if (m.showAddEventModal) { setShowAddEventModal(false); return; }
-      if (m.selectedEvent) { setSelectedEvent(null); return; }
-      if (m.selectedDeal) { setSelectedDeal(null); return; }
-      if (m.selectedService) { setSelectedService(null); return; }
-      if (m.showSubmissionModal) { setShowSubmissionModal(false); return; }
-      if (m.showMyCalendarModal) { setShowMyCalendarModal(false); return; }
-      if (m.showMessagesModal) { setShowMessagesModal(false); setCurrentConversation(null); setMessageInput(''); return; }
-      if (m.showProfileModal) { setShowProfileModal(false); return; }
-      if (m.showClaimBusinessModal) { setShowClaimBusinessModal(false); setClaimFormData({ businessName: '', ownerName: '', email: '', phone: '', role: 'owner', address: '' }); setClaimVerificationStep('form'); setClaimVerificationCode(''); setClaimId(null); setClaimResendCooldown(0); if (claimCooldownTimerRef.current) { clearInterval(claimCooldownTimerRef.current); claimCooldownTimerRef.current = null; } setClaimDocuments([]); setClaimVerificationMethod('email'); setClaimSelectedBusiness(null); setClaimSearchQuery(''); return; }
-      if (m.showAuthModal) { setShowAuthModal(false); return; }
-      if (m.showAdminPanel) { setShowAdminPanel(false); return; }
-      if (m.showNotifications) { setShowNotifications(false); return; }
-      if (m.showProfileMenu) { setShowProfileMenu(false); return; }
-
-      const section = e.state?.section || window.location.hash.replace('#', '') || 'classes';
-      if (validSections.includes(section)) {
-        setCurrentSection(section);
-      }
-    };
-    window.addEventListener('popstate', handlePopState);
-    return () => {
-      if (authTimer) clearTimeout(authTimer);
-      window.removeEventListener('popstate', handlePopState);
-    };
-  }, []);
+    if (prevPathnameRef.current === location.pathname) return;
+    prevPathnameRef.current = location.pathname;
+    // Close any open modals on route change
+    const m = openModalRef.current;
+    if (m.showBookingConfirmation) { handleBookingConfirmationRef.current(false); return; }
+    if (m.showImageCropper) { setShowImageCropper(false); return; }
+    if (m.showBookingSheet) { closeBookingSheetRef.current(); return; }
+    if (m.showContactSheet) { setShowContactSheet(false); setContactBusiness(null); setContactSubject(''); setContactMessage(''); return; }
+    if (m.showEditEventModal) { setShowEditEventModal(false); setEditingEvent(null); return; }
+    if (m.showEditVenueModal) { setShowEditVenueModal(false); return; }
+    if (m.showAddEventModal) { setShowAddEventModal(false); return; }
+    if (m.selectedEvent) { setSelectedEvent(null); return; }
+    if (m.selectedDeal) { setSelectedDeal(null); return; }
+    if (m.selectedService) { setSelectedService(null); return; }
+    if (m.showSubmissionModal) { setShowSubmissionModal(false); return; }
+    if (m.showMyCalendarModal) { setShowMyCalendarModal(false); return; }
+    if (m.showMessagesModal) { setShowMessagesModal(false); setCurrentConversation(null); setMessageInput(''); return; }
+    if (m.showProfileModal) { setShowProfileModal(false); return; }
+    if (m.showClaimBusinessModal) { setShowClaimBusinessModal(false); setClaimFormData({ businessName: '', ownerName: '', email: '', phone: '', role: 'owner', address: '' }); setClaimVerificationStep('form'); setClaimVerificationCode(''); setClaimId(null); setClaimResendCooldown(0); if (claimCooldownTimerRef.current) { clearInterval(claimCooldownTimerRef.current); claimCooldownTimerRef.current = null; } setClaimDocuments([]); setClaimVerificationMethod('email'); setClaimSelectedBusiness(null); setClaimSearchQuery(''); return; }
+    if (m.showAuthModal) { setShowAuthModal(false); return; }
+    if (m.showAdminPanel) { setShowAdminPanel(false); return; }
+    if (m.showNotifications) { setShowNotifications(false); return; }
+    if (m.showProfileMenu) { setShowProfileMenu(false); return; }
+  }, [location.pathname]);
 
   // Track analytics event
   const trackAnalytics = useCallback(async (eventType, businessId, referenceId = null) => {
@@ -934,7 +952,6 @@ export default function PulseApp() {
         const num = parseInt(e.key);
         if (num >= 1 && num <= 5) {
           setCurrentSection(tabs[num - 1]);
-          window.history.pushState({ section: tabs[num - 1] }, '', `#${tabs[num - 1]}`);
         }
       }
     };
@@ -1762,6 +1779,12 @@ export default function PulseApp() {
 
   return (
     <div className="pulse-app">
+      <HashRedirect />
+      {/* Catch-all: redirect bare root to /classes */}
+      <Routes>
+        <Route path="/" element={<Navigate to="/classes" replace />} />
+        <Route path="*" element={null} />
+      </Routes>
       <a href="#main-content" className="skip-link">Skip to content</a>
       {(user.isAdmin || userClaimedBusinesses.length > 0) && (
         <div className="view-switcher">
@@ -2552,10 +2575,10 @@ export default function PulseApp() {
             <div className="footer-links">
               <div className="footer-link-group">
                 <h4>Explore</h4>
-                <button onClick={() => { setCurrentSection('classes'); window.history.pushState({ section: 'classes' }, '', '#classes'); window.scrollTo(0, 0); }}>Classes</button>
-                <button onClick={() => { setCurrentSection('events'); window.history.pushState({ section: 'events' }, '', '#events'); window.scrollTo(0, 0); }}>Events</button>
-                <button onClick={() => { setCurrentSection('deals'); window.history.pushState({ section: 'deals' }, '', '#deals'); window.scrollTo(0, 0); }}>Deals</button>
-                <button onClick={() => { setCurrentSection('services'); window.history.pushState({ section: 'services' }, '', '#services'); window.scrollTo(0, 0); }}>Services</button>
+                <button onClick={() => { setCurrentSection('classes'); window.scrollTo(0, 0); }}>Classes</button>
+                <button onClick={() => { setCurrentSection('events'); window.scrollTo(0, 0); }}>Events</button>
+                <button onClick={() => { setCurrentSection('deals'); window.scrollTo(0, 0); }}>Deals</button>
+                <button onClick={() => { setCurrentSection('services'); window.scrollTo(0, 0); }}>Services</button>
               </div>
               <div className="footer-link-group">
                 <h4>For Business</h4>
