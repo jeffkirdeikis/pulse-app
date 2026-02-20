@@ -77,8 +77,10 @@ export function useCalendar({ myCalendar, isAuthenticated, session, registerForE
       }
     } else if (isAlreadyInCalendar) {
       showToast(`"${event.title}" is already in your calendar`);
+      window.open(generateGoogleCalendarUrl(event), '_blank');
     } else {
-      showToast('Sign in to add events to your calendar');
+      // Not authenticated — still open Google Calendar, just skip saving to in-app calendar
+      window.open(generateGoogleCalendarUrl(event), '_blank');
     }
   }, [myCalendar, isAuthenticated, registerForEvent, getVenueName, showToast, generateGoogleCalendarUrl, onCalendarAdd]);
 

@@ -2553,6 +2553,7 @@ export default function PulseApp() {
           event={selectedEvent}
           onClose={closeEvent}
           getVenueName={getVenueName}
+          venues={REAL_DATA.venues}
           isVerified={isVerified}
           isInMyCalendar={isInMyCalendar}
           addToCalendar={addToCalendar}

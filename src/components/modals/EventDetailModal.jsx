@@ -6,11 +6,13 @@ import {
   Users, Building, Zap
 } from 'lucide-react';
 import { PACIFIC_TZ } from '../../utils/timezoneHelpers';
+import { getBookingUrl } from '../../utils/bookingHelpers';
 
 const EventDetailModal = memo(function EventDetailModal({
   event,
   onClose,
   getVenueName,
+  venues,
   isVerified,
   isInMyCalendar,
   addToCalendar,
@@ -32,6 +34,8 @@ const EventDetailModal = memo(function EventDetailModal({
   const inCalendar = isInMyCalendar?.(event.id);
   const venueName = getVenueName(event.venueId, event);
   const venueVerified = isVerified(event.venueId);
+  const venue = venues?.find(v => v.id === event.venueId);
+  const venueInfoUrl = getBookingUrl(venueName) || venue?.website || null;
 
   const handleShare = async () => {
     const shareData = {
@@ -261,13 +265,15 @@ const EventDetailModal = memo(function EventDetailModal({
           >
             {inCalendar ? (<><Check size={18} /> Added to Calendar</>) : (<><Calendar size={18} /> Add to Calendar</>)}
           </button>
-          <a
-            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(venueName + ' Squamish BC')}`}
-            target="_blank" rel="noopener noreferrer" className="event-cta-btn secondary"
-          >
-            <MapPin size={18} />
-            View Venue
-          </a>
+          {venueInfoUrl && (
+            <a
+              href={venueInfoUrl}
+              target="_blank" rel="noopener noreferrer" className="event-cta-btn secondary"
+            >
+              <MapPin size={18} />
+              View Venue
+            </a>
+          )}
         </div>
 
         {/* Footer */}
