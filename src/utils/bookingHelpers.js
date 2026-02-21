@@ -2,40 +2,32 @@
 // Sources: Mindbody, WellnessLiving, JaneApp scrapers
 
 const BOOKING_SYSTEMS = {
-  // Mindbody Widget API
+  // Venue websites with embedded booking widgets (best UX — no Cloudflare issues)
   'Shala Yoga': {
-    type: 'mindbody',
-    bookingUrl: 'https://clients.mindbodyonline.com/classic/ws?studioid=189264',
-    widgetId: '189264'
+    type: 'website',
+    bookingUrl: 'https://shalayoga.ca/booking'
   },
   'Wild Life Gym': {
-    type: 'mindbody',
-    bookingUrl: 'https://clients.mindbodyonline.com/classic/ws?studioid=69441',
-    widgetId: '69441'
+    type: 'website',
+    bookingUrl: 'https://wildlifegym.com/group-class-schedule/'
   },
-  // Mindbody Classic Interface
   'Squamish Barbell': {
-    type: 'mindbody',
-    bookingUrl: 'https://clients.mindbodyonline.com/classic/mainclass?studioid=7879&tg=7',
-    studioId: '7879'
+    type: 'janeapp',
+    bookingUrl: 'https://squamishbarbell.janeapp.com/'
   },
   'Seed Studio': {
-    type: 'mindbody',
-    bookingUrl: 'https://clients.mindbodyonline.com/classic/mainclass?studioid=5729485&tg=7',
-    studioId: '5729485'
+    type: 'website',
+    bookingUrl: 'https://www.seedsquamish.com/class-schedule'
   },
-  // Mindbody BrandedWeb
   'Oxygen Yoga & Fitness': {
-    type: 'mindbody',
-    bookingUrl: 'https://oxygenyogaandfitness.com/squamish/schedule/',
-    widgetId: '5922581a2'
+    type: 'website',
+    bookingUrl: 'https://oxygenyogaandfitness.com/squamish/'
   },
   'Oxygen Yoga & Fitness Squamish': {
-    type: 'mindbody',
-    bookingUrl: 'https://oxygenyogaandfitness.com/squamish/schedule/',
-    widgetId: '5922581a2'
+    type: 'website',
+    bookingUrl: 'https://oxygenyogaandfitness.com/squamish/'
   },
-  // WellnessLiving
+  // WellnessLiving (these work reliably)
   'Breathe Fitness Studio': {
     type: 'wellnessliving',
     bookingUrl: 'https://www.wellnessliving.com/schedule/breathe_fitness_squamish',
@@ -51,15 +43,14 @@ const BOOKING_SYSTEMS = {
     bookingUrl: 'https://www.wellnessliving.com/schedule/thesoundmartialarts',
     businessId: '414578'
   },
-  // Ground Up Climbing - direct website
+  // Direct websites
   'Ground Up Climbing Centre': {
     type: 'website',
-    bookingUrl: 'https://groundupclimbing.ca/schedule'
+    bookingUrl: 'https://climbgroundup.com/'
   },
-  // Mountain Fitness Center
   'Mountain Fitness Center': {
     type: 'website',
-    bookingUrl: 'https://mountainfitnesscenter.ca/'
+    bookingUrl: 'https://mountainfitnesscenter.ca/classes'
   }
 };
 

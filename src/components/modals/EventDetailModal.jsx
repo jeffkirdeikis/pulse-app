@@ -251,8 +251,16 @@ const EventDetailModal = memo(function EventDetailModal({
 
           {/* Category & Tags (filter out internal/system tags) */}
           {(() => {
-            const internalPatterns = /^(auto-scraped|mindbody|wellnessliving|janeapp|scraped|source-|manual-entry|healcode|brandedweb)/i;
-            const userTags = event.tags?.filter(t => !internalPatterns.test(t) && !t.includes('-classic') && !t.includes('-api')) || [];
+            const internalPatterns = /^(auto-scraped|mindbody|wellnessliving|janeapp|scraped|source-|manual-entry|healcode|brandedweb|community-submitted)/i;
+            // Also filter venue-name slugs (kebab-case of the venue name)
+            const venueSlug = venueName ? venueName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') : '';
+            const userTags = event.tags?.filter(t => {
+              if (internalPatterns.test(t)) return false;
+              if (t.includes('-classic') || t.includes('-api')) return false;
+              // Filter venue-name slugs (e.g. "shala-yoga", "squamish-barbell")
+              if (venueSlug && t.toLowerCase() === venueSlug) return false;
+              return true;
+            }) || [];
             const hasContent = event.category || userTags.length > 0;
             return hasContent ? (
               <div className="event-about-tags" style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: event.description ? '12px' : '0' }}>
