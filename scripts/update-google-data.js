@@ -45,7 +45,7 @@ async function getPlaceDetails(placeId) {
 }
 
 async function getBusinesses() {
-  const response = await fetch(`${SUPABASE_URL}/rest/v1/businesses?select=id,name,address,google_place_id&order=updated_at.asc&limit=100`, {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/businesses?select=id,name,address,google_place_id&google_rating=is.null&status=eq.active&order=name.asc&limit=1000`, {
     headers: {
       'apikey': SUPABASE_KEY,
       'Authorization': `Bearer ${SUPABASE_KEY}`
