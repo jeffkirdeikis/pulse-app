@@ -1315,9 +1315,65 @@ async function main() {
     ...tourismEvents
   ];
 
-  console.log(`\n--- Inserting ${allEvents.length} events ---`);
+  // Cross-source dedup: when multiple scrapers find the same event, keep the best one.
+  // Normalize titles by removing venue suffixes ("@ The BAG", "at Trickster's"), collapsing
+  // spaces, and lowercasing. Events with the same normalized title + date + time hour are
+  // considered duplicates. Prefer venue-specific scrapers over aggregators.
+  const VENUE_SUFFIX = /\s*[@(].*$/i;                    // "PWR UP @ The BAG" → "PWR UP"
+  const AT_VENUE     = /\s+at\s+(?:the\s+)?[\w'']+.*$/i; // "Trivia at Trickster's" → "Trivia"
+  function normalizeTitle(title) {
+    return (title || '')
+      .replace(VENUE_SUFFIX, '')
+      .replace(AT_VENUE, '')
+      .replace(/['']/g, '')        // remove apostrophes
+      .replace(/\s+/g, '')         // collapse all whitespace
+      .toLowerCase();
+  }
+
+  // Priority: venue-specific scrapers > aggregators. Lower = better.
+  const SOURCE_PRIORITY = {
+    'tricksters-hideout': 1, 'brackendale-art-gallery': 1, 'a-frame-brewing': 1,
+    'arrow-wood-games': 1, 'sea-to-sky-gondola': 1, 'squamish-library': 1,
+    'squamish-arts': 2, 'tourism-squamish': 3
+  };
+  function eventPriority(evt) {
+    const tag = evt.tags?.find(t => SOURCE_PRIORITY[t] !== undefined);
+    return tag ? SOURCE_PRIORITY[tag] : 4;
+  }
+
+  const seen = new Map(); // key → event index in allEvents
+  const deduped = [];
+  let crossDupes = 0;
 
   for (const event of allEvents) {
+    const normTitle = normalizeTitle(event.title);
+    const timeHour = event.time ? event.time.substring(0, 2) : '??';
+    const key = `${normTitle}|${event.date}|${timeHour}`;
+
+    const existingIdx = seen.get(key);
+    if (existingIdx !== undefined) {
+      // Keep the higher-priority (lower number) event
+      const existing = deduped[existingIdx];
+      if (eventPriority(event) < eventPriority(existing)) {
+        console.log(`   [cross-dedup] Replacing "${existing.title}" with "${event.title}" (higher priority source)`);
+        deduped[existingIdx] = event;
+      } else {
+        console.log(`   [cross-dedup] Dropping "${event.title}" — duplicate of "${existing.title}"`);
+      }
+      crossDupes++;
+    } else {
+      seen.set(key, deduped.length);
+      deduped.push(event);
+    }
+  }
+
+  if (crossDupes > 0) {
+    console.log(`\n   Cross-source dedup: ${crossDupes} duplicates removed (${allEvents.length} → ${deduped.length})`);
+  }
+
+  console.log(`\n--- Inserting ${deduped.length} events ---`);
+
+  for (const event of deduped) {
     const exists = await classExists(event.title, event.date, event.venueName, event.time);
     if (exists) {
       // Backfill source_url on existing events that don't have one yet
