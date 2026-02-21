@@ -2,17 +2,18 @@ import React, { memo, useRef } from 'react';
 import { motion, useMotionValue, useTransform } from 'framer-motion';
 import {
   Calendar, CalendarPlus, Check, Clock, DollarSign, ExternalLink,
-  MapPin, Navigation, Repeat, Share2, Sparkles, Star, Ticket,
+  Globe, MapPin, Navigation, Phone, Repeat, Share2, Sparkles, Star, Ticket,
   Users, Building, Zap
 } from 'lucide-react';
 import { PACIFIC_TZ } from '../../utils/timezoneHelpers';
-import { getBookingUrl } from '../../utils/bookingHelpers';
 
 const EventDetailModal = memo(function EventDetailModal({
   event,
   onClose,
   getVenueName,
   venues,
+  matchedService,
+  onViewVenue,
   isVerified,
   isInMyCalendar,
   addToCalendar,
@@ -35,7 +36,6 @@ const EventDetailModal = memo(function EventDetailModal({
   const venueName = getVenueName(event.venueId, event);
   const venueVerified = isVerified(event.venueId);
   const venue = venues?.find(v => v.id === event.venueId);
-  const venueInfoUrl = getBookingUrl(venueName) || venue?.website || null;
 
   const handleShare = async () => {
     const shareData = {
@@ -243,7 +243,52 @@ const EventDetailModal = memo(function EventDetailModal({
         {/* About Section */}
         <div className="event-section">
           <h2 className="event-section-title">About</h2>
-          <p className="event-about-text">{event.description}</p>
+          {event.description && (
+            <p className="event-about-text" style={{ whiteSpace: 'pre-line' }}>{event.description}</p>
+          )}
+
+          {/* Category & Tags */}
+          {(event.category || (event.tags && event.tags.length > 0)) && (
+            <div className="event-about-tags" style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: event.description ? '12px' : '0' }}>
+              {event.category && (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 10px', borderRadius: '20px', background: '#eef2ff', color: '#4338ca', fontSize: '12px', fontWeight: 600 }}>
+                  {event.category}
+                </span>
+              )}
+              {event.tags?.map((tag, i) => (
+                <span key={i} style={{ display: 'inline-flex', alignItems: 'center', padding: '4px 10px', borderRadius: '20px', background: '#f3f4f6', color: '#4b5563', fontSize: '12px', fontWeight: 500 }}>
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Venue Info Block */}
+          {matchedService && (
+            <div style={{ marginTop: '14px', padding: '12px 14px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+              <div style={{ fontWeight: 600, fontSize: '14px', color: '#1e293b', marginBottom: '8px' }}>{matchedService.name}</div>
+              {matchedService.address && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#475569', marginBottom: '4px' }}>
+                  <div style={{ color: '#6366f1', display: 'flex', alignItems: 'center' }}><MapPin size={14} /></div>
+                  {matchedService.address}
+                </div>
+              )}
+              {matchedService.phone && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#475569', marginBottom: '4px' }}>
+                  <div style={{ color: '#6366f1', display: 'flex', alignItems: 'center' }}><Phone size={14} /></div>
+                  <a href={`tel:${matchedService.phone.replace(/[^\d+]/g, '')}`} style={{ color: '#475569', textDecoration: 'none' }}>{matchedService.phone}</a>
+                </div>
+              )}
+              {matchedService.website && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#475569' }}>
+                  <div style={{ color: '#6366f1', display: 'flex', alignItems: 'center' }}><Globe size={14} /></div>
+                  <a href={matchedService.website.startsWith('http') ? matchedService.website : `https://${matchedService.website}`} target="_blank" rel="noopener noreferrer" style={{ color: '#4f46e5', textDecoration: 'none' }}>
+                    {matchedService.website.replace(/^https?:\/\//, '').replace(/\/$/, '')}
+                  </a>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* CTA Section */}
@@ -265,15 +310,14 @@ const EventDetailModal = memo(function EventDetailModal({
           >
             {inCalendar ? (<><Check size={18} /> Added to Calendar</>) : (<><Calendar size={18} /> Add to Calendar</>)}
           </button>
-          {venueInfoUrl && (
-            <a
-              href={venueInfoUrl}
-              target="_blank" rel="noopener noreferrer" className="event-cta-btn secondary"
-            >
-              <MapPin size={18} />
-              View Venue
-            </a>
-          )}
+          <button
+            type="button"
+            className="event-cta-btn secondary"
+            onClick={() => onViewVenue?.(event.venueId, venueName)}
+          >
+            <MapPin size={18} />
+            View Venue
+          </button>
         </div>
 
         {/* Footer */}
