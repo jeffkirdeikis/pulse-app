@@ -6,6 +6,7 @@ import {
   Users, Building, Zap
 } from 'lucide-react';
 import { PACIFIC_TZ } from '../../utils/timezoneHelpers';
+import { getBookingUrl } from '../../utils/bookingHelpers';
 
 const EventDetailModal = memo(function EventDetailModal({
   event,
@@ -36,6 +37,7 @@ const EventDetailModal = memo(function EventDetailModal({
   const venueName = getVenueName(event.venueId, event);
   const venueVerified = isVerified(event.venueId);
   const venue = venues?.find(v => v.id === event.venueId);
+  const classUrl = getBookingUrl(venueName) || venue?.website || null;
 
   const handleShare = async () => {
     const shareData = {
@@ -315,16 +317,16 @@ const EventDetailModal = memo(function EventDetailModal({
           >
             {inCalendar ? (<><Check size={18} /> Added to Calendar</>) : (<><Calendar size={18} /> Add to Calendar</>)}
           </button>
-          {event.eventType === 'class' ? (
-            <button
-              type="button"
+          {event.eventType === 'class' && classUrl ? (
+            <a
+              href={classUrl.startsWith('http') ? classUrl : `https://${classUrl}`}
+              target="_blank" rel="noopener noreferrer"
               className="event-cta-btn secondary"
-              onClick={() => handleBookClick(event)}
             >
               <ExternalLink size={18} />
               View Class
-            </button>
-          ) : (
+            </a>
+          ) : event.eventType !== 'class' ? (
             <button
               type="button"
               className="event-cta-btn secondary"
@@ -333,7 +335,7 @@ const EventDetailModal = memo(function EventDetailModal({
               <MapPin size={18} />
               View Venue
             </button>
-          )}
+          ) : null}
         </div>
 
         {/* Footer */}
