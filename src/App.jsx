@@ -1576,7 +1576,7 @@ export default function PulseApp() {
         time: filters.time !== 'all' ? filters.time : null,
         price: filters.price !== 'all' ? filters.price : null,
         age: filters.age !== 'all' ? filters.age : null,
-        category: filters.category !== 'all' ? filters.category : null,
+        category: (Array.isArray(filters.category) ? filters.category.length > 0 : filters.category !== 'all') ? filters.category : null,
       };
       const filterLabels = {
         time: { morning: 'Morning', afternoon: 'Afternoon', evening: 'Evening' },

@@ -506,6 +506,75 @@
           font-weight: 600;
         }
 
+        /* Category multi-select dropdown */
+        .cat-dropdown-trigger {
+          display: flex;
+          align-items: center;
+          text-align: left;
+          background-image: none;
+          padding-right: 16px;
+        }
+
+        .cat-dropdown-menu {
+          position: absolute;
+          top: calc(100% + 4px);
+          left: 0;
+          right: 0;
+          background: #ffffff;
+          border: 2px solid #e5e7eb;
+          border-radius: 12px;
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+          z-index: 50;
+          max-height: 280px;
+          overflow-y: auto;
+          padding: 4px;
+        }
+
+        .cat-dropdown-item {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          width: 100%;
+          padding: 10px 12px;
+          border: none;
+          background: none;
+          font-size: 14px;
+          font-weight: 500;
+          color: var(--text-primary);
+          cursor: pointer;
+          border-radius: 8px;
+          transition: background 0.15s;
+          text-align: left;
+        }
+
+        .cat-dropdown-item:hover {
+          background: #f0f9ff;
+        }
+
+        .cat-dropdown-item-active {
+          background: #eff6ff;
+          font-weight: 600;
+        }
+
+        .cat-check-box {
+          width: 20px;
+          height: 20px;
+          border: 2px solid #d1d5db;
+          border-radius: 4px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+          color: #3b82f6;
+          transition: all 0.15s;
+        }
+
+        .cat-dropdown-item-active .cat-check-box,
+        .cat-dropdown-item .cat-check-box:has(svg) {
+          border-color: #3b82f6;
+          background: #eff6ff;
+        }
+
         .reset-btn {
           background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
           border: none;

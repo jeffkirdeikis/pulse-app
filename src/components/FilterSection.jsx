@@ -1,5 +1,5 @@
-import React, { useMemo, useRef, useEffect } from 'react';
-import { SlidersHorizontal, ChevronRight, Sun, Sunset, Moon, Baby, DollarSign } from 'lucide-react';
+import React, { useMemo, useRef, useEffect, useState } from 'react';
+import { SlidersHorizontal, ChevronRight, ChevronDown, Sun, Sunset, Moon, Baby, DollarSign, Check } from 'lucide-react';
 
 function getCategoryColor(cat) {
   const c = (cat || '').toLowerCase();
@@ -48,7 +48,7 @@ function getDateStrip(count = 14) {
 
 /**
  * Collapsible filter section for classes/events tabs.
- * Includes horizontal date picker, time, age (with kids age range slider), category, and price filters.
+ * Includes horizontal date picker, quick filter chips, and expandable category/time filters.
  */
 const FilterSection = React.memo(function FilterSection({
   filters,
@@ -69,6 +69,22 @@ const FilterSection = React.memo(function FilterSection({
   freeCount = 0,
   weekendCount = 0,
 }) {
+  const [catDropdownOpen, setCatDropdownOpen] = useState(false);
+  const catDropdownRef = useRef(null);
+
+  // Close category dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (catDropdownRef.current && !catDropdownRef.current.contains(e.target)) {
+        setCatDropdownOpen(false);
+      }
+    }
+    if (catDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [catDropdownOpen]);
+
   // Derive Pacific date string from currentTime so date strip regenerates at midnight
   const pacificDateKey = useMemo(() => {
     if (!currentTime) return '';
@@ -90,13 +106,30 @@ const FilterSection = React.memo(function FilterSection({
   }, [filters.day]);
 
   const isDateSelected = /^\d{4}-\d{2}-\d{2}$/.test(filters.day);
+
+  // Support both old single-category string and new multi-category array
+  const selectedCategories = Array.isArray(filters.category) ? filters.category : (filters.category === 'all' ? [] : [filters.category]);
+  const isCategoryFiltered = selectedCategories.length > 0;
+
   const activeFilterCount = [
     filters.day !== 'today',
     filters.time !== 'all',
     filters.age !== 'all',
-    filters.category !== 'all',
+    isCategoryFiltered,
     filters.price !== 'all',
   ].filter(Boolean).length;
+
+  function toggleCategory(cat) {
+    const current = selectedCategories;
+    const updated = current.includes(cat)
+      ? current.filter(c => c !== cat)
+      : [...current, cat];
+    setFilters({ ...filters, category: updated.length === 0 ? 'all' : updated });
+  }
+
+  const catLabel = isCategoryFiltered
+    ? selectedCategories.length === 1 ? selectedCategories[0] : `${selectedCategories.length} categories`
+    : 'All Categories';
 
   return (
     <>
@@ -154,17 +187,17 @@ const FilterSection = React.memo(function FilterSection({
       <div className="quick-filter-chips">
         {[
           { key: 'free', label: freeCount > 0 ? `Free · ${freeCount}` : 'Free', icon: <DollarSign size={14} />, apply: { price: 'free' }, match: (f) => f.price === 'free' },
+          { key: 'kids', label: 'Kids', icon: <Baby size={14} />, apply: { age: 'kids' }, match: (f) => f.age === 'kids' },
           { key: 'morning', label: 'Morning', icon: <Sun size={14} />, apply: { time: 'morning' }, match: (f) => f.time === 'morning' },
           { key: 'afternoon', label: 'Afternoon', icon: <Sunset size={14} />, apply: { time: 'afternoon' }, match: (f) => f.time === 'afternoon' },
           { key: 'evening', label: 'Evening', icon: <Moon size={14} />, apply: { time: 'evening' }, match: (f) => f.time === 'evening' },
-          { key: 'kids', label: 'Kids', icon: <Baby size={14} />, apply: { age: 'kids' }, match: (f) => f.age === 'kids' },
         ].map(chip => {
           const isActive = chip.match(filters);
           return (
             <button
               key={chip.key}
               type="button"
-              className={`quick-chip ${isActive ? 'quick-chip-active' : ''} ${chip.key === 'now' && isActive ? 'quick-chip-now' : ''}`}
+              className={`quick-chip ${isActive ? 'quick-chip-active' : ''}`}
               onClick={() => {
                 if (isActive) {
                   // Toggle off — reset the relevant filter
@@ -226,11 +259,11 @@ const FilterSection = React.memo(function FilterSection({
               {filters.age === 'kids' ? 'Kids' : filters.age === 'adults' ? 'Adults' : filters.age} <span className="pill-x">&times;</span>
             </button>
           )}
-          {filters.category !== 'all' && (
-            <button type="button" className="filter-pill" onClick={() => setFilters({...filters, category: 'all'})}>
-              {filters.category} <span className="pill-x">&times;</span>
+          {isCategoryFiltered && selectedCategories.map(cat => (
+            <button key={cat} type="button" className="filter-pill" onClick={() => toggleCategory(cat)}>
+              {cat} <span className="pill-x">&times;</span>
             </button>
-          )}
+          ))}
           {filters.price !== 'all' && (
             <button type="button" className="filter-pill" onClick={() => setFilters({...filters, price: 'all'})}>
               {filters.price === 'free' ? 'Free' : 'Paid'} <span className="pill-x">&times;</span>
@@ -267,24 +300,49 @@ const FilterSection = React.memo(function FilterSection({
               </select>
             </div>
 
-            {/* Age Filter */}
-            <div className="filter-group">
-              <select
-                value={filters.age}
-                aria-label="Filter by age group"
-                onChange={(e) => {
-                  setFilters({...filters, age: e.target.value});
-                  if (e.target.value !== 'kids') {
-                    setKidsAgeRange([0, 18]);
-                  }
-                }}
-                className={`filter-dropdown ${filters.age === 'kids' ? 'filter-active' : ''}`}
-              >
-                <option value="all">All Ages</option>
-                <option value="kids">Kids</option>
-                <option value="adults">Adults</option>
-              </select>
-            </div>
+            {/* Category Multi-Select Dropdown */}
+            {categories.length > 1 && (
+              <div className="filter-group" ref={catDropdownRef} style={{ position: 'relative' }}>
+                <button
+                  type="button"
+                  className={`filter-dropdown cat-dropdown-trigger ${isCategoryFiltered ? 'filter-active' : ''}`}
+                  onClick={() => setCatDropdownOpen(!catDropdownOpen)}
+                  aria-label="Filter by category"
+                  aria-expanded={catDropdownOpen}
+                >
+                  <span>{catLabel}</span>
+                  <ChevronDown size={16} style={{ marginLeft: 'auto', opacity: 0.5, transform: catDropdownOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+                </button>
+                {catDropdownOpen && (
+                  <div className="cat-dropdown-menu">
+                    <button
+                      type="button"
+                      className="cat-dropdown-item"
+                      onClick={() => { setFilters({ ...filters, category: 'all' }); setCatDropdownOpen(false); }}
+                    >
+                      <span className="cat-check-box">{!isCategoryFiltered && <Check size={14} />}</span>
+                      <span>All Categories</span>
+                    </button>
+                    {categories.slice(1).map(cat => {
+                      const isChecked = selectedCategories.includes(cat);
+                      const dotColor = getCategoryColor(cat);
+                      return (
+                        <button
+                          key={cat}
+                          type="button"
+                          className={`cat-dropdown-item ${isChecked ? 'cat-dropdown-item-active' : ''}`}
+                          onClick={() => toggleCategory(cat)}
+                        >
+                          <span className="cat-check-box">{isChecked && <Check size={14} />}</span>
+                          {dotColor && <span className="cat-dot" style={{ background: dotColor }} />}
+                          <span>{cat}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Kids Age Range Slider - Shows when Kids is selected */}
@@ -365,54 +423,11 @@ const FilterSection = React.memo(function FilterSection({
             </div>
           )}
 
-          {/* Category Pills */}
-          {categories.length > 1 && (
-            <div className="category-pills-section">
-              <div className="category-pills" role="group" aria-label="Filter by category">
-                <button
-                  type="button"
-                  className={`filter-cat-pill ${filters.category === 'all' ? 'filter-cat-pill-active' : ''}`}
-                  onClick={() => setFilters({...filters, category: 'all'})}
-                >
-                  All
-                </button>
-                {categories.slice(1).map(cat => {
-                  const dotColor = getCategoryColor(cat);
-                  return (
-                    <button
-                      key={cat}
-                      type="button"
-                    className={`filter-cat-pill ${filters.category === cat ? 'filter-cat-pill-active' : ''}`}
-                      onClick={() => setFilters({...filters, category: filters.category === cat ? 'all' : cat})}
-                    >
-                      {dotColor && <span className="cat-dot" style={{ background: dotColor }} />}
-                      {cat}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
           <div className="filters-row-bottom">
-            {/* Price Filter */}
-            <div className="filter-group">
-              <select
-                value={filters.price}
-                onChange={(e) => setFilters({...filters, price: e.target.value})}
-                className="filter-dropdown"
-                aria-label="Filter by price"
-              >
-                <option value="all">All Prices</option>
-                {hasFreeItems && <option value="free">Free</option>}
-                <option value="paid">Paid</option>
-              </select>
-            </div>
-
             {/* Reset Button */}
             {(() => {
               const hasActiveFilters = filters.day !== 'today' || filters.time !== 'all' ||
-                                      filters.age !== 'all' || filters.category !== 'all' || filters.price !== 'all' ||
+                                      filters.age !== 'all' || isCategoryFiltered || filters.price !== 'all' ||
                                       (kidsAgeRange[0] !== 0 || kidsAgeRange[1] !== 18);
               return hasActiveFilters ? (
                 <button

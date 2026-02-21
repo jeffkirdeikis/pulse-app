@@ -147,9 +147,12 @@ export function filterEvents(allEvents, { currentSection, filters, searchQuery, 
     filtered = filtered.filter(e => e.ageGroup?.includes('Adults') || e.ageGroup === 'All Ages' || e.ageGroup === '19+' || e.ageGroup === 'Teens & Adults');
   }
 
-  // Category
+  // Category — supports single string or array of selected categories
   if (filters.category !== 'all') {
-    filtered = filtered.filter(e => e.category === filters.category || (e.tags && e.tags.includes(filters.category)));
+    const cats = Array.isArray(filters.category) ? filters.category : [filters.category];
+    if (cats.length > 0) {
+      filtered = filtered.filter(e => cats.includes(e.category) || (e.tags && cats.some(c => e.tags.includes(c))));
+    }
   }
 
   // Time of day — supports exact time (HH:MM) and range keywords (morning, afternoon, evening)
@@ -226,8 +229,12 @@ export function filterDeals(allDeals, { searchQuery, filters, getVenueName }) {
     );
   }
 
+  // Category — supports single string or array
   if (filters.category !== 'all') {
-    filtered = filtered.filter(d => d.category === filters.category);
+    const cats = Array.isArray(filters.category) ? filters.category : [filters.category];
+    if (cats.length > 0) {
+      filtered = filtered.filter(d => cats.includes(d.category));
+    }
   }
 
   // Sort by deal score (best deals first)
