@@ -615,7 +615,7 @@
         .modal-drag-handle {
           display: flex;
           justify-content: center;
-          padding: 10px 0 4px;
+          padding: 14px 0 10px;
           cursor: grab;
           touch-action: none;
           position: absolute;

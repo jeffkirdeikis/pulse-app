@@ -1,5 +1,5 @@
 import React, { memo, useRef } from 'react';
-import { motion, useMotionValue, useTransform } from 'framer-motion';
+import { motion, useMotionValue, useTransform, useDragControls } from 'framer-motion';
 import {
   Calendar, CalendarPlus, Check, Clock, DollarSign, ExternalLink,
   Globe, MapPin, Navigation, Phone, Repeat, Share2, Sparkles, Star, Ticket,
@@ -26,6 +26,7 @@ const EventDetailModal = memo(function EventDetailModal({
   const dragY = useMotionValue(0);
   const modalOpacity = useTransform(dragY, [0, 300], [1, 0.2]);
   const modalScale = useTransform(dragY, [0, 300], [1, 0.92]);
+  const dragControls = useDragControls();
   const modalRef = useRef(null);
 
   if (!event) return null;
@@ -62,12 +63,10 @@ const EventDetailModal = memo(function EventDetailModal({
     }
   };
 
-  // Only allow drag when scrolled to top
-  const handleDragStart = (_, info) => {
-    if (modalRef.current && modalRef.current.scrollTop > 10) {
-      // Cancel drag if scrolled down — user is scrolling content, not dismissing
-      return false;
-    }
+  const handleDragHandlePointerDown = (e) => {
+    // Only allow drag-to-dismiss when scrolled to top
+    if (modalRef.current && modalRef.current.scrollTop > 10) return;
+    dragControls.start(e);
   };
 
   return (
@@ -77,14 +76,15 @@ const EventDetailModal = memo(function EventDetailModal({
         onClick={(e) => e.stopPropagation()}
         ref={modalRef}
         drag="y"
+        dragControls={dragControls}
+        dragListener={false}
         dragConstraints={{ top: 0, bottom: 0 }}
         dragElastic={{ top: 0, bottom: 0.6 }}
-        onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
         style={{ y: dragY, opacity: modalOpacity, scale: modalScale }}
       >
         {/* Drag Handle */}
-        <div className="modal-drag-handle" aria-hidden="true">
+        <div className="modal-drag-handle" onPointerDown={handleDragHandlePointerDown} aria-hidden="true">
           <div className="drag-handle-bar" />
         </div>
         <button type="button" className="close-btn event-close" onClick={onClose} aria-label="Close">
