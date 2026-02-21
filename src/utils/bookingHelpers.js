@@ -12,8 +12,8 @@ const BOOKING_SYSTEMS = {
     bookingUrl: 'https://wildlifegym.com/group-class-schedule/'
   },
   'Squamish Barbell': {
-    type: 'website',
-    bookingUrl: 'https://www.squamishbarbell.com/programs'
+    type: 'mindbody',
+    bookingUrl: 'https://clients.mindbodyonline.com/ASP/su1.asp?studioid=7879'
   },
   'Seed Studio': {
     type: 'website',
