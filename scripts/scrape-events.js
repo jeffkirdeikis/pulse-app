@@ -13,18 +13,10 @@ const SUPABASE_KEY = SUPABASE_SERVICE_KEY();
 // Squamish event sources - aggregators and community sites
 const EVENT_SOURCES = [
   // === PRIMARY AGGREGATORS ===
-  {
-    name: 'Together Nest - Activities',
-    url: 'https://together-nest.com/discover?category=activities',
-    category: 'Community',
-    type: 'events'
-  },
-  {
-    name: 'Together Nest - Events',
-    url: 'https://together-nest.com/discover?category=events',
-    category: 'Community',
-    type: 'events'
-  },
+  // Together Nest DISABLED — scrapes a directory, not structured events.
+  // All entries had fake 09:00 start times, no end times, descriptions were
+  // just "CATEGORY for AGE_RANGE", and many had venue_name = image URLs or
+  // category headers. 56 junk entries cleaned from DB on Feb 21, 2026.
   {
     name: 'Sea to Sky Kids - Directory',
     url: 'https://seatoskykids.ca/directory/',
@@ -106,12 +98,7 @@ const EVENT_SOURCES = [
     type: 'events'
   },
   // === ADDED Feb 10, 2026: Missing sources ===
-  {
-    name: 'Together Nest - All',
-    url: 'https://together-nest.com/discover',
-    category: 'Community',
-    type: 'events'
-  },
+  // Together Nest - All DISABLED (see note above)
   {
     name: 'Squamish Chamber - Events & Programming',
     url: 'https://www.squamishchamber.com/events-programming/',
