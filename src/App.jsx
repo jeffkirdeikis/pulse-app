@@ -2558,12 +2558,14 @@ export default function PulseApp() {
           getVenueName={getVenueName}
           venues={REAL_DATA.venues}
           matchedService={selectedEvent ? services.find(s => s.id === selectedEvent.venueId) : null}
-          onViewVenue={(venueId, venueName) => {
+          onViewVenue={(venueId, venueName, sourceUrl) => {
             closeEvent();
             const svc = services.find(s => s.id === venueId);
             if (svc) {
               // Open ServiceDetailModal as overlay without navigating away
               setSelectedService(svc);
+            } else if (sourceUrl) {
+              window.open(sourceUrl, '_blank');
             } else {
               window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(venueName + ' Squamish BC')}`, '_blank');
             }

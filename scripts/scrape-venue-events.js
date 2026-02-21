@@ -129,6 +129,42 @@ async function insertEvent(evt) {
   }
 }
 
+/** Update source_url on an existing event that doesn't have one yet */
+async function backfillSourceUrl(title, date, venueName, time, sourceUrl) {
+  try {
+    // Find the event by title + date + venue + time
+    let findUrl = `${SUPABASE_URL}/rest/v1/events?title=ilike.${encodeURIComponent(title)}&start_date=eq.${date}&venue_name=ilike.${encodeURIComponent(venueName)}&source_url=is.null&select=id`;
+    if (time) {
+      const normalizedTime = time.length === 5 ? `${time}:00` : time;
+      findUrl += `&start_time=eq.${encodeURIComponent(normalizedTime)}`;
+    }
+    findUrl += '&limit=1';
+
+    const findResp = await fetch(findUrl, {
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+    });
+    const rows = await findResp.json();
+    if (!Array.isArray(rows) || rows.length === 0) return;
+
+    const id = rows[0].id;
+    const updateResp = await fetch(`${SUPABASE_URL}/rest/v1/events?id=eq.${id}`, {
+      method: 'PATCH',
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify({ source_url: sourceUrl })
+    });
+    if (updateResp.ok) {
+      console.log(`   [backfill] Updated source_url for "${title}" on ${date}`);
+    }
+  } catch (error) {
+    // Non-critical — don't break the scraper flow
+  }
+}
+
 function decodeHtmlEntities(str) {
   if (!str) return '';
   return str
@@ -1284,6 +1320,10 @@ async function main() {
   for (const event of allEvents) {
     const exists = await classExists(event.title, event.date, event.venueName, event.time);
     if (exists) {
+      // Backfill source_url on existing events that don't have one yet
+      if (event.sourceUrl) {
+        await backfillSourceUrl(event.title, event.date, event.venueName, event.time, event.sourceUrl);
+      }
       console.log(`   [skip] ${event.title} on ${event.date} at ${event.time} (already exists)`);
       skipped++;
       continue;

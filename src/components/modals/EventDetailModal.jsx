@@ -277,14 +277,18 @@ const EventDetailModal = memo(function EventDetailModal({
 
           {/* Category & Tags (filter out internal/system tags) */}
           {(() => {
-            const internalPatterns = /^(auto-scraped|mindbody|wellnessliving|janeapp|scraped|source-|manual-entry|healcode|brandedweb|community-submitted|together-?nest|togethernest|website|perfectmind)/i;
+            const internalPatterns = /^(auto-scraped|mindbody|wellnessliving|janeapp|scraped|source-|manual-entry|healcode|brandedweb|community-submitted|together-?nest|togethernest|website|perfectmind|wp-tribe-api|squarespace-api|communico-api|tockify-pinboard|gondola-website|tourism-squamish|bag-website)/i;
             // Also filter venue-name slugs (kebab-case of the venue name)
             const venueSlug = venueName ? venueName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') : '';
+            // Also generate a slug without apostrophe separation (e.g. "Trickster's" → "tricksters" not "trickster-s")
+            const venueSlugCompact = venueName ? venueName.toLowerCase().replace(/'/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') : '';
             const userTags = event.tags?.filter(t => {
               if (internalPatterns.test(t)) return false;
               if (t.includes('-classic') || t.includes('-api') || t.includes('---')) return false;
-              // Filter venue-name slugs (e.g. "shala-yoga", "squamish-barbell")
-              if (venueSlug && t.toLowerCase() === venueSlug) return false;
+              // Filter venue-name slugs (e.g. "shala-yoga", "squamish-barbell", "tricksters-hideout")
+              const tagLower = t.toLowerCase();
+              if (venueSlug && tagLower === venueSlug) return false;
+              if (venueSlugCompact && tagLower === venueSlugCompact) return false;
               return true;
             }) || [];
             const hasContent = event.category || userTags.length > 0;
@@ -365,7 +369,7 @@ const EventDetailModal = memo(function EventDetailModal({
           <button
             type="button"
             className="event-cta-btn secondary"
-            onClick={() => onViewVenue?.(event.venueId, venueName)}
+            onClick={() => onViewVenue?.(event.venueId, venueName, event.sourceUrl)}
           >
             <Building size={18} />
             View Venue
