@@ -13,10 +13,15 @@ const SUPABASE_KEY = SUPABASE_SERVICE_KEY();
 // Squamish event sources - aggregators and community sites
 const EVENT_SOURCES = [
   // === PRIMARY AGGREGATORS ===
-  // Together Nest DISABLED — scrapes a directory, not structured events.
-  // All entries had fake 09:00 start times, no end times, descriptions were
-  // just "CATEGORY for AGE_RANGE", and many had venue_name = image URLs or
-  // category headers. 56 junk entries cleaned from DB on Feb 21, 2026.
+  // Together Nest Events — the events page renders well for Firecrawl.
+  // Activities page is a SPA that won't render, so only scrape events.
+  // Cleaned up 56 junk entries from old broken scraper on Feb 21, 2026.
+  {
+    name: 'Together Nest - Events',
+    url: 'https://together-nest.com/discover?category=events',
+    category: 'Community',
+    type: 'events'
+  },
   {
     name: 'Sea to Sky Kids - Directory',
     url: 'https://seatoskykids.ca/directory/',
@@ -119,8 +124,14 @@ const EVENT_SOURCES = [
   }
 ];
 
-// Special scraper for Together Nest - parses markdown since it's a SPA
-async function scrapeTogetherNest(url, sourceType) {
+// Together Nest Events scraper — parses markdown from their SPA.
+// Events page renders with structure:
+//   ### Event Title
+//   by Venue/Organizer Name
+//   Mar 7, 2026  (or "Feb 13, 2026 - Feb 28, 2026" for multi-day)
+//   Squamish, BC, Canada
+//   View Details
+async function scrapeTogetherNest(url) {
   try {
     const response = await fetch('https://api.firecrawl.dev/v1/scrape', {
       method: 'POST',
@@ -136,6 +147,8 @@ async function scrapeTogetherNest(url, sourceType) {
           { type: 'scroll', direction: 'down', amount: 3000 },
           { type: 'wait', milliseconds: 2000 },
           { type: 'scroll', direction: 'down', amount: 3000 },
+          { type: 'wait', milliseconds: 1000 },
+          { type: 'scroll', direction: 'down', amount: 3000 },
           { type: 'wait', milliseconds: 1000 }
         ]
       })
@@ -149,55 +162,74 @@ async function scrapeTogetherNest(url, sourceType) {
     }
 
     const markdown = data.data?.markdown || '';
+    const events = [];
+    const sections = markdown.split('###').slice(1);
 
-    // Parse activity cards from markdown
-    // Pattern: ### Title followed by category, location, age, price info
-    const activities = [];
-    const sections = markdown.split('###').slice(1); // Skip content before first ###
+    // Junk headings to skip (category headers, splash screen, navigation)
+    const skipPatterns = /^(Welcome to the Nest|Events$|Activities$|Camps|After School|Playgrounds|Home & Family|Back to|Filter|What's On|Featured)/i;
+    // Date pattern: "Feb 21, 2026" or "Feb 13, 2026 - Feb 28, 2026"
+    const datePattern = /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2},?\s+\d{4}/i;
 
     for (const section of sections) {
       const lines = section.trim().split('\n').filter(l => l.trim());
-      if (lines.length === 0) continue;
+      if (lines.length < 2) continue;
 
       const title = lines[0].trim();
+      if (skipPatterns.test(title)) continue;
+      if (title.length < 3 || title.length > 120) continue;
 
-      // Skip non-activity headings
-      if (title.includes('Activities') || title.includes('Back to') || title.includes('Filter')) continue;
-
-      // Extract info from following lines
-      let category = '';
-      let location = 'Squamish, BC';
-      let ageRange = '';
-      let price = 'Paid';
       let provider = '';
+      let dateStr = '';
+      let location = '';
+      let imageUrl = '';
 
       for (const line of lines.slice(1)) {
         const l = line.trim();
-        if (l.includes('by ')) {
-          provider = l.replace('by ', '').trim();
+        if (l.startsWith('by ')) {
+          provider = l.replace(/^by\s+/, '').trim();
+        } else if (datePattern.test(l)) {
+          dateStr = l;
         } else if (l.includes('Squamish')) {
           location = l;
-        } else if (l.includes('years') || l.includes('months')) {
-          ageRange = l;
-        } else if (l === 'Free' || l === 'Paid') {
-          price = l;
-        } else if (!l.includes('Click') && !l.includes('Registration') && !l.includes('Available') && l.length < 50) {
-          // Likely the category
-          if (!category) category = l;
+        } else if (l === 'View Details' || l === 'Learn More') {
+          continue;
         }
       }
 
-      activities.push({
+      // Also check for image in the line before the ### (from the raw section split)
+      const imgMatch = section.match(/!\[.*?\]\((https?:\/\/[^)]+)\)/);
+      if (imgMatch) imageUrl = imgMatch[1];
+
+      // Must have a title and a provider to be a real event
+      if (!provider) continue;
+
+      // Parse date — handle "Feb 21, 2026" and "Feb 13, 2026 - Feb 28, 2026"
+      let parsedDate = null;
+      if (dateStr) {
+        // For multi-day events, use the start date
+        const startDateStr = dateStr.split(' - ')[0].trim();
+        parsedDate = new Date(startDateStr);
+        if (isNaN(parsedDate.getTime())) parsedDate = null;
+      }
+
+      // Skip past events
+      if (parsedDate && parsedDate < new Date(new Date().toDateString())) {
+        console.log(`   ⚪ Skipped: ${title.substring(0, 40)}... (past date)`);
+        continue;
+      }
+
+      events.push({
         title,
-        provider: provider || title.split(' - ')[0],
-        description: `${category} for ${ageRange || 'all ages'}`,
-        location,
-        price,
-        isClass: sourceType === 'activities'
+        provider,
+        date: parsedDate ? parsedDate.toISOString().split('T')[0] : null,
+        location: location || 'Squamish, BC',
+        image: imageUrl || null,
+        description: `Community event at ${provider} in Squamish`,
+        isClass: false
       });
     }
 
-    return activities;
+    return events;
   } catch (error) {
     console.error(`   Error scraping Together Nest: ${error.message}`);
     return [];
@@ -207,9 +239,9 @@ async function scrapeTogetherNest(url, sourceType) {
 async function scrapeUrl(url, sourceName, sourceType = 'events') {
   console.log(`   Fetching: ${url}`);
 
-  // Special handling for Together Nest - use markdown parsing
+  // Special handling for Together Nest - parse markdown from SPA
   if (sourceName.includes('Together Nest')) {
-    return await scrapeTogetherNest(url, sourceType);
+    return await scrapeTogetherNest(url);
   }
 
   // Different extraction for activities vs events
@@ -337,7 +369,7 @@ function parseDate(dateStr) {
 }
 
 function parseTime(timeStr) {
-  if (!timeStr) return '09:00';
+  if (!timeStr) return null;
 
   // Convert to 24h format
   const match = timeStr.match(/(\d{1,2}):?(\d{2})?\s*(am|pm)?/i);
@@ -352,7 +384,7 @@ function parseTime(timeStr) {
     return `${hours.toString().padStart(2, '0')}:${minutes}`;
   }
 
-  return '09:00';
+  return null;
 }
 
 async function checkEventExists(title, date, isClass = false) {
@@ -473,7 +505,7 @@ async function main() {
         price_description: event.price || null,
         image_url: event.image || null,
         status: 'active',
-        tags: ['auto-scraped', source.name.toLowerCase().replace(/\s+/g, '-')]
+        tags: ['auto-scraped', source.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')]
       });
 
       if (success) {
