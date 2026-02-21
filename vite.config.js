@@ -68,6 +68,11 @@ export default defineConfig({
       workbox: {
         // Import push notification handler into service worker
         importScripts: ['/push-handler.js'],
+        // Disable navigation fallback — the SW is registered at root scope on
+        // pulse-app.ca but the React app lives at /squamish (via Vercel rewrite).
+        // Without this, Workbox precaches /index.html (the landing page HTML)
+        // and serves it as fallback for navigation to /squamish, breaking the PWA.
+        navigateFallback: null,
         // Cache app shell and assets
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
         // Don't precache source maps
