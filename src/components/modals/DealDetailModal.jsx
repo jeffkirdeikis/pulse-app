@@ -32,7 +32,8 @@ const DealDetailModal = memo(function DealDetailModal({
       url: window.location.href
     };
     try {
-      if (navigator.share) {
+      const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+      if (isMobile && navigator.share) {
         await navigator.share(shareData);
       } else {
         await navigator.clipboard.writeText(`${shareData.text} - ${shareData.url}`);
