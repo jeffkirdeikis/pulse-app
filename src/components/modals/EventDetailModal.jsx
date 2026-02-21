@@ -247,21 +247,26 @@ const EventDetailModal = memo(function EventDetailModal({
             <p className="event-about-text" style={{ whiteSpace: 'pre-line' }}>{event.description}</p>
           )}
 
-          {/* Category & Tags */}
-          {(event.category || (event.tags && event.tags.length > 0)) && (
-            <div className="event-about-tags" style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: event.description ? '12px' : '0' }}>
-              {event.category && (
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 10px', borderRadius: '20px', background: '#eef2ff', color: '#4338ca', fontSize: '12px', fontWeight: 600 }}>
-                  {event.category}
-                </span>
-              )}
-              {event.tags?.map((tag, i) => (
-                <span key={i} style={{ display: 'inline-flex', alignItems: 'center', padding: '4px 10px', borderRadius: '20px', background: '#f3f4f6', color: '#4b5563', fontSize: '12px', fontWeight: 500 }}>
-                  {tag}
-                </span>
-              ))}
-            </div>
-          )}
+          {/* Category & Tags (filter out internal/system tags) */}
+          {(() => {
+            const internalPatterns = /^(auto-scraped|mindbody|wellnessliving|janeapp|scraped|source-|manual-entry|healcode|brandedweb)/i;
+            const userTags = event.tags?.filter(t => !internalPatterns.test(t) && !t.includes('-classic') && !t.includes('-api')) || [];
+            const hasContent = event.category || userTags.length > 0;
+            return hasContent ? (
+              <div className="event-about-tags" style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: event.description ? '12px' : '0' }}>
+                {event.category && (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 10px', borderRadius: '20px', background: '#eef2ff', color: '#4338ca', fontSize: '12px', fontWeight: 600 }}>
+                    {event.category}
+                  </span>
+                )}
+                {userTags.map((tag, i) => (
+                  <span key={i} style={{ display: 'inline-flex', alignItems: 'center', padding: '4px 10px', borderRadius: '20px', background: '#f3f4f6', color: '#4b5563', fontSize: '12px', fontWeight: 500 }}>
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            ) : null;
+          })()}
 
           {/* Venue Info Block */}
           {matchedService && (
@@ -310,14 +315,25 @@ const EventDetailModal = memo(function EventDetailModal({
           >
             {inCalendar ? (<><Check size={18} /> Added to Calendar</>) : (<><Calendar size={18} /> Add to Calendar</>)}
           </button>
-          <button
-            type="button"
-            className="event-cta-btn secondary"
-            onClick={() => onViewVenue?.(event.venueId, venueName)}
-          >
-            <MapPin size={18} />
-            View Venue
-          </button>
+          {event.eventType === 'class' ? (
+            <button
+              type="button"
+              className="event-cta-btn secondary"
+              onClick={() => handleBookClick(event)}
+            >
+              <ExternalLink size={18} />
+              View Class
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="event-cta-btn secondary"
+              onClick={() => onViewVenue?.(event.venueId, venueName)}
+            >
+              <MapPin size={18} />
+              View Venue
+            </button>
+          )}
         </div>
 
         {/* Footer */}
