@@ -1,33 +1,34 @@
 // Booking URL lookup - maps venue names to their class schedule / program pages
-// All URLs verified to show actual class/program content (not login forms or clinics)
+// URLs sourced from each venue's own website navigation links
+// Mindbody studioIDs verified against venue websites
 
 const BOOKING_SYSTEMS = {
-  // Venue websites with embedded booking widgets (best UX — no Cloudflare issues)
+  // Mindbody venues — direct schedule URLs with verified studioIDs
   'Shala Yoga': {
     type: 'website',
-    bookingUrl: 'https://shalayoga.ca/booking'
+    bookingUrl: 'https://shalayoga.ca/booking'  // embeds Mindbody widget (studioid 353274)
   },
   'Wild Life Gym': {
-    type: 'website',
-    bookingUrl: 'https://wildlifegym.com/group-class-schedule/'
+    type: 'mindbody',
+    bookingUrl: 'https://clients.mindbodyonline.com/classic/mainclass?studioid=527949&fl=true&tabID=7'
   },
   'Squamish Barbell': {
     type: 'mindbody',
     bookingUrl: 'https://clients.mindbodyonline.com/classic/mainclass?studioid=7879&fl=true&tabID=7'
   },
   'Seed Studio': {
-    type: 'website',
-    bookingUrl: 'https://www.seedsquamish.com/class-schedule'
+    type: 'mindbody',
+    bookingUrl: 'https://clients.mindbodyonline.com/classic/ws?studioid=5729485&stype=-7&sView=day&sLoc=0'
   },
   'Oxygen Yoga & Fitness': {
-    type: 'website',
-    bookingUrl: 'https://oxygenyogaandfitness.com/squamish/'
+    type: 'mindbody',
+    bookingUrl: 'https://clients.mindbodyonline.com/classic/ws?studioid=5736498&stype=-8&sTG=24&sView=day&sLoc=1'
   },
   'Oxygen Yoga & Fitness Squamish': {
-    type: 'website',
-    bookingUrl: 'https://oxygenyogaandfitness.com/squamish/'
+    type: 'mindbody',
+    bookingUrl: 'https://clients.mindbodyonline.com/classic/ws?studioid=5736498&stype=-8&sTG=24&sView=day&sLoc=1'
   },
-  // WellnessLiving (these work reliably)
+  // Venue website schedule pages (no Mindbody)
   'Breathe Fitness Studio': {
     type: 'website',
     bookingUrl: 'https://breathesquamish.com/pages/squamish-schedule'
@@ -40,14 +41,13 @@ const BOOKING_SYSTEMS = {
     type: 'website',
     bookingUrl: 'https://www.thesoundmartialarts.com/sound-martial-arts-schedule'
   },
-  // Direct websites
   'Ground Up Climbing Centre': {
     type: 'website',
     bookingUrl: 'https://climbgroundup.com/programs/'
   },
   'Mountain Fitness Center': {
-    type: 'website',
-    bookingUrl: 'https://mountainfitnesscenter.ca/classes'
+    type: 'mindbody',
+    bookingUrl: 'https://clients.mindbodyonline.com/classic/mainclass?studioid=265219&fl=true&tabID=7'
   }
 };
 
