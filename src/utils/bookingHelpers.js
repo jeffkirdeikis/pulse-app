@@ -48,6 +48,14 @@ const BOOKING_SYSTEMS = {
   'Mountain Fitness Center': {
     type: 'mindbody',
     bookingUrl: 'https://clients.mindbodyonline.com/classic/mainclass?studioid=265219&fl=true&tabID=7'
+  },
+  'Roundhouse Martial Arts & Fitness': {
+    type: 'website',
+    bookingUrl: 'https://www.roundhousesquamish.com/memberships?_mt=%2Fbuy%2F48717'
+  },
+  'Roundhouse Martial Arts': {
+    type: 'website',
+    bookingUrl: 'https://www.roundhousesquamish.com/memberships?_mt=%2Fbuy%2F48717'
   }
 };
 
