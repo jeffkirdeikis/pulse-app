@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useEffect, useState } from 'react';
-import { SlidersHorizontal, ChevronRight, ChevronDown, Sun, Sunset, Moon, Baby, DollarSign, Check } from 'lucide-react';
+import { ChevronDown, Sun, Sunset, Moon, Baby, DollarSign, Check } from 'lucide-react';
 
 function getCategoryColor(cat) {
   const c = (cat || '').toLowerCase();
@@ -217,64 +217,8 @@ const FilterSection = React.memo(function FilterSection({
         })}
       </div>
 
-      {/* Filters Toggle Button */}
-      <div className="filters-toggle-section">
-        <button
-          type="button"
-          className="filters-toggle-btn"
-          onClick={() => setShowFilters(!showFilters)}
-        >
-          <SlidersHorizontal size={18} />
-          <span>{showFilters ? 'Hide Filters' : 'Filters'}</span>
-          {activeFilterCount > 0 && (
-            <span className="filter-count-badge">{activeFilterCount}</span>
-          )}
-          <ChevronRight
-            size={18}
-            aria-hidden="true"
-            style={{
-              transform: showFilters ? 'rotate(90deg)' : 'rotate(0deg)',
-              transition: 'transform 0.2s ease'
-            }}
-          />
-        </button>
-      </div>
-
-      {/* Active Filter Pills - visible when filters applied but panel hidden */}
-      {!showFilters && activeFilterCount > 0 && (
-        <div className="active-filter-pills">
-          {filters.time !== 'all' && (() => {
-            const labels = { morning: 'Morning', afternoon: 'Afternoon', evening: 'Evening' };
-            let label = labels[filters.time];
-            if (!label) {
-              const [h, m] = filters.time.split(':').map(Number);
-              const hr = h === 0 ? 12 : h > 12 ? h - 12 : h;
-              const period = h >= 12 ? 'PM' : 'AM';
-              label = `${hr}${m ? ':' + String(m).padStart(2, '0') : ''} ${period}+`;
-            }
-            return <button type="button" className="filter-pill" onClick={() => setFilters({...filters, time: 'all'})}>{label} <span className="pill-x">&times;</span></button>;
-          })()}
-          {filters.age !== 'all' && (
-            <button type="button" className="filter-pill" onClick={() => { setFilters({...filters, age: 'all'}); setKidsAgeRange([0, 18]); }}>
-              {filters.age === 'kids' ? 'Kids' : filters.age === 'adults' ? 'Adults' : filters.age} <span className="pill-x">&times;</span>
-            </button>
-          )}
-          {isCategoryFiltered && selectedCategories.map(cat => (
-            <button key={cat} type="button" className="filter-pill" onClick={() => toggleCategory(cat)}>
-              {cat} <span className="pill-x">&times;</span>
-            </button>
-          ))}
-          {filters.price !== 'all' && (
-            <button type="button" className="filter-pill" onClick={() => setFilters({...filters, price: 'all'})}>
-              {filters.price === 'free' ? 'Free' : 'Paid'} <span className="pill-x">&times;</span>
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* Filters Section - Collapsible */}
-      {showFilters && (
-        <div className="filters-section">
+      {/* Filters Section - Always visible */}
+      <div className="filters-section">
           <div className="filters-row-top">
             {/* Time Filter - Dynamic 30-min slots */}
             <div className="filter-group">
@@ -445,7 +389,6 @@ const FilterSection = React.memo(function FilterSection({
             })()}
           </div>
         </div>
-      )}
     </>
   );
 });
