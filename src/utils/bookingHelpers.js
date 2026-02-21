@@ -13,7 +13,7 @@ const BOOKING_SYSTEMS = {
   },
   'Squamish Barbell': {
     type: 'mindbody',
-    bookingUrl: 'https://clients.mindbodyonline.com/ASP/su1.asp?studioid=7879'
+    bookingUrl: 'https://clients.mindbodyonline.com/classic/mainclass?studioid=7879&fl=true&tabID=7'
   },
   'Seed Studio': {
     type: 'website',

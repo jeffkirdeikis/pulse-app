@@ -2178,7 +2178,7 @@ export default function PulseApp() {
           {/* Booking Bottom Sheet */}
           <AnimatePresence>
           {showBookingSheet && bookingEvent && (
-            <motion.div key="booking" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }} style={{ position: 'fixed', inset: 0, zIndex: 1000 }}>
+            <motion.div key="booking" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }} style={{ position: 'fixed', inset: 0, zIndex: 1100 }}>
             <Suspense fallback={null}><BookingSheet
               bookingEvent={bookingEvent}
               bookingStep={bookingStep}
