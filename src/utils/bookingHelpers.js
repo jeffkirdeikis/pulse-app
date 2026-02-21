@@ -1,5 +1,5 @@
-// Booking systems lookup - maps venue names to their booking URLs
-// Sources: Mindbody, WellnessLiving, JaneApp scrapers
+// Booking URL lookup - maps venue names to their class schedule / program pages
+// All URLs verified to show actual class/program content (not login forms or clinics)
 
 const BOOKING_SYSTEMS = {
   // Venue websites with embedded booking widgets (best UX — no Cloudflare issues)
@@ -12,8 +12,8 @@ const BOOKING_SYSTEMS = {
     bookingUrl: 'https://wildlifegym.com/group-class-schedule/'
   },
   'Squamish Barbell': {
-    type: 'janeapp',
-    bookingUrl: 'https://squamishbarbell.janeapp.com/'
+    type: 'website',
+    bookingUrl: 'https://www.squamishbarbell.com/programs'
   },
   'Seed Studio': {
     type: 'website',
@@ -29,24 +29,21 @@ const BOOKING_SYSTEMS = {
   },
   // WellnessLiving (these work reliably)
   'Breathe Fitness Studio': {
-    type: 'wellnessliving',
-    bookingUrl: 'https://www.wellnessliving.com/schedule/breathe_fitness_squamish',
-    businessId: '338540'
+    type: 'website',
+    bookingUrl: 'https://breathesquamish.com/pages/squamish-schedule'
   },
   'Breathe Fitness': {
-    type: 'wellnessliving',
-    bookingUrl: 'https://www.wellnessliving.com/schedule/breathe_fitness_squamish',
-    businessId: '338540'
+    type: 'website',
+    bookingUrl: 'https://breathesquamish.com/pages/squamish-schedule'
   },
   'The Sound Martial Arts': {
-    type: 'wellnessliving',
-    bookingUrl: 'https://www.wellnessliving.com/schedule/thesoundmartialarts',
-    businessId: '414578'
+    type: 'website',
+    bookingUrl: 'https://www.thesoundmartialarts.com/sound-martial-arts-schedule'
   },
   // Direct websites
   'Ground Up Climbing Centre': {
     type: 'website',
-    bookingUrl: 'https://climbgroundup.com/'
+    bookingUrl: 'https://climbgroundup.com/programs/'
   },
   'Mountain Fitness Center': {
     type: 'website',
