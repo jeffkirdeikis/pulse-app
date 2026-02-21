@@ -238,6 +238,24 @@ const EventDetailModal = memo(function EventDetailModal({
                 </span>
               </div>
             </div>
+            {event.venueAddress && event.venueAddress !== 'Squamish, BC' && (
+              <div className="event-detail-card">
+                <div className="event-detail-icon" style={{ background: '#fef3c7', color: '#d97706' }}><MapPin size={20} /></div>
+                <div className="event-detail-content">
+                  <span className="event-detail-label">Address</span>
+                  <span className="event-detail-value">{event.venueAddress}</span>
+                </div>
+              </div>
+            )}
+            {event.category && (
+              <div className="event-detail-card">
+                <div className="event-detail-icon" style={{ background: '#eef2ff', color: '#4f46e5' }}><Sparkles size={20} /></div>
+                <div className="event-detail-content">
+                  <span className="event-detail-label">Category</span>
+                  <span className="event-detail-value">{event.category}</span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -250,12 +268,12 @@ const EventDetailModal = memo(function EventDetailModal({
 
           {/* Category & Tags (filter out internal/system tags) */}
           {(() => {
-            const internalPatterns = /^(auto-scraped|mindbody|wellnessliving|janeapp|scraped|source-|manual-entry|healcode|brandedweb|community-submitted)/i;
+            const internalPatterns = /^(auto-scraped|mindbody|wellnessliving|janeapp|scraped|source-|manual-entry|healcode|brandedweb|community-submitted|together-?nest|togethernest)/i;
             // Also filter venue-name slugs (kebab-case of the venue name)
             const venueSlug = venueName ? venueName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') : '';
             const userTags = event.tags?.filter(t => {
               if (internalPatterns.test(t)) return false;
-              if (t.includes('-classic') || t.includes('-api')) return false;
+              if (t.includes('-classic') || t.includes('-api') || t.includes('---')) return false;
               // Filter venue-name slugs (e.g. "shala-yoga", "squamish-barbell")
               if (venueSlug && t.toLowerCase() === venueSlug) return false;
               return true;
