@@ -504,6 +504,7 @@ async function main() {
         is_free: isFree,
         price_description: event.price || null,
         image_url: event.image || null,
+        source_url: event.url || null,
         status: 'active',
         tags: ['auto-scraped', source.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')]
       });

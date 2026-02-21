@@ -151,7 +151,7 @@ export function useAppData() {
       while (hasMore) {
         const { data: pageData, error } = await supabase
           .from('events')
-          .select('id, title, event_type, venue_id, venue_name, venue_address, start_date, start_time, end_time, tags, category, description, is_free, price, price_description, featured, image_url, view_count, created_at')
+          .select('id, title, event_type, venue_id, venue_name, venue_address, start_date, start_time, end_time, tags, category, description, is_free, price, price_description, featured, image_url, view_count, created_at, source_url')
           .eq('status', 'active')
           .gte('start_date', localDateStr)
           .order('start_date', { ascending: true })
@@ -239,7 +239,8 @@ export function useAppData() {
           viewCount: event.view_count || 0,
           createdAt: event.created_at || null,
           businessId: event.venue_id || null,
-          timeUnknown
+          timeUnknown,
+          sourceUrl: event.source_url || null
         };
       });
 
@@ -319,7 +320,7 @@ export function useAppData() {
     // Fetch from DB
     const { data, error } = await supabase
       .from('events')
-      .select('id, title, event_type, venue_id, venue_name, venue_address, start_date, start_time, end_time, tags, category, description, is_free, price, price_description, featured, image_url, view_count, created_at')
+      .select('id, title, event_type, venue_id, venue_name, venue_address, start_date, start_time, end_time, tags, category, description, is_free, price, price_description, featured, image_url, view_count, created_at, source_url')
       .eq('id', id)
       .single();
     if (error || !data) return null;
@@ -356,7 +357,8 @@ export function useAppData() {
       recurrence: 'none', description: event.description || '',
       featured: event.featured || false, image: event.image_url,
       viewCount: event.view_count || 0, createdAt: event.created_at || null,
-      businessId: event.venue_id || null, timeUnknown
+      businessId: event.venue_id || null, timeUnknown,
+      sourceUrl: event.source_url || null
     };
   }, [dbEvents]);
 

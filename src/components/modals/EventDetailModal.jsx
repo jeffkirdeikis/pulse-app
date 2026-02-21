@@ -194,6 +194,15 @@ const EventDetailModal = memo(function EventDetailModal({
             <div className="quick-action-icon directions"><Navigation size={20} /></div>
             <span>Directions</span>
           </a>
+          {event.sourceUrl && (
+            <a
+              href={event.sourceUrl}
+              target="_blank" rel="noopener noreferrer" className="quick-action-btn"
+            >
+              <div className="quick-action-icon" style={{ background: '#eef2ff', color: '#4f46e5' }}><ExternalLink size={20} /></div>
+              <span>More Info</span>
+            </a>
+          )}
         </div>
 
         {/* Details Section */}
@@ -268,7 +277,7 @@ const EventDetailModal = memo(function EventDetailModal({
 
           {/* Category & Tags (filter out internal/system tags) */}
           {(() => {
-            const internalPatterns = /^(auto-scraped|mindbody|wellnessliving|janeapp|scraped|source-|manual-entry|healcode|brandedweb|community-submitted|together-?nest|togethernest)/i;
+            const internalPatterns = /^(auto-scraped|mindbody|wellnessliving|janeapp|scraped|source-|manual-entry|healcode|brandedweb|community-submitted|together-?nest|togethernest|website|perfectmind)/i;
             // Also filter venue-name slugs (kebab-case of the venue name)
             const venueSlug = venueName ? venueName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') : '';
             const userTags = event.tags?.filter(t => {
@@ -342,6 +351,17 @@ const EventDetailModal = memo(function EventDetailModal({
           >
             {inCalendar ? (<><Check size={18} /> Added to Calendar</>) : (<><Calendar size={18} /> Add to Calendar</>)}
           </button>
+          {event.sourceUrl && (
+            <a
+              href={event.sourceUrl}
+              target="_blank" rel="noopener noreferrer"
+              className="event-cta-btn secondary"
+              style={{ textDecoration: 'none' }}
+            >
+              <ExternalLink size={18} />
+              Event Page
+            </a>
+          )}
           <button
             type="button"
             className="event-cta-btn secondary"

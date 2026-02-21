@@ -103,7 +103,8 @@ async function insertEvent(evt) {
     is_free: evt.isFree || false,
     price_description: evt.priceDescription || (evt.isFree ? 'Free' : 'See venue for pricing'),
     status: 'active',
-    tags: evt.tags
+    tags: evt.tags,
+    source_url: evt.sourceUrl || null
   };
 
   try {
@@ -299,6 +300,7 @@ async function scrapeTricksters() {
           venueName: TRICKSTERS.venue,
           address: TRICKSTERS.address,
           tags: ['auto-scraped', 'wp-tribe-api', TRICKSTERS.tag],
+          sourceUrl: evt.url || null,
           ...costInfo
         });
       }
@@ -782,7 +784,7 @@ async function scrapeGondola() {
     // Avoid duplicates — same event can appear in featured and filtered sections
     if (parsedEvents.some(e => e.title === rawTitle)) continue;
 
-    parsedEvents.push({ title: rawTitle, recurrence, description, detailUrl });
+    parsedEvents.push({ title: rawTitle, recurrence, description, detailUrl, sourceUrl: detailUrl || null });
   }
 
   console.log(`   Parsed ${parsedEvents.length} unique event types`);
@@ -821,6 +823,7 @@ async function scrapeGondola() {
         venueName: GONDOLA.venue,
         address: GONDOLA.address,
         tags: ['auto-scraped', 'gondola-website', GONDOLA.tag],
+        sourceUrl: evt.sourceUrl || null,
         price: 0, isFree: false, priceDescription: 'See venue for pricing'
       });
     }
@@ -991,6 +994,7 @@ async function scrapeArtsCouncil() {
           venueAddress: venueAddress || undefined,
           address: venueAddress || '',
           tags: ['auto-scraped', 'wp-tribe-api', ARTS_COUNCIL.tag],
+          sourceUrl: evt.url || null,
           ...costInfo
         });
       }
@@ -1207,6 +1211,7 @@ async function scrapeTourismSquamish() {
 
         return {
           title, startTime, endTime, costInfo, venueName, venueAddress, description,
+          sourceUrl: fullUrl,
           dates: [...dates]
         };
       } catch (error) {
@@ -1230,6 +1235,7 @@ async function scrapeTourismSquamish() {
           venueName: evt.venueName || 'Squamish',
           address: evt.venueAddress || '',
           tags: ['auto-scraped', 'tourism-squamish', TOURISM_SQUAMISH.tag],
+          sourceUrl: evt.sourceUrl || null,
           ...evt.costInfo
         });
       }
