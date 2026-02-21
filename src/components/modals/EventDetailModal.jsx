@@ -369,7 +369,7 @@ const EventDetailModal = memo(function EventDetailModal({
           <button
             type="button"
             className="event-cta-btn secondary"
-            onClick={() => onViewVenue?.(event.venueId, venueName, event.sourceUrl)}
+            onClick={() => onViewVenue?.(event.venueId, venueName)}
           >
             <Building size={18} />
             View Venue

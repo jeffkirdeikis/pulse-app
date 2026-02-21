@@ -129,13 +129,12 @@ async function insertEvent(evt) {
   }
 }
 
-/** Update source_url on an existing event that doesn't have one yet */
-async function backfillSourceUrl(title, date, venueName, time, sourceUrl) {
+/** Backfill source_url and description on existing events */
+async function backfillEvent(evt) {
   try {
-    // Find the event by title + date + venue + time
-    let findUrl = `${SUPABASE_URL}/rest/v1/events?title=ilike.${encodeURIComponent(title)}&start_date=eq.${date}&venue_name=ilike.${encodeURIComponent(venueName)}&source_url=is.null&select=id`;
-    if (time) {
-      const normalizedTime = time.length === 5 ? `${time}:00` : time;
+    let findUrl = `${SUPABASE_URL}/rest/v1/events?title=ilike.${encodeURIComponent(evt.title)}&start_date=eq.${evt.date}&venue_name=ilike.${encodeURIComponent(evt.venueName)}&select=id,source_url,description`;
+    if (evt.time) {
+      const normalizedTime = evt.time.length === 5 ? `${evt.time}:00` : evt.time;
       findUrl += `&start_time=eq.${encodeURIComponent(normalizedTime)}`;
     }
     findUrl += '&limit=1';
@@ -146,8 +145,21 @@ async function backfillSourceUrl(title, date, venueName, time, sourceUrl) {
     const rows = await findResp.json();
     if (!Array.isArray(rows) || rows.length === 0) return;
 
-    const id = rows[0].id;
-    const updateResp = await fetch(`${SUPABASE_URL}/rest/v1/events?id=eq.${id}`, {
+    const existing = rows[0];
+    const updates = {};
+
+    // Backfill source_url if missing
+    if (!existing.source_url && evt.sourceUrl) {
+      updates.source_url = evt.sourceUrl;
+    }
+    // Update description if the new one is significantly longer (richer content)
+    if (evt.description && evt.description.length > (existing.description || '').length + 20) {
+      updates.description = evt.description;
+    }
+
+    if (Object.keys(updates).length === 0) return;
+
+    const updateResp = await fetch(`${SUPABASE_URL}/rest/v1/events?id=eq.${existing.id}`, {
       method: 'PATCH',
       headers: {
         'apikey': SUPABASE_KEY,
@@ -155,10 +167,11 @@ async function backfillSourceUrl(title, date, venueName, time, sourceUrl) {
         'Content-Type': 'application/json',
         'Prefer': 'return=minimal'
       },
-      body: JSON.stringify({ source_url: sourceUrl })
+      body: JSON.stringify(updates)
     });
     if (updateResp.ok) {
-      console.log(`   [backfill] Updated source_url for "${title}" on ${date}`);
+      const fields = Object.keys(updates).join(', ');
+      console.log(`   [backfill] Updated ${fields} for "${evt.title}" on ${evt.date}`);
     }
   } catch (error) {
     // Non-critical — don't break the scraper flow
@@ -318,7 +331,7 @@ async function scrapeTricksters() {
 
       for (const evt of apiEvents) {
         const title = decodeHtmlEntities(evt.title || '');
-        const description = decodeHtmlEntities((evt.description || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 500));
+        const description = decodeHtmlEntities((evt.description || '').replace(/<\/p>/gi, '\n').replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '').replace(/\n{3,}/g, '\n\n').trim().substring(0, 2000));
         const date = parseDate(evt.start_date || evt.utc_start_date);
         const startTime = parseTime24(evt.start_date || evt.utc_start_date);
         const endTime = parseTime24(evt.end_date || evt.utc_end_date);
@@ -1001,7 +1014,7 @@ async function scrapeArtsCouncil() {
         if (!title) continue;
 
         const description = decodeHtmlEntities(
-          (evt.description || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 500)
+          (evt.description || '').replace(/<\/p>/gi, '\n').replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '').replace(/\n{3,}/g, '\n\n').trim().substring(0, 2000)
         );
         const date = parseDate(evt.start_date || evt.utc_start_date);
         const startTime = parseTime24(evt.start_date || evt.utc_start_date);
@@ -1376,10 +1389,8 @@ async function main() {
   for (const event of deduped) {
     const exists = await classExists(event.title, event.date, event.venueName, event.time);
     if (exists) {
-      // Backfill source_url on existing events that don't have one yet
-      if (event.sourceUrl) {
-        await backfillSourceUrl(event.title, event.date, event.venueName, event.time, event.sourceUrl);
-      }
+      // Backfill source_url and richer descriptions on existing events
+      await backfillEvent(event);
       console.log(`   [skip] ${event.title} on ${event.date} at ${event.time} (already exists)`);
       skipped++;
       continue;
