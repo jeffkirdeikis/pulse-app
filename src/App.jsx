@@ -177,8 +177,11 @@ export default function PulseApp() {
   const closeService = useCallback(() => {
     setSelectedService(null);
     const saved = preModalStateRef.current;
-    navigate('/services');
     if (saved) {
+      // Return to the section the user was on before opening the modal
+      if (saved.section === 'services') {
+        navigate('/services');
+      }
       requestAnimationFrame(() => window.scrollTo(0, saved.scrollY));
       preModalStateRef.current = null;
     }
@@ -2559,7 +2562,8 @@ export default function PulseApp() {
             closeEvent();
             const svc = services.find(s => s.id === venueId);
             if (svc) {
-              selectService(svc);
+              // Open ServiceDetailModal as overlay without navigating away
+              setSelectedService(svc);
             } else {
               window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(venueName + ' Squamish BC')}`, '_blank');
             }
