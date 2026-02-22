@@ -744,6 +744,7 @@ function BookingSheet({ slot, onClose, onBook, onViewProfile }) {
   const priceStr = formatPrice(slot.price_min, slot.price_max);
   const dateObj = new Date(slot.date + 'T12:00:00');
   const dateStr = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  const disciplineLabel = DISCIPLINES.find(d => d.key === slot.discipline)?.label || slot.discipline;
 
   useEffect(() => {
     const handleEsc = (e) => { if (e.key === 'Escape') onClose(); };
@@ -752,67 +753,58 @@ function BookingSheet({ slot, onClose, onBook, onViewProfile }) {
   }, [onClose]);
 
   return (
-    <>
-      <div className="wb-sheet-backdrop" onClick={onClose} />
-      <div className="wb-sheet">
-        <div className="wb-sheet-handle" />
-        <button type="button" className="wb-sheet-close-btn" onClick={onClose} aria-label="Close">
-          <X size={18} />
+    <div className="wb-card-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="wb-card-modal" onClick={(e) => e.stopPropagation()}>
+        <button type="button" className="wb-card-close" onClick={onClose} aria-label="Close">
+          <X size={16} />
         </button>
-        <div className="wb-sheet-content">
-          <div className="wb-sheet-header">
-            <div className="wb-sheet-avatar">
-              {slot.photo_url ? (
-                <ProgressiveImage src={slot.photo_url} alt={slot.provider_name} style={{ width: '100%', height: '100%', borderRadius: '50%' }} />
-              ) : (
-                <span>{getInitials(slot.provider_name)}</span>
-              )}
-            </div>
-            <div className="wb-sheet-info">
-              <h3>{slot.provider_name}</h3>
-              <p>{slot.clinic_name}</p>
-            </div>
-          </div>
 
-          <div className="wb-sheet-details">
-            <div className="wb-sheet-detail">
-              <Calendar size={16} />
-              <span>{dateStr}</span>
-            </div>
-            <div className="wb-sheet-detail">
-              <Clock size={16} />
-              <span>{formatTime(slot.start_time)} · {slot.duration_minutes} minutes</span>
-            </div>
-            {priceStr && (
-              <div className="wb-sheet-detail">
-                <DollarSign size={16} />
-                <span>{priceStr}</span>
-              </div>
-            )}
-            {slot.direct_billing && (
-              <div className="wb-sheet-detail">
-                <Check size={16} />
-                <span>Direct Billing Available</span>
-              </div>
+        {/* Hero */}
+        <div className="wb-card-hero">
+          <div className="wb-card-avatar">
+            {slot.photo_url ? (
+              <ProgressiveImage src={slot.photo_url} alt={slot.provider_name} style={{ width: '100%', height: '100%', borderRadius: '50%' }} />
+            ) : (
+              <span>{getInitials(slot.provider_name)}</span>
             )}
           </div>
-
-          <div className="wb-sheet-actions">
-            <button type="button" className="wb-sheet-book-btn" onClick={onBook}>
-              <ExternalLink size={18} />
-              Book Now
-            </button>
-            <button type="button" className="wb-sheet-profile-btn" onClick={onViewProfile}>
-              View Profile
-            </button>
+          <h2 className="wb-card-name">{slot.provider_name}</h2>
+          <p className="wb-card-clinic">{slot.clinic_name}</p>
+          <div className="wb-card-badges">
+            {disciplineLabel && <span className="wb-card-badge discipline">{disciplineLabel}</span>}
+            {slot.direct_billing && <span className="wb-card-badge billing">Direct Billing</span>}
+            {priceStr && <span className="wb-card-badge price">{priceStr}</span>}
           </div>
-
-          <p className="wb-sheet-disclaimer">
-            Opens {slot.clinic_name}'s booking page in a new tab · Availability refreshed every 30 min
-          </p>
         </div>
+
+        {/* Date/Time Card */}
+        <div className="wb-card-datetime">
+          <div className="wb-card-dt-row">
+            <div className="wb-card-dt-icon"><Calendar size={18} /></div>
+            <span>{dateStr}</span>
+          </div>
+          <div className="wb-card-dt-row">
+            <div className="wb-card-dt-icon"><Clock size={18} /></div>
+            <span>{formatTime(slot.start_time)} · {slot.duration_minutes} minutes</span>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="wb-card-actions">
+          <button type="button" className="wb-card-book-btn" onClick={onBook}>
+            <ExternalLink size={18} />
+            Book Now
+          </button>
+          <button type="button" className="wb-card-profile-btn" onClick={onViewProfile}>
+            View Profile
+          </button>
+        </div>
+
+        <p className="wb-card-disclaimer">
+          Opens {slot.clinic_name}'s booking page · Refreshed every 30 min
+        </p>
       </div>
-    </>
+    </div>
   );
 }
 
@@ -1571,47 +1563,44 @@ const wellnessBookingStyles = `
 .wb-time-btn:active { transform: scale(0.95); }
 .wb-time-dur { font-size: 10px; font-weight: 500; color: #9ca3af; }
 
-/* Booking Bottom Sheet */
-.wb-sheet-backdrop {
+/* Booking Card Modal (centered, matches event detail modal style) */
+.wb-card-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.4);
-  z-index: 100;
-  animation: fadeIn 0.2s ease;
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(8px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: wbFadeIn 0.2s ease;
 }
-.wb-sheet {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: white;
-  border-radius: 24px 24px 0 0;
-  z-index: 101;
-  max-height: 80vh;
+.wb-card-modal {
+  background: #ffffff;
+  border-radius: 24px;
+  max-width: 420px;
+  width: 100%;
+  max-height: 90vh;
   overflow-y: auto;
-  animation: sheetUp 0.3s ease;
-  /* relative for close button positioning */
+  position: relative;
+  box-shadow: 0 25px 80px rgba(0,0,0,0.25), 0 10px 30px rgba(0,0,0,0.1);
+  animation: wbCardUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
-@keyframes sheetUp {
-  from { transform: translateY(100%); }
-  to { transform: translateY(0); }
+@keyframes wbCardUp {
+  from { opacity: 0; transform: translateY(30px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
-@keyframes fadeIn {
+@keyframes wbFadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
 }
-.wb-sheet-handle {
-  width: 36px;
-  height: 4px;
-  background: #d1d5db;
-  border-radius: 2px;
-  margin: 12px auto;
-}
-.wb-sheet-close-btn {
+.wb-card-close {
   position: absolute;
-  top: 12px;
-  right: 12px;
-  background: #f3f4f6;
+  top: 14px;
+  right: 14px;
+  background: rgba(0,0,0,0.06);
+  backdrop-filter: blur(12px);
   border: none;
   border-radius: 50%;
   width: 32px;
@@ -1622,48 +1611,84 @@ const wellnessBookingStyles = `
   cursor: pointer;
   color: #6b7280;
   z-index: 1;
+  transition: all 0.15s;
 }
-.wb-sheet-close-btn:hover { background: #e5e7eb; color: #374151; }
-.wb-sheet-content { padding: 0 20px 32px; }
-.wb-sheet-header {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  margin-bottom: 20px;
+.wb-card-close:hover { background: rgba(0,0,0,0.1); color: #374151; }
+
+/* Hero */
+.wb-card-hero {
+  text-align: center;
+  padding: 28px 20px 16px;
+  background: linear-gradient(180deg, #faf5ff 0%, #ffffff 100%);
+  border-radius: 24px 24px 0 0;
 }
-.wb-sheet-avatar {
-  width: 52px;
-  height: 52px;
+.wb-card-avatar {
+  width: 72px;
+  height: 72px;
   border-radius: 50%;
   background: linear-gradient(135deg, #fce7f3 0%, #ede9fe 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
+  font-size: 24px;
   font-weight: 700;
   color: #8b5cf6;
   overflow: hidden;
-  flex-shrink: 0;
+  margin: 0 auto 12px;
+  box-shadow: 0 4px 16px rgba(139,92,246,0.15);
 }
-.wb-sheet-avatar img { width: 100%; height: 100%; object-fit: cover; }
-.wb-sheet-info h3 { font-size: 17px; font-weight: 700; color: #111827; margin: 0; }
-.wb-sheet-info p { font-size: 13px; color: #6b7280; margin: 2px 0 0; }
-.wb-sheet-details {
+.wb-card-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.wb-card-name { font-size: 20px; font-weight: 800; color: #111827; margin: 0 0 4px; }
+.wb-card-clinic { font-size: 14px; color: #6b7280; margin: 0 0 12px; }
+.wb-card-badges { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
+.wb-card-badge {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 8px;
+}
+.wb-card-badge.discipline { background: #fce7f3; color: #be185d; }
+.wb-card-badge.billing { background: #ecfdf5; color: #059669; }
+.wb-card-badge.price { background: #f3f4f6; color: #374151; }
+
+/* Date/Time */
+.wb-card-datetime {
+  margin: 0 20px;
+  padding: 14px 16px;
+  background: #f9fafb;
+  border-radius: 14px;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  margin-bottom: 20px;
 }
-.wb-sheet-detail {
+.wb-card-dt-row {
   display: flex;
   align-items: center;
   gap: 10px;
   font-size: 14px;
+  font-weight: 500;
   color: #374151;
 }
-.wb-sheet-detail svg { color: #9ca3af; flex-shrink: 0; }
-.wb-sheet-actions { display: flex; gap: 10px; margin-bottom: 12px; }
-.wb-sheet-book-btn {
+.wb-card-dt-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #8b5cf6;
+  flex-shrink: 0;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+
+/* Actions */
+.wb-card-actions {
+  display: flex;
+  gap: 10px;
+  padding: 16px 20px 8px;
+}
+.wb-card-book-btn {
   flex: 1;
   display: flex;
   align-items: center;
@@ -1677,9 +1702,12 @@ const wellnessBookingStyles = `
   font-size: 16px;
   font-weight: 700;
   cursor: pointer;
+  box-shadow: 0 4px 14px rgba(139,92,246,0.25);
+  transition: all 0.15s;
 }
-.wb-sheet-book-btn:active { transform: scale(0.98); }
-.wb-sheet-profile-btn {
+.wb-card-book-btn:hover { box-shadow: 0 6px 20px rgba(139,92,246,0.35); transform: translateY(-1px); }
+.wb-card-book-btn:active { transform: scale(0.98) translateY(0); }
+.wb-card-profile-btn {
   padding: 14px 20px;
   background: #f3f4f6;
   color: #374151;
@@ -1688,12 +1716,26 @@ const wellnessBookingStyles = `
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
+  transition: all 0.15s;
 }
-.wb-sheet-disclaimer {
+.wb-card-profile-btn:hover { background: #e5e7eb; }
+.wb-card-disclaimer {
   font-size: 11px;
   color: #9ca3af;
   text-align: center;
   line-height: 1.4;
+  padding: 4px 20px 20px;
+  margin: 0;
+}
+
+/* Legacy sheetUp keyframe used by provider modal */
+@keyframes sheetUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 /* Provider Detail Modal */
@@ -1701,22 +1743,25 @@ const wellnessBookingStyles = `
   position: fixed;
   inset: 0;
   background: rgba(0,0,0,0.5);
-  z-index: 100;
+  backdrop-filter: blur(8px);
+  z-index: 1000;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: center;
-  animation: fadeIn 0.2s ease;
+  padding: 20px;
+  animation: wbFadeIn 0.2s ease;
 }
 .wb-provider-modal {
   background: white;
-  border-radius: 24px 24px 0 0;
+  border-radius: 24px;
   width: 100%;
   max-width: 500px;
   max-height: 90vh;
   overflow-y: auto;
   padding: 20px;
   position: relative;
-  animation: sheetUp 0.3s ease;
+  box-shadow: 0 25px 80px rgba(0,0,0,0.25), 0 10px 30px rgba(0,0,0,0.1);
+  animation: wbCardUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .wb-modal-close {
   position: absolute;
@@ -1837,12 +1882,13 @@ const wellnessBookingStyles = `
 /* Alert Setup Modal */
 .wb-alert-modal {
   background: white;
-  border-radius: 24px 24px 0 0;
+  border-radius: 24px;
   width: 100%;
   max-width: 500px;
   padding: 24px 20px 32px;
   position: relative;
-  animation: sheetUp 0.3s ease;
+  box-shadow: 0 25px 80px rgba(0,0,0,0.25), 0 10px 30px rgba(0,0,0,0.1);
+  animation: wbCardUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .wb-alert-header {
   text-align: center;
