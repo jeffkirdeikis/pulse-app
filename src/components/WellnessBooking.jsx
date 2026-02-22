@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import {
   ArrowLeft, Calendar, Clock, Filter, Heart, Star, MapPin, ExternalLink,
   Bell, BellOff, ChevronRight, ChevronLeft, X, Users, DollarSign,
@@ -502,8 +503,8 @@ export default function WellnessBooking({
         )}
       </div>
 
-      {/* Booking Bottom Sheet */}
-      {selectedSlot && (
+      {/* Portaled modals — rendered on document.body to escape motion.div transform context */}
+      {selectedSlot && createPortal(
         <BookingSheet
           slot={selectedSlot}
           onClose={() => setSelectedSlot(null)}
@@ -512,11 +513,11 @@ export default function WellnessBooking({
             setSelectedProvider(selectedSlot);
             setSelectedSlot(null);
           }}
-        />
+        />,
+        document.body
       )}
 
-      {/* Provider Detail Modal */}
-      {selectedProvider && (
+      {selectedProvider && createPortal(
         <ProviderDetailModal
           provider={selectedProvider}
           slots={slots.filter(s => s.provider_id === (selectedProvider.provider_id || selectedProvider.id))}
@@ -536,11 +537,11 @@ export default function WellnessBooking({
             setSelectedProvider(null);
             setShowAlertModal(true);
           }}
-        />
+        />,
+        document.body
       )}
 
-      {/* Alert Setup Modal */}
-      {showAlertModal && (
+      {showAlertModal && createPortal(
         <AlertSetupModal
           provider={alertProvider}
           days={alertDays}
@@ -549,7 +550,8 @@ export default function WellnessBooking({
           setTimeRange={setAlertTimeRange}
           onSave={handleSaveAlert}
           onClose={() => setShowAlertModal(false)}
-        />
+        />,
+        document.body
       )}
 
       <style>{wellnessBookingStyles}</style>
