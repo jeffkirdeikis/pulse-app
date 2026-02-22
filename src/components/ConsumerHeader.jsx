@@ -157,7 +157,7 @@ const ConsumerHeader = React.memo(function ConsumerHeader({
     <>
       <header className="app-header-premium">
         <div className="header-container-premium">
-          <div className="logo-area-premium">
+          <div className="logo-area-premium" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} style={{ cursor: 'pointer' }}>
             <div className="pulse-logo-premium">
               <svg className="pulse-icon-premium" viewBox="0 0 100 120" fill="none" aria-hidden="true">
                 <defs>
