@@ -3,7 +3,7 @@
    ============================================================ */
 
 /* Tap feedback — scale down on press (for elements not using framer-motion whileTap) */
-.banner-tab:active,
+.category-card:active,
 .feedback-fab:active,
 .btn-primary:active,
 .btn-secondary:active,
@@ -20,23 +20,6 @@
   transition: transform 0.1s cubic-bezier(0.2, 0, 0, 1) !important;
 }
 
-/* Sliding tab indicator */
-.banner-tabs {
-  position: relative;
-}
-
-.tab-indicator {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  height: 3px;
-  background: #2563eb;
-  border-radius: 3px 3px 0 0;
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-              width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  will-change: transform, width;
-  z-index: 2;
-}
 
 /* Skeleton loading shimmer */
 .skeleton-card {

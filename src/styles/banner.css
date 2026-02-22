@@ -2,7 +2,6 @@
         .top-banner-premium {
           background: white;
           border-bottom: 1px solid var(--border-light);
-          overflow: hidden;
         }
 
         .banner-content-premium {
@@ -12,70 +11,97 @@
           width: 100%;
         }
 
-        .banner-tabs {
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 0;
-        }
-
-        .banner-tabs.banner-tabs-row2 {
-          grid-template-columns: repeat(2, 1fr);
-          border-top: 1px solid #f3f4f6;
-        }
-
-        .banner-tab {
-          padding: 14px 12px;
-          min-height: 44px;
-          background: transparent;
-          border: none;
-          border-bottom: 3px solid transparent;
+        /* ========== CATEGORY CARDS STRIP ========== */
+        .category-cards-strip {
           display: flex;
+          gap: 8px;
+          padding: 10px 12px;
+          overflow-x: auto;
+          scroll-snap-type: x mandatory;
+          -webkit-overflow-scrolling: touch;
+          scrollbar-width: none;
+        }
+
+        .category-cards-strip::-webkit-scrollbar {
+          display: none;
+        }
+
+        .category-card {
+          flex: 1 0 0;
+          min-width: 64px;
+          max-width: 96px;
+          height: 76px;
+          display: flex;
+          flex-direction: column;
           align-items: center;
           justify-content: center;
           gap: 6px;
-          font-size: 14px;
-          font-weight: 600;
-          color: var(--text-secondary);
+          padding: 8px 4px;
+          border-radius: 16px;
+          border: 1.5px solid #e5e7eb;
+          background: #f9fafb;
           cursor: pointer;
           transition: all 0.2s ease;
+          scroll-snap-align: center;
+          position: relative;
+          -webkit-tap-highlight-color: transparent;
         }
 
-        .banner-tab:hover {
-          color: #3b82f6;
-          background: var(--bg-secondary);
+        .category-card:hover {
+          border-color: #93c5fd;
+          background: #f0f7ff;
         }
 
-        .banner-tab.active {
-          color: #2563eb;
-          background: linear-gradient(to bottom, rgba(59, 130, 246, 0.05), transparent);
+        .category-card.active {
+          border-color: #3b82f6;
+          background: #eff6ff;
+          box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15);
         }
 
-        .banner-tab svg {
-          transition: transform 0.2s;
+        .category-card-icon {
+          width: 36px;
+          height: 36px;
+          border-radius: 10px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: white;
+          color: #9ca3af;
+          transition: all 0.2s ease;
           flex-shrink: 0;
         }
 
-        .banner-tab.active svg {
-          transform: scale(1.1);
+        .category-card.active .category-card-icon {
+          background: linear-gradient(135deg, #3b82f6, #2563eb);
+          color: white;
+          box-shadow: 0 2px 6px rgba(59, 130, 246, 0.3);
         }
 
-        .banner-tab span {
-          white-space: nowrap;
-        }
-        .tab-count {
-          font-size: 10px;
+        .category-card-label {
+          font-size: 11px;
           font-weight: 600;
-          color: var(--text-tertiary);
-          background: var(--bg-tertiary);
-          border-radius: 8px;
-          padding: 1px 5px;
-          min-width: 18px;
-          text-align: center;
-          line-height: 1.4;
+          color: #6b7280;
+          white-space: nowrap;
+          line-height: 1;
         }
-        .banner-tab.active .tab-count {
+
+        .category-card.active .category-card-label {
+          color: #2563eb;
+        }
+
+        .category-card-count {
+          position: absolute;
+          top: 4px;
+          right: 4px;
+          font-size: 9px;
+          font-weight: 700;
           color: #2563eb;
           background: #dbeafe;
+          border-radius: 8px;
+          padding: 1px 5px;
+          min-width: 16px;
+          text-align: center;
+          line-height: 1.4;
         }
 
         /* ========== PREMIUM SEARCH BAR ========== */

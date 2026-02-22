@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
-import { Calendar, Star, DollarSign, Search, X, Heart, Wrench, MessageCircle, Bell, WifiOff, Clock, TrendingUp } from 'lucide-react';
+import { Calendar, Star, DollarSign, Search, X, Heart, Wrench, MessageCircle, Bell, WifiOff, Clock, TrendingUp, Sparkles } from 'lucide-react';
 import GlobalSearchDropdown from './GlobalSearchDropdown';
 
 const RECENT_SEARCHES_KEY = 'pulse-recent-searches';
@@ -54,37 +54,27 @@ const ConsumerHeader = React.memo(function ConsumerHeader({
   onSelectService,
   getVenueName,
 }) {
-  const row1Tabs = ['classes', 'events', 'deals'];
-  const row2Tabs = ['services', 'wellness'];
+  const allTabs = useMemo(() => [
+    { key: 'classes', label: 'Classes', icon: Calendar, hasCount: true },
+    { key: 'events', label: 'Events', icon: Star, hasCount: true },
+    { key: 'deals', label: 'Deals', icon: DollarSign, hasCount: true },
+    { key: 'services', label: 'Services', icon: Wrench, hasCount: false },
+    { key: 'wellness', label: 'Wellness', icon: Sparkles, hasCount: false },
+  ], []);
   const tabRefs = useRef({});
-  const [indicator1, setIndicator1] = useState({ x: 0, w: 0 });
-  const [indicator2, setIndicator2] = useState({ x: 0, w: 0 });
+  const stripRef = useRef(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [recentSearches, setRecentSearches] = useState(getRecentSearches);
   const searchContainerRef = useRef(null);
   const inputRef = useRef(null);
 
-  const updateIndicator = useCallback(() => {
+  // Auto-scroll active card into view
+  useEffect(() => {
     const el = tabRefs.current[currentSection];
-    if (!el) return;
-    const parent = el.parentElement;
-    if (!parent) return;
-    const x = el.offsetLeft;
-    const w = el.offsetWidth;
-    if (row1Tabs.includes(currentSection)) {
-      setIndicator1({ x, w });
-      setIndicator2({ x: 0, w: 0 });
-    } else {
-      setIndicator2({ x, w });
-      setIndicator1({ x: 0, w: 0 });
+    if (el && stripRef.current) {
+      el.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
     }
   }, [currentSection]);
-
-  useEffect(() => {
-    updateIndicator();
-    window.addEventListener('resize', updateIndicator);
-    return () => window.removeEventListener('resize', updateIndicator);
-  }, [updateIndicator]);
 
   // Close suggestions on outside click
   useEffect(() => {
@@ -227,76 +217,39 @@ const ConsumerHeader = React.memo(function ConsumerHeader({
         </div>
       )}
 
-      {/* Top Banner Navigation */}
+      {/* Top Banner Navigation — Category Cards */}
       <nav className="top-banner-premium" aria-label="Main navigation">
         <div className="banner-content-premium">
-          <div className="banner-tabs" role="tablist" aria-label="Content sections">
-            <button
-              type="button"
-              ref={el => tabRefs.current.classes = el}
-              role="tab"
-              aria-selected={currentSection === 'classes'}
-              className={`banner-tab ${currentSection === 'classes' ? 'active' : ''}`}
-              onClick={() => { setCurrentSection('classes'); setServicesSubView('directory'); setFilters(f => ({...f, category: 'all'}));  }}
-            >
-              <Calendar size={18} />
-              <span>Classes</span>
-              {tabCounts.classes > 0 && <span className="tab-count">{tabCounts.classes}</span>}
-            </button>
-            <button
-              type="button"
-              ref={el => tabRefs.current.events = el}
-              role="tab"
-              aria-selected={currentSection === 'events'}
-              className={`banner-tab ${currentSection === 'events' ? 'active' : ''}`}
-              onClick={() => { setCurrentSection('events'); setServicesSubView('directory'); setFilters(f => ({...f, category: 'all'}));  }}
-            >
-              <Star size={18} />
-              <span>Events</span>
-              {tabCounts.events > 0 && <span className="tab-count">{tabCounts.events}</span>}
-            </button>
-            <button
-              type="button"
-              ref={el => tabRefs.current.deals = el}
-              role="tab"
-              aria-selected={currentSection === 'deals'}
-              className={`banner-tab ${currentSection === 'deals' ? 'active' : ''}`}
-              onClick={() => { setCurrentSection('deals'); setServicesSubView('directory'); setFilters(f => ({...f, category: 'all'}));  }}
-            >
-              <DollarSign size={18} />
-              <span>Deals</span>
-              {tabCounts.deals > 0 && <span className="tab-count">{tabCounts.deals}</span>}
-            </button>
-            {indicator1.w > 0 && (
-              <div className="tab-indicator" style={{ transform: `translateX(${indicator1.x}px)`, width: `${indicator1.w}px` }} />
-            )}
-          </div>
-          <div className="banner-tabs banner-tabs-row2" role="tablist" aria-label="More sections">
-            <button
-              type="button"
-              ref={el => tabRefs.current.services = el}
-              role="tab"
-              aria-selected={currentSection === 'services'}
-              className={`banner-tab ${currentSection === 'services' ? 'active' : ''}`}
-              onClick={() => { setCurrentSection('services');  }}
-            >
-              <Wrench size={18} />
-              <span>Services</span>
-            </button>
-            <button
-              type="button"
-              ref={el => tabRefs.current.wellness = el}
-              role="tab"
-              aria-selected={currentSection === 'wellness'}
-              className={`banner-tab ${currentSection === 'wellness' ? 'active' : ''}`}
-              onClick={() => { setCurrentSection('wellness');  }}
-            >
-              <Heart size={18} />
-              <span>Wellness</span>
-            </button>
-            {indicator2.w > 0 && (
-              <div className="tab-indicator" style={{ transform: `translateX(${indicator2.x}px)`, width: `${indicator2.w}px` }} />
-            )}
+          <div className="category-cards-strip" ref={stripRef} role="tablist" aria-label="Content sections">
+            {allTabs.map(({ key, label, icon: Icon, hasCount }) => {
+              const isActive = currentSection === key;
+              const count = hasCount ? tabCounts[key] : 0;
+              return (
+                <button
+                  type="button"
+                  key={key}
+                  ref={el => tabRefs.current[key] = el}
+                  role="tab"
+                  aria-selected={isActive}
+                  className={`category-card${isActive ? ' active' : ''}`}
+                  onClick={() => {
+                    if (key === 'classes' || key === 'events' || key === 'deals') {
+                      setCurrentSection(key);
+                      setServicesSubView('directory');
+                      setFilters(f => ({ ...f, category: 'all' }));
+                    } else {
+                      setCurrentSection(key);
+                    }
+                  }}
+                >
+                  <div className="category-card-icon">
+                    <Icon size={22} strokeWidth={2} />
+                  </div>
+                  <span className="category-card-label">{label}</span>
+                  {count > 0 && <span className="category-card-count">{count}</span>}
+                </button>
+              );
+            })}
           </div>
         </div>
       </nav>
