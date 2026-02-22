@@ -775,6 +775,11 @@ export default function PulseApp() {
   });
   const [showFilters, setShowFilters] = useState(false);
 
+  // Reset "free" filter when switching sections — shouldn't carry over between tabs
+  useEffect(() => {
+    setFilters(f => f.price !== 'all' ? { ...f, price: 'all' } : f);
+  }, [currentSection]);
+
   // Persist filter preferences (time, age, price) to localStorage
   useEffect(() => {
     try {
