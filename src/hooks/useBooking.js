@@ -32,7 +32,7 @@ export function useBooking({ getVenueName, venues, trackAnalytics, addToCalendar
   const getBusinessForEvent = useCallback((event) => {
     const venueName = getVenueName(event.venueId, event);
     const venue = venues.find(v => v.name === venueName);
-    const bookingUrl = getBookingUrl(venueName) || event.bookingUrl;
+    const bookingUrl = getBookingUrl(venueName, event) || event.bookingUrl;
     const bookingType = getBookingType(venueName);
 
     return {

@@ -28,10 +28,11 @@ const BOOKING_SYSTEMS = {
     type: 'mindbody',
     bookingUrl: 'https://clients.mindbodyonline.com/classic/ws?studioid=5736498&stype=-8&sTG=24&sView=day&sLoc=1'
   },
-  // District of Squamish — PerfectMind booking system
+  // District of Squamish — PerfectMind for programs, admissions page for swims
   'Brennan Park Recreation Centre': {
     type: 'website',
-    bookingUrl: 'https://districtofsquamish.perfectmind.com/Contacts/BookMe4?widgetId=15f6af07-39c5-473e-b053-96653f77a406'
+    bookingUrl: 'https://districtofsquamish.perfectmind.com/Contacts/BookMe4?widgetId=15f6af07-39c5-473e-b053-96653f77a406',
+    swimUrl: 'https://squamish.ca/rec/admissions/'
   },
   // Venue website schedule pages (no Mindbody)
   'Breathe Fitness Studio': {
@@ -64,19 +65,30 @@ const BOOKING_SYSTEMS = {
   }
 };
 
-// Helper to get booking URL for a venue
-export const getBookingUrl = (venueName) => {
+// Check if an event title looks like a swim activity
+function isSwimEvent(event) {
+  if (!event?.title) return false;
+  const t = event.title.toLowerCase();
+  return t.includes('swim') || t.includes('aqua') || t.includes('water polo') || t.includes('diving');
+}
+
+// Helper to get booking URL for a venue, optionally event-aware
+export const getBookingUrl = (venueName, event) => {
   if (!venueName) return null;
 
   // Direct lookup
-  if (BOOKING_SYSTEMS[venueName]) {
-    return BOOKING_SYSTEMS[venueName].bookingUrl;
+  const entry = BOOKING_SYSTEMS[venueName];
+  if (entry) {
+    // Route swim events to swimUrl if available
+    if (entry.swimUrl && isSwimEvent(event)) return entry.swimUrl;
+    return entry.bookingUrl;
   }
 
   // Fuzzy match - check if venue name contains known business
   const normalizedName = venueName.toLowerCase();
   for (const [key, value] of Object.entries(BOOKING_SYSTEMS)) {
     if (normalizedName.includes(key.toLowerCase()) || key.toLowerCase().includes(normalizedName)) {
+      if (value.swimUrl && isSwimEvent(event)) return value.swimUrl;
       return value.bookingUrl;
     }
   }
