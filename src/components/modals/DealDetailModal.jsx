@@ -59,7 +59,7 @@ const DealDetailModal = memo(function DealDetailModal({
         deal_id: deal.id,
         business_id: deal.businessId || null,
         redemption_code: redemptionCode,
-        status: 'pending',
+        status: 'redeemed',
         savings_amount: deal.savingsPercent || null
       });
       if (error) {
