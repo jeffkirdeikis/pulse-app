@@ -13,6 +13,7 @@
  *   6. Squamish Public Library — Communico /eeventcaldata API
  *   7. Squamish Arts Council — WordPress Tribe Events REST API
  *   8. Tourism Squamish — Calendar HTML + detail page fetches
+ *   9. Create Makerspace — Google Calendar iCal feed
  *
  * Run: node scripts/scrape-venue-events.js
  */
@@ -79,6 +80,14 @@ const TOURISM_SQUAMISH = {
   calendarBase: 'https://www.exploresquamish.com/festivals-events/event-calendar/'
 };
 
+const CREATE_MAKERSPACE = {
+  venue: 'Create Makerspace',
+  address: '39449 Queens Way #1, Squamish, BC',
+  tag: 'create-makerspace',
+  icalUrl: 'https://calendar.google.com/calendar/ical/d1f5f075d81514b84ef84b0afa6daa82696c6b27e59814a674c45953f2660b1d%40group.calendar.google.com/public/basic.ics',
+  websiteUrl: 'https://createmakerspace.com/classes'
+};
+
 // ============================================================
 // SHARED HELPERS
 // ============================================================
@@ -95,7 +104,7 @@ async function insertEvent(evt) {
     venue_name: evt.venueName,
     venue_address: evt.address,
     category: evt.category,
-    event_type: 'event',
+    event_type: evt.eventType || 'event',
     start_date: evt.date,
     start_time: evt.time,
     end_time: evt.endTime || null,
@@ -253,6 +262,92 @@ function convertCompactTo24h(timeStr) {
   if (period === 'PM' && hours !== 12) hours += 12;
   if (period === 'AM' && hours === 12) hours = 0;
   return `${String(hours).padStart(2, '0')}:${minutes}`;
+}
+
+/** Parse iCal datetime value (with optional TZID) to { date, time } in Pacific */
+function parseIcalDatetime(dtvalue, tzid) {
+  // All-day event: YYYYMMDD (no time component)
+  if (/^\d{8}$/.test(dtvalue)) {
+    const y = dtvalue.substring(0, 4);
+    const m = dtvalue.substring(4, 6);
+    const d = dtvalue.substring(6, 8);
+    return { date: `${y}-${m}-${d}`, time: null };
+  }
+
+  // UTC: YYYYMMDDTHHmmSSZ
+  if (dtvalue.endsWith('Z')) {
+    const dt = new Date(
+      dtvalue.replace(/(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z/, '$1-$2-$3T$4:$5:$6Z')
+    );
+    return {
+      date: dt.toLocaleDateString('en-CA', { timeZone: 'America/Vancouver' }),
+      time: dt.toLocaleTimeString('en-CA', { hour12: false, hour: '2-digit', minute: '2-digit', timeZone: 'America/Vancouver' })
+    };
+  }
+
+  // TZID-qualified or bare local: YYYYMMDDTHHmmSS
+  const match = dtvalue.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})$/);
+  if (match) {
+    const tz = tzid || 'America/Vancouver';
+    // Build an ISO string and interpret in the given timezone
+    const isoStr = `${match[1]}-${match[2]}-${match[3]}T${match[4]}:${match[5]}:${match[6]}`;
+    const dt = new Date(isoStr + (tz === 'UTC' ? 'Z' : ''));
+    // If it's already Pacific or a North American tz, the local interpretation is fine
+    // For TZID-qualified, we trust the calendar's timezone
+    return {
+      date: `${match[1]}-${match[2]}-${match[3]}`,
+      time: `${match[4]}:${match[5]}`
+    };
+  }
+
+  return { date: null, time: null };
+}
+
+/** Parse iCal text into an array of event objects */
+function parseIcal(icalText) {
+  // Step 1: Unfold continuation lines (RFC 5545 §3.1)
+  const unfolded = icalText.replace(/\r\n[ \t]/g, '').replace(/\n[ \t]/g, '');
+
+  // Step 2: Split into VEVENT blocks
+  const vevents = [];
+  const blocks = unfolded.split('BEGIN:VEVENT');
+
+  for (let i = 1; i < blocks.length; i++) {
+    const block = blocks[i].split('END:VEVENT')[0];
+    const lines = block.split(/\r?\n/);
+
+    const evt = {};
+    for (const line of lines) {
+      // Parse property: NAME;PARAMS:VALUE or NAME:VALUE
+      const colonIdx = line.indexOf(':');
+      if (colonIdx === -1) continue;
+
+      const propPart = line.substring(0, colonIdx);
+      const value = line.substring(colonIdx + 1);
+      const [propName, ...params] = propPart.split(';');
+
+      // Extract TZID from params if present
+      let tzid = null;
+      for (const p of params) {
+        const tzMatch = p.match(/^TZID=(.+)/i);
+        if (tzMatch) tzid = tzMatch[1];
+      }
+
+      switch (propName) {
+        case 'SUMMARY': evt.summary = value; break;
+        case 'DESCRIPTION': evt.description = value; break;
+        case 'LOCATION': evt.location = value; break;
+        case 'DTSTART': evt.dtstart = value; evt.tzid = tzid; break;
+        case 'DTEND': evt.dtend = value; break;
+      }
+    }
+
+    if (evt.summary && evt.dtstart) {
+      vevents.push(evt);
+    }
+  }
+
+  return vevents;
 }
 
 function parseTime24(dateStr) {
@@ -1296,11 +1391,116 @@ async function scrapeTourismSquamish() {
 }
 
 // ============================================================
+// 9. CREATE MAKERSPACE — Google Calendar iCal feed
+// ============================================================
+
+async function scrapeCreateMakerspace() {
+  console.log(`\n--- Create Makerspace (Google Calendar iCal) ---`);
+  const events = [];
+  const today = getTodayPacific();
+  const endDate = getEndDatePacific(30);
+
+  console.log(`   Fetching iCal feed...`);
+
+  try {
+    const response = await retryWithBackoff(
+      () => fetch(CREATE_MAKERSPACE.icalUrl, {
+        headers: { 'User-Agent': 'PulseApp-Scraper/1.0' }
+      }),
+      { label: 'Create Makerspace iCal feed' }
+    );
+
+    if (!response.ok) {
+      console.error(`   iCal feed returned ${response.status}`);
+      return events;
+    }
+
+    const icalText = await response.text();
+    console.log(`   Got ${icalText.length} chars of iCal data`);
+
+    const vevents = parseIcal(icalText);
+    console.log(`   Parsed ${vevents.length} VEVENT blocks`);
+
+    for (const evt of vevents) {
+      const start = parseIcalDatetime(evt.dtstart, evt.tzid);
+      if (!start.date || !start.time) {
+        // Skip all-day events (no time = not a real class)
+        continue;
+      }
+
+      // Filter to upcoming 30-day window
+      if (start.date < today || start.date > endDate) continue;
+
+      const end = evt.dtend ? parseIcalDatetime(evt.dtend, evt.tzid) : { time: null };
+
+      // Clean iCal escape sequences
+      const title = (evt.summary || '')
+        .replace(/\\n/g, ' ')
+        .replace(/\\,/g, ',')
+        .replace(/\\;/g, ';')
+        .replace(/\\\\/g, '\\')
+        .trim();
+
+      // Skip private/internal events
+      if (/\bprivate\b/i.test(title) || /\btentative\b/i.test(title) || /\bconsult\b/i.test(title)) {
+        continue;
+      }
+
+      let description = (evt.description || '')
+        .replace(/\\n/g, '\n')
+        .replace(/\\,/g, ',')
+        .replace(/\\;/g, ';')
+        .replace(/\\\\/g, '\\')
+        .trim()
+        .substring(0, 500);
+
+      // Extract price from description if present
+      let priceInfo;
+      const priceMatch = description.match(/\$(\d+(?:\.\d{2})?)/);
+      if (priceMatch) {
+        const price = parseFloat(priceMatch[1]);
+        priceInfo = { price, isFree: price === 0, priceDescription: `$${priceMatch[1]}` };
+      } else if (/free/i.test(description) || /free/i.test(title)) {
+        priceInfo = { price: 0, isFree: true, priceDescription: 'Free' };
+      } else {
+        priceInfo = { price: 0, isFree: false, priceDescription: 'See createmakerspace.com for pricing' };
+      }
+
+      // Clean up description for display (collapse newlines)
+      description = description.replace(/\n{2,}/g, '\n').replace(/\n/g, ' ').trim();
+      if (!description) {
+        description = `${title} at Create Makerspace`;
+      }
+
+      events.push({
+        title,
+        date: start.date,
+        time: start.time,
+        endTime: end.time || null,
+        description,
+        category: 'Arts & Crafts',
+        eventType: 'class',
+        venueName: CREATE_MAKERSPACE.venue,
+        address: CREATE_MAKERSPACE.address,
+        tags: ['auto-scraped', 'google-ical', CREATE_MAKERSPACE.tag],
+        sourceUrl: CREATE_MAKERSPACE.websiteUrl,
+        ...priceInfo
+      });
+    }
+  } catch (error) {
+    console.error(`   Error scraping Create Makerspace: ${error.message}`);
+  }
+
+  console.log(`   Found ${events.length} classes`);
+  return events;
+}
+
+// ============================================================
 // MAIN
 // ============================================================
 
 async function main() {
-  console.log('=== Scraping Venue Events (8 sources) ===');
+  console.log('=== Scraping Venue Events (9 sources) ===');
   console.log(`   Date range: ${getTodayPacific()} to ${getEndDatePacific(30)}`);
 
   let inserted = 0;
@@ -1316,6 +1516,7 @@ async function main() {
   const libraryEvents = await scrapeLibrary();
   const artsCouncilEvents = await scrapeArtsCouncil();
   const tourismEvents = await scrapeTourismSquamish();
+  const makerspaceEvents = await scrapeCreateMakerspace();
 
   const allEvents = [
     ...tricksterEvents,
@@ -1325,7 +1526,8 @@ async function main() {
     ...gondolaEvents,
     ...libraryEvents,
     ...artsCouncilEvents,
-    ...tourismEvents
+    ...tourismEvents,
+    ...makerspaceEvents
   ];
 
   // Cross-source dedup: when multiple scrapers find the same event, keep the best one.
@@ -1347,6 +1549,7 @@ async function main() {
   const SOURCE_PRIORITY = {
     'tricksters-hideout': 1, 'brackendale-art-gallery': 1, 'a-frame-brewing': 1,
     'arrow-wood-games': 1, 'sea-to-sky-gondola': 1, 'squamish-library': 1,
+    'create-makerspace': 1,
     'squamish-arts': 2, 'tourism-squamish': 3
   };
   function eventPriority(evt) {
@@ -1414,6 +1617,7 @@ async function main() {
   console.log(`Library events found: ${libraryEvents.length}`);
   console.log(`Arts Council events found: ${artsCouncilEvents.length}`);
   console.log(`Tourism Squamish events found: ${tourismEvents.length}`);
+  console.log(`Create Makerspace classes found: ${makerspaceEvents.length}`);
   console.log(`Inserted: ${inserted}`);
   console.log(`Skipped (duplicates): ${skipped}`);
   console.log(`Failed: ${failed}`);
