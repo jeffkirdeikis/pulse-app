@@ -2,6 +2,64 @@ import { isRealDeal, calculateDealScore } from './dealHelpers';
 import { getPacificNow } from './timezoneHelpers';
 
 /**
+ * Search across all content sections (classes, events, deals, services) using in-memory arrays.
+ *
+ * @param {Object} opts
+ * @param {string} opts.query - Search string
+ * @param {Array} opts.dbEvents - All events/classes from useAppData
+ * @param {Array} opts.dbDeals - All deals from useAppData
+ * @param {Array} opts.services - All services from useAppData
+ * @param {Function} opts.getVenueName - (venueId, item) => string
+ * @param {Date} opts.now - Current Pacific time
+ * @param {number} [opts.limit=5] - Max results per section
+ * @returns {{ classes: Array, events: Array, deals: Array, services: Array }}
+ */
+export function crossSectionSearch({ query, dbEvents = [], dbDeals = [], services = [], getVenueName = () => '', now, limit = 5 }) {
+  if (!query?.trim()) return { classes: [], events: [], deals: [], services: [] };
+  const q = query.trim().toLowerCase();
+
+  // Events & Classes — future only, match title/description/venue/tags
+  const matchEvent = (e) =>
+    e.title?.toLowerCase().includes(q) ||
+    e.description?.toLowerCase().includes(q) ||
+    (getVenueName(e.venueId, e) || '').toLowerCase().includes(q) ||
+    e.tags?.some(tag => typeof tag === 'string' && tag.toLowerCase().includes(q));
+
+  const futureEvents = dbEvents.filter(e =>
+    e.start instanceof Date && !isNaN(e.start.getTime()) && e.start >= now && matchEvent(e)
+  );
+  const classes = futureEvents.filter(e => e.eventType === 'class').slice(0, limit);
+  const events = futureEvents.filter(e => e.eventType === 'event').slice(0, limit);
+
+  // Deals — exclude expired and non-real, match title/description/venue
+  const deals = dbDeals.filter(deal => {
+    if (!isRealDeal(deal)) return false;
+    if (deal.validUntil) {
+      const parts = String(deal.validUntil).split(/[-T]/);
+      if (parts.length >= 3) {
+        const expiryDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]), 23, 59, 59);
+        if (!isNaN(expiryDate.getTime()) && expiryDate < now) return false;
+      }
+    }
+    return (
+      deal.title?.toLowerCase().includes(q) ||
+      deal.description?.toLowerCase().includes(q) ||
+      deal.venueName?.toLowerCase().includes(q) ||
+      (getVenueName(deal.venueId, deal) || '').toLowerCase().includes(q)
+    );
+  }).slice(0, limit);
+
+  // Services — match name/category/address
+  const matchedServices = services.filter(s =>
+    s.name?.toLowerCase().includes(q) ||
+    s.category?.toLowerCase().includes(q) ||
+    s.address?.toLowerCase().includes(q)
+  ).slice(0, limit);
+
+  return { classes, events, deals, services: matchedServices };
+}
+
+/**
  * Filter and sort events/classes based on current filters.
  *
  * @param {Array} allEvents - Combined hardcoded + database events

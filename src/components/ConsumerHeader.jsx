@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { Calendar, Star, DollarSign, Search, X, Heart, Wrench, MessageCircle, Bell, WifiOff, Clock, TrendingUp } from 'lucide-react';
+import GlobalSearchDropdown from './GlobalSearchDropdown';
 
 const RECENT_SEARCHES_KEY = 'pulse-recent-searches';
 const MAX_RECENT = 5;
@@ -46,6 +47,12 @@ const ConsumerHeader = React.memo(function ConsumerHeader({
   unreadNotifCount,
   searchSuggestions = [],
   tabCounts = {},
+  globalResults,
+  navigateToSectionWithSearch,
+  onSelectEvent,
+  onSelectDeal,
+  onSelectService,
+  getVenueName,
 }) {
   const row1Tabs = ['classes', 'events', 'deals'];
   const row2Tabs = ['services', 'wellness'];
@@ -120,7 +127,31 @@ const ConsumerHeader = React.memo(function ConsumerHeader({
     setRecentSearches([]);
   }, []);
 
-  const hasSuggestions = searchQuery?.trim() ? matchedSuggestions.length > 0 : recentSearches.length > 0;
+  const hasGlobalResults = globalResults && Object.values(globalResults).some(arr => arr.length > 0);
+  const hasSuggestions = searchQuery?.trim() ? (matchedSuggestions.length > 0 || hasGlobalResults) : recentSearches.length > 0;
+
+  const handleGlobalNav = useCallback((section, query) => {
+    setShowSuggestions(false);
+    navigateToSectionWithSearch?.(section, query);
+  }, [navigateToSectionWithSearch]);
+
+  const handleGlobalSelectEvent = useCallback((evt) => {
+    setShowSuggestions(false);
+    if (searchQuery?.trim()) saveRecentSearch(searchQuery.trim());
+    onSelectEvent?.(evt);
+  }, [searchQuery, onSelectEvent]);
+
+  const handleGlobalSelectDeal = useCallback((deal) => {
+    setShowSuggestions(false);
+    if (searchQuery?.trim()) saveRecentSearch(searchQuery.trim());
+    onSelectDeal?.(deal);
+  }, [searchQuery, onSelectDeal]);
+
+  const handleGlobalSelectService = useCallback((svc) => {
+    setShowSuggestions(false);
+    if (searchQuery?.trim()) saveRecentSearch(searchQuery.trim());
+    onSelectService?.(svc);
+  }, [searchQuery, onSelectService]);
 
   return (
     <>
@@ -301,18 +332,32 @@ const ConsumerHeader = React.memo(function ConsumerHeader({
         {showSuggestions && hasSuggestions && (
           <div className="search-suggestions">
             {searchQuery?.trim() ? (
-              /* Query-based autocomplete */
-              matchedSuggestions.map((s, i) => (
-                <button
-                  type="button"
-                  key={i}
-                  className="search-suggestion-item"
-                  onMouseDown={(e) => { e.preventDefault(); handleSelectSuggestion(s); }}
-                >
-                  <Search size={14} className="suggestion-icon" />
-                  <span className="suggestion-text">{s}</span>
-                </button>
-              ))
+              /* Global search dropdown when we have results */
+              hasGlobalResults ? (
+                <GlobalSearchDropdown
+                  globalResults={globalResults}
+                  searchQuery={searchQuery}
+                  currentSection={currentSection}
+                  onNavigateWithSearch={handleGlobalNav}
+                  onSelectEvent={handleGlobalSelectEvent}
+                  onSelectDeal={handleGlobalSelectDeal}
+                  onSelectService={handleGlobalSelectService}
+                  getVenueName={getVenueName}
+                />
+              ) : (
+                /* Fallback to autocomplete suggestions */
+                matchedSuggestions.map((s, i) => (
+                  <button
+                    type="button"
+                    key={i}
+                    className="search-suggestion-item"
+                    onMouseDown={(e) => { e.preventDefault(); handleSelectSuggestion(s); }}
+                  >
+                    <Search size={14} className="suggestion-icon" />
+                    <span className="suggestion-text">{s}</span>
+                  </button>
+                ))
+              )
             ) : (
               /* Recent searches */
               <>

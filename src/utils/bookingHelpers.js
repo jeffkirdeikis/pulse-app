@@ -28,6 +28,11 @@ const BOOKING_SYSTEMS = {
     type: 'mindbody',
     bookingUrl: 'https://clients.mindbodyonline.com/classic/ws?studioid=5736498&stype=-8&sTG=24&sView=day&sLoc=1'
   },
+  // District of Squamish — PerfectMind booking system
+  'Brennan Park Recreation Centre': {
+    type: 'website',
+    bookingUrl: 'https://districtofsquamish.perfectmind.com/Contacts/BookMe4?widgetId=15f6af07-39c5-473e-b053-96653f77a406'
+  },
   // Venue website schedule pages (no Mindbody)
   'Breathe Fitness Studio': {
     type: 'website',

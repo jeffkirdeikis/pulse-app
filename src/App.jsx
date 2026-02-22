@@ -39,11 +39,12 @@ const ContactSheet = lazy(() => import('./components/modals/ContactSheet'));
 const EditEventModal = lazy(() => import('./components/modals/EditEventModal'));
 const NotificationsPanel = lazy(() => import('./components/modals/NotificationsPanel'));
 import EventCard from './components/EventCard';
+import ZeroResultsRescue from './components/ZeroResultsRescue';
 import SkeletonCards from './components/SkeletonCards';
 import PullToRefresh from './components/PullToRefresh';
 import { REAL_DATA } from './data/realData';
 import { normalizeDealCategory } from './utils/dealHelpers';
-import { filterEvents as filterEventsUtil, filterDeals as filterDealsUtil } from './utils/filterHelpers';
+import { filterEvents as filterEventsUtil, filterDeals as filterDealsUtil, crossSectionSearch } from './utils/filterHelpers';
 import { PACIFIC_TZ, getPacificNow } from './utils/timezoneHelpers';
 import './styles/index.css';
 
@@ -130,6 +131,13 @@ export default function PulseApp() {
 
   // Save section + scroll position before opening detail modals so we can restore on close
   const preModalStateRef = useRef(null);
+
+  // Cross-section search: allows navigating to a section with a pre-filled query
+  const pendingSearchRef = useRef(null);
+  const navigateToSectionWithSearch = useCallback((section, query) => {
+    pendingSearchRef.current = query;
+    setCurrentSection(section);
+  }, [setCurrentSection]);
 
   // Deep-link-aware select/close for detail modals
   const selectEvent = useCallback((evt) => {
@@ -1534,6 +1542,12 @@ export default function PulseApp() {
     return filteredDeals.filter(d => dealCategoryFilter === 'All' || normalizeDealCategory(d.category) === dealCategoryFilter).length;
   }, [filteredDeals, dealCategoryFilter]);
 
+  // Cross-section search results — consumed by ZeroResultsRescue and GlobalSearchDropdown
+  const globalResults = useMemo(() => {
+    if (!searchQuery?.trim()) return null;
+    return crossSectionSearch({ query: searchQuery, dbEvents, dbDeals, services, getVenueName, now: currentTime, limit: 20 });
+  }, [searchQuery, dbEvents, dbDeals, services, getVenueName, currentTime]);
+
   // Memoize paginated events and grouping for infinite scroll with dividers
   const paginatedEvents = useMemo(() => filteredEvents.slice(0, visibleEventCount), [filteredEvents, visibleEventCount]);
   const groupedEvents = useMemo(() => {
@@ -1597,28 +1611,42 @@ export default function PulseApp() {
       }
 
       return (
-        <div className="empty-state">
-          <div className="empty-state-icon">
-            {currentSection === 'classes' ? '🧘' : '📅'}
-          </div>
-          <p className="empty-state-message">{emptyMessage}</p>
-          {suggestions.length > 0 && (
-            <div className="empty-state-suggestions">
-              {suggestions.slice(0, 3).map((s, i) => (
-                <button key={i} className="empty-state-suggestion" onClick={s.action}>
-                  {s.label}{s.count ? ` (${s.count} results)` : ''}
-                </button>
-              ))}
+        <>
+          <div className="empty-state">
+            <div className="empty-state-icon">
+              {currentSection === 'classes' ? '🧘' : '📅'}
             </div>
+            <p className="empty-state-message">{emptyMessage}</p>
+            {suggestions.length > 0 && (
+              <div className="empty-state-suggestions">
+                {suggestions.slice(0, 3).map((s, i) => (
+                  <button key={i} className="empty-state-suggestion" onClick={s.action}>
+                    {s.label}{s.count ? ` (${s.count} results)` : ''}
+                  </button>
+                ))}
+              </div>
+            )}
+            <button className="empty-state-btn" onClick={() => {
+              setFilters({ day: 'today', age: 'all', category: 'all', time: 'all', price: 'all', location: 'all' });
+              setKidsAgeRange([0, 18]);
+              setSearchQuery('');
+            }}>
+              Reset All Filters
+            </button>
+          </div>
+          {searchQuery?.trim() && (
+            <ZeroResultsRescue
+              globalResults={globalResults}
+              currentSection={currentSection}
+              searchQuery={searchQuery}
+              onNavigateWithSearch={navigateToSectionWithSearch}
+              onSelectEvent={selectEvent}
+              onSelectDeal={selectDeal}
+              onSelectService={selectService}
+              getVenueName={getVenueName}
+            />
           )}
-          <button className="empty-state-btn" onClick={() => {
-            setFilters({ day: 'today', age: 'all', category: 'all', time: 'all', price: 'all', location: 'all' });
-            setKidsAgeRange([0, 18]);
-            setSearchQuery('');
-          }}>
-            Reset All Filters
-          </button>
-        </div>
+        </>
       );
     }
 
@@ -1798,8 +1826,15 @@ export default function PulseApp() {
     prevSectionRef.current = currentSection;
     // On first render (or same section), don't reset persisted filters
     if (prevSection === currentSection) return;
-    setSearchQuery('');
-    setDebouncedSearch('');
+    // If a pending search was set (cross-section navigation), use it instead of clearing
+    if (pendingSearchRef.current) {
+      setSearchQuery(pendingSearchRef.current);
+      setDebouncedSearch(pendingSearchRef.current);
+      pendingSearchRef.current = null;
+    } else {
+      setSearchQuery('');
+      setDebouncedSearch('');
+    }
     // Reset day/category but preserve persisted preferences (time, age, price)
     setFilters(f => ({ ...f, day: 'today', category: 'all' }));
     // Reset pagination when switching sections
@@ -1885,6 +1920,12 @@ export default function PulseApp() {
             unreadNotifCount={unreadNotifCount}
             searchSuggestions={searchSuggestions}
             tabCounts={tabCounts}
+            globalResults={globalResults}
+            navigateToSectionWithSearch={navigateToSectionWithSearch}
+            onSelectEvent={selectEvent}
+            onSelectDeal={selectDeal}
+            onSelectService={selectService}
+            getVenueName={getVenueName}
           />
 
           {/* Premium Filter System - Clean 5-Filter Layout */}
@@ -1968,20 +2009,34 @@ export default function PulseApp() {
                 transition={{ type: 'spring', stiffness: 300, damping: 30 }}
               >
                 {currentSection === 'deals' ? (
-                  <DealsGrid
-                    deals={filteredDeals}
-                    dealsLoading={dealsLoading}
-                    dealCategoryFilter={dealCategoryFilter}
-                    setDealCategoryFilter={setDealCategoryFilter}
-                    dealCardRefs={dealCardRefs}
-                    searchQuery={searchQuery}
-                    setSearchQuery={setSearchQuery}
-                    getVenueName={getVenueName}
-                    isItemSavedLocal={isItemSavedLocal}
-                    toggleSave={toggleSave}
-                    onSelectDeal={selectDeal}
-                    onPrefetch={prefetchDeal}
-                  />
+                  <>
+                    <DealsGrid
+                      deals={filteredDeals}
+                      dealsLoading={dealsLoading}
+                      dealCategoryFilter={dealCategoryFilter}
+                      setDealCategoryFilter={setDealCategoryFilter}
+                      dealCardRefs={dealCardRefs}
+                      searchQuery={searchQuery}
+                      setSearchQuery={setSearchQuery}
+                      getVenueName={getVenueName}
+                      isItemSavedLocal={isItemSavedLocal}
+                      toggleSave={toggleSave}
+                      onSelectDeal={selectDeal}
+                      onPrefetch={prefetchDeal}
+                    />
+                    {searchQuery?.trim() && filteredDealsDisplayCount === 0 && (
+                      <ZeroResultsRescue
+                        globalResults={globalResults}
+                        currentSection="deals"
+                        searchQuery={searchQuery}
+                        onNavigateWithSearch={navigateToSectionWithSearch}
+                        onSelectEvent={selectEvent}
+                        onSelectDeal={selectDeal}
+                        onSelectService={selectService}
+                        getVenueName={getVenueName}
+                      />
+                    )}
+                  </>
                 ) : currentSection === 'services' ? (
                   <>
                     {servicesSubView === 'booking' ? (
@@ -1993,7 +2048,8 @@ export default function PulseApp() {
                         setShowAuthModal={setShowAuthModal}
                       />
                     ) : (
-                    <ServicesGrid
+                    <>
+                      <ServicesGrid
                         services={services}
                         servicesLoading={servicesLoading}
                         debouncedSearch={debouncedSearch}
@@ -2005,6 +2061,19 @@ export default function PulseApp() {
                         onSelectService={selectService}
                         onPrefetch={prefetchService}
                       />
+                      {debouncedSearch && filteredServicesCount === 0 && (
+                        <ZeroResultsRescue
+                          globalResults={globalResults}
+                          currentSection="services"
+                          searchQuery={searchQuery}
+                          onNavigateWithSearch={navigateToSectionWithSearch}
+                          onSelectEvent={selectEvent}
+                          onSelectDeal={selectDeal}
+                          onSelectService={selectService}
+                          getVenueName={getVenueName}
+                        />
+                      )}
+                    </>
                     )}
                   </>
                 ) : currentSection === 'wellness' ? (
