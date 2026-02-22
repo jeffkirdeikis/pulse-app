@@ -68,6 +68,7 @@ const FilterSection = React.memo(function FilterSection({
   happeningNowCount = 0,
   freeCount = 0,
   weekendCount = 0,
+  currentSection,
 }) {
   const [catDropdownOpen, setCatDropdownOpen] = useState(false);
   const catDropdownRef = useRef(null);
@@ -186,12 +187,12 @@ const FilterSection = React.memo(function FilterSection({
       {/* Quick Filter Chips */}
       <div className="quick-filter-chips">
         {[
-          { key: 'free', label: freeCount > 0 ? `Free · ${freeCount}` : 'Free', icon: <DollarSign size={14} />, apply: { price: 'free' }, match: (f) => f.price === 'free' },
+          currentSection !== 'classes' && { key: 'free', label: freeCount > 0 ? `Free · ${freeCount}` : 'Free', icon: <DollarSign size={14} />, apply: { price: 'free' }, match: (f) => f.price === 'free' },
           { key: 'kids', label: 'Kids', icon: <Baby size={14} />, apply: { age: 'kids' }, match: (f) => f.age === 'kids' },
           { key: 'morning', label: 'Morning', icon: <Sun size={14} />, apply: { time: 'morning' }, match: (f) => f.time === 'morning' },
           { key: 'afternoon', label: 'Afternoon', icon: <Sunset size={14} />, apply: { time: 'afternoon' }, match: (f) => f.time === 'afternoon' },
           { key: 'evening', label: 'Evening', icon: <Moon size={14} />, apply: { time: 'evening' }, match: (f) => f.time === 'evening' },
-        ].map(chip => {
+        ].filter(Boolean).map(chip => {
           const isActive = chip.match(filters);
           return (
             <button

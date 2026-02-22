@@ -1948,6 +1948,7 @@ export default function PulseApp() {
               happeningNowCount={happeningNowCount}
               freeCount={freeCount}
               weekendCount={weekendCount}
+              currentSection={currentSection}
             />
           )}
 
