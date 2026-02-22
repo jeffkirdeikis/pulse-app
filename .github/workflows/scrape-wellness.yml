@@ -6,7 +6,7 @@ on:
     # 8 AM - 8 PM PT = 16:00 - 04:00 UTC
     # Mon-Sat: cron doesn't support PT directly, so we cover UTC hours
     - cron: '0,30 16-23 * * 1-6'    # Mon-Sat 4pm-11:30pm UTC (8am-3:30pm PT)
-    - cron: '0,30 0-4 * * 2-7'      # Tue-Sun 12am-4:30am UTC (4pm-8:30pm PT prev day)
+    - cron: '0,30 0-4 * * 0-6'      # Every day 12am-4:30am UTC (4pm-8:30pm PT prev day)
 
   # Allow manual trigger
   workflow_dispatch:
