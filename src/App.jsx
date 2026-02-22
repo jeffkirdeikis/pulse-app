@@ -906,6 +906,10 @@ export default function PulseApp() {
     });
     // Only include categories with >0 matching events (Bug #7-9: empty dropdown options)
     const cats = Object.keys(catCounts).filter(c => catCounts[c] > 0).sort();
+    // Always include Kids and Family categories for kid-friendly filtering
+    if (!cats.includes('Kids')) cats.push('Kids');
+    if (!cats.includes('Family')) cats.push('Family');
+    cats.sort();
     return ['All', ...cats];
   }, [dbEvents, currentSection, filters.day, currentTime]);
 

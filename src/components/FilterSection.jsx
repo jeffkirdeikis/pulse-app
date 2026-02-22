@@ -188,7 +188,7 @@ const FilterSection = React.memo(function FilterSection({
       <div className="quick-filter-chips">
         {[
           currentSection !== 'classes' && { key: 'free', label: freeCount > 0 ? `Free · ${freeCount}` : 'Free', icon: <DollarSign size={14} />, apply: { price: 'free' }, match: (f) => f.price === 'free' },
-          { key: 'kids', label: 'Kids', icon: <Baby size={14} />, apply: { age: 'kids' }, match: (f) => f.age === 'kids' },
+          { key: 'kids', label: 'Kids/Family', icon: <Baby size={14} />, apply: { age: 'kids' }, match: (f) => f.age === 'kids' },
           { key: 'morning', label: 'Morning', icon: <Sun size={14} />, apply: { time: 'morning' }, match: (f) => f.time === 'morning' },
           { key: 'afternoon', label: 'Afternoon', icon: <Sunset size={14} />, apply: { time: 'afternoon' }, match: (f) => f.time === 'afternoon' },
           { key: 'evening', label: 'Evening', icon: <Moon size={14} />, apply: { time: 'evening' }, match: (f) => f.time === 'evening' },

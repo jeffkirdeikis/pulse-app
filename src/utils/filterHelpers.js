@@ -209,7 +209,15 @@ export function filterEvents(allEvents, { currentSection, filters, searchQuery, 
   if (filters.category !== 'all') {
     const cats = Array.isArray(filters.category) ? filters.category : [filters.category];
     if (cats.length > 0) {
-      filtered = filtered.filter(e => cats.includes(e.category) || (e.tags && cats.some(c => e.tags.includes(c))));
+      const hasKidsFamily = cats.includes('Kids') || cats.includes('Family');
+      const otherCats = cats.filter(c => c !== 'Kids' && c !== 'Family');
+      filtered = filtered.filter(e => {
+        // Kids/Family categories match any event with kid-related labels (all ages)
+        if (hasKidsFamily && (e.ageGroup?.includes('Kids') || e.tags?.includes('Kids') || e.tags?.includes('Family'))) return true;
+        // Standard category matching for other selected categories
+        if (otherCats.length > 0 && (otherCats.includes(e.category) || (e.tags && otherCats.some(c => e.tags.includes(c))))) return true;
+        return false;
+      });
     }
   }
 
