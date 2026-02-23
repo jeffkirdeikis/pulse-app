@@ -48,21 +48,24 @@
         }
 
         .logo-text-premium {
-          font-size: 24px;
+          font-family: 'Inter Tight', -apple-system, BlinkMacSystemFont, sans-serif;
+          font-size: 26px;
           font-weight: 900;
-          letter-spacing: -0.5px;
+          letter-spacing: -1.5px;
           background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
           background-clip: text;
+          line-height: 1;
         }
 
         .city-tag {
-          font-size: 12px;
-          font-weight: 600;
-          color: var(--text-secondary);
+          font-family: 'Inter Tight', -apple-system, BlinkMacSystemFont, sans-serif;
+          font-size: 11px;
+          font-weight: 800;
+          color: var(--text-tertiary);
           text-transform: uppercase;
-          letter-spacing: 0.5px;
+          letter-spacing: 2px;
         }
 
         .header-actions-premium {
