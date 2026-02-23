@@ -2725,7 +2725,13 @@ export default function PulseApp() {
         )}
       </AnimatePresence>
 
-      <FeedbackWidget />
+      <FeedbackWidget onAddContent={() => {
+        if (!session) {
+          setShowAuthModal(true);
+        } else {
+          setShowAddEventModal(true);
+        }
+      }} />
 
       {view === 'consumer' && (
         <footer className="app-footer" role="contentinfo">

@@ -97,6 +97,45 @@
   padding: 20px 24px 24px;
 }
 
+.feedback-add-content-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1.5px dashed #2563eb;
+  background: #eff6ff;
+  color: #2563eb;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.feedback-add-content-btn:hover {
+  background: #dbeafe;
+  border-color: #1d4ed8;
+}
+
+.feedback-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 16px 0;
+  color: #9ca3af;
+  font-size: 12px;
+}
+
+.feedback-divider::before,
+.feedback-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #e5e7eb;
+}
+
 .feedback-types {
   display: flex;
   gap: 8px;

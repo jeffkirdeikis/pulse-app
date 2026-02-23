@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, memo } from 'react';
-import { MessageSquare, X, ImagePlus, Info, Send } from 'lucide-react';
+import { MessageSquare, X, ImagePlus, Info, Send, Plus } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 const TYPES = [
@@ -8,7 +8,7 @@ const TYPES = [
   { id: 'suggestion', label: 'Suggestion', icon: '💡', placeholder: 'What would you like to see on Pulse?' },
 ];
 
-const FeedbackWidget = memo(function FeedbackWidget() {
+const FeedbackWidget = memo(function FeedbackWidget({ onAddContent }) {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedType, setSelectedType] = useState('bug');
   const [message, setMessage] = useState('');
@@ -169,6 +169,18 @@ const FeedbackWidget = memo(function FeedbackWidget() {
 
               {/* Body */}
               <div className="feedback-body">
+                {/* Add Content CTA */}
+                <button
+                  type="button"
+                  className="feedback-add-content-btn"
+                  onClick={() => { setIsOpen(false); onAddContent?.(); }}
+                >
+                  <Plus size={16} />
+                  Add Event / Class / Business
+                </button>
+
+                <div className="feedback-divider"><span>or send feedback</span></div>
+
                 {/* Type Selector */}
                 <div className="feedback-types">
                   {TYPES.map(t => (
