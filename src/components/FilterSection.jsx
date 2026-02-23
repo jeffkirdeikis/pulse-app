@@ -223,11 +223,11 @@ const FilterSection = React.memo(function FilterSection({
       <div className="filters-section">
           <div className="filters-row-top">
             {/* Time Filter - Dynamic 30-min slots */}
-            <div className="filter-group">
+            <div className="filter-group filter-select-wrapper">
               <select
                 value={filters.time}
                 onChange={(e) => setFilters({...filters, time: e.target.value})}
-                className="filter-dropdown"
+                className="filter-dropdown filter-select-custom"
                 aria-label="Filter by time"
               >
                 <option value="all">All Times</option>
@@ -244,6 +244,7 @@ const FilterSection = React.memo(function FilterSection({
                   );
                 })}
               </select>
+              <ChevronDown size={16} className="filter-select-arrow" />
             </div>
 
             {/* Category Multi-Select Dropdown */}

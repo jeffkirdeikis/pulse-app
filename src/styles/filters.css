@@ -507,6 +507,27 @@
           font-weight: 600;
         }
 
+        /* Custom select arrow to match category dropdown */
+        .filter-select-wrapper {
+          position: relative;
+        }
+
+        .filter-select-custom {
+          -webkit-appearance: none;
+          -moz-appearance: none;
+          appearance: none;
+          padding-right: 40px !important;
+        }
+
+        .filter-select-arrow {
+          position: absolute;
+          right: 14px;
+          top: 50%;
+          transform: translateY(-50%);
+          opacity: 0.5;
+          pointer-events: none;
+        }
+
         /* Category multi-select dropdown */
         .cat-dropdown-trigger {
           display: flex;
