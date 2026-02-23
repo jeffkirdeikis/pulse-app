@@ -233,6 +233,7 @@
         /* ========== QUICK FILTER CHIPS ========== */
         .quick-filter-chips {
           display: flex;
+          justify-content: center;
           gap: 8px;
           padding: 8px 20px;
           background: #ffffff;
