@@ -1,8 +1,8 @@
         /* ========== PREMIUM TOP BANNER ========== */
         .top-banner-premium {
-          background: linear-gradient(to bottom, #f0f7ff, #ffffff);
-          border-bottom: 1px solid var(--border-light);
-          box-shadow: 0 2px 8px rgba(59, 130, 246, 0.06);
+          background: linear-gradient(180deg, #e8f1fd 0%, #f0f7ff 60%, #ffffff 100%);
+          border-bottom: 1px solid #dbeafe;
+          box-shadow: 0 3px 12px rgba(59, 130, 246, 0.10);
         }
 
         .banner-content-premium {
@@ -40,7 +40,8 @@
           padding: 8px 4px;
           border-radius: 16px;
           border: 1.5px solid #e5e7eb;
-          background: #f9fafb;
+          background: #ffffff;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
           cursor: pointer;
           transition: all 0.2s ease;
           scroll-snap-align: center;
