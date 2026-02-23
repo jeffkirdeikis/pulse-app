@@ -51,7 +51,7 @@
           font-family: 'Inter Tight', -apple-system, BlinkMacSystemFont, sans-serif;
           font-size: 26px;
           font-weight: 900;
-          letter-spacing: -1.5px;
+          letter-spacing: 0.5px;
           background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
