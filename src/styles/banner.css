@@ -1,7 +1,8 @@
         /* ========== PREMIUM TOP BANNER ========== */
         .top-banner-premium {
-          background: white;
+          background: linear-gradient(to bottom, #f0f7ff, #ffffff);
           border-bottom: 1px solid var(--border-light);
+          box-shadow: 0 2px 8px rgba(59, 130, 246, 0.06);
         }
 
         .banner-content-premium {
@@ -15,7 +16,7 @@
         .category-cards-strip {
           display: flex;
           gap: 8px;
-          padding: 10px 12px;
+          padding: 12px 12px 14px;
           overflow-x: auto;
           scroll-snap-type: x mandatory;
           -webkit-overflow-scrolling: touch;

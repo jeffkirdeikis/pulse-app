@@ -246,7 +246,7 @@ const ConsumerHeader = React.memo(function ConsumerHeader({
                     <Icon size={22} strokeWidth={2} />
                   </div>
                   <span className="category-card-label">{label}</span>
-                  {count > 0 && <span className="category-card-count">{count}</span>}
+                  {user.isAdmin && count > 0 && <span className="category-card-count">{count}</span>}
                 </button>
               );
             })}
