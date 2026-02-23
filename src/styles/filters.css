@@ -804,7 +804,7 @@
           }
 
           .filters-row-top {
-            grid-template-columns: 1fr;
+            grid-template-columns: 1fr 1fr;
             gap: 8px;
             margin-bottom: 8px;
           }
