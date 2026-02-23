@@ -719,6 +719,17 @@ export default function PulseApp() {
     },
   });
 
+  // Handle pending action after sign-in (e.g. user clicked "Add Event" before logging in)
+  useEffect(() => {
+    if (session?.user) {
+      const pending = sessionStorage.getItem('pulse_pending_action');
+      if (pending === 'add_content') {
+        sessionStorage.removeItem('pulse_pending_action');
+        openSubmissionModal();
+      }
+    }
+  }, [session?.user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Load pending submissions when admin panel opens
   useEffect(() => {
     if (showAdminPanel && user?.isAdmin) {
@@ -2727,9 +2738,10 @@ export default function PulseApp() {
 
       <FeedbackWidget onAddContent={() => {
         if (!session) {
+          sessionStorage.setItem('pulse_pending_action', 'add_content');
           setShowAuthModal(true);
         } else {
-          setShowAddEventModal(true);
+          openSubmissionModal();
         }
       }} />
 
