@@ -6,6 +6,7 @@ import {
   Users, Building, Zap
 } from 'lucide-react';
 import { PACIFIC_TZ } from '../../utils/timezoneHelpers';
+import { stripHtml } from '../../utils/textHelpers';
 
 const EventDetailModal = memo(function EventDetailModal({
   event,
@@ -272,7 +273,7 @@ const EventDetailModal = memo(function EventDetailModal({
         <div className="event-section">
           <h2 className="event-section-title">About</h2>
           {event.description && (
-            <p className="event-about-text" style={{ whiteSpace: 'pre-line' }}>{event.description}</p>
+            <p className="event-about-text" style={{ whiteSpace: 'pre-line' }}>{stripHtml(event.description)}</p>
           )}
 
           {/* Category & Tags (filter out internal/system tags) */}

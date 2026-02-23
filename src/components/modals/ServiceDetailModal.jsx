@@ -3,6 +3,7 @@ import {
   CheckCircle, ChevronRight, Globe, Mail, MapPin, Navigation,
   Phone, Share2, Star, Users, Wrench, X
 } from 'lucide-react';
+import { stripHtml } from '../../utils/textHelpers';
 
 function getSafeWebsiteUrl(url) {
   if (!url) return null;
@@ -132,7 +133,7 @@ const ServiceDetailModal = memo(function ServiceDetailModal({
         <div className="service-section">
           <h2 className="service-section-title">About</h2>
           <p className="service-about-text">
-            {service.description || `${service.name} is a ${(service.category || 'local').toLowerCase()} business located in Squamish, BC.`}
+            {stripHtml(service.description) || `${service.name} is a ${(service.category || 'local').toLowerCase()} business located in Squamish, BC.`}
           </p>
         </div>
 

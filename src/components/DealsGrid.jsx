@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { MapPin, Clock, Star, Check, ChevronRight, DollarSign } from 'lucide-react';
 import SkeletonCards from './SkeletonCards';
 import { generateSmartDealTitle, normalizeDealCategory, getDealSavingsDisplay } from '../utils/dealHelpers';
+import { stripHtml } from '../utils/textHelpers';
 
 const DealsGrid = React.memo(function DealsGrid({
   deals,
@@ -142,7 +143,7 @@ const DealsGrid = React.memo(function DealsGrid({
               )}
 
               {deal.description && deal.title && deal.description.toLowerCase() !== deal.title.toLowerCase() && (
-                <p className="deal-description-new">{deal.description.length > 80 ? deal.description.substring(0, 77) + '...' : deal.description}</p>
+                <p className="deal-description-new">{(() => { const d = stripHtml(deal.description); return d.length > 80 ? d.substring(0, 77) + '...' : d; })()}</p>
               )}
             </div>
 
