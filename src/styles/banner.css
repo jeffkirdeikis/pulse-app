@@ -130,12 +130,12 @@
         }
 
         /* ========== CATEGORY BRAND COLORS (inactive) ========== */
-        /* Classes — blue */
+        /* Classes — teal */
         .category-card--classes .category-card-icon {
-          background: #dbeafe;
-          color: #2563eb;
+          background: #ccfbf1;
+          color: #0d9488;
         }
-        .category-card--classes .category-card-label { color: #2563eb; }
+        .category-card--classes .category-card-label { color: #0f766e; }
 
         /* Events — amber/gold */
         .category-card--events .category-card-icon {
@@ -169,7 +169,7 @@
         .category-card.active .category-card-icon {
           background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
           color: white;
-          box-shadow: 0 4px 14px rgba(37, 99, 235, 0.45);
+          box-shadow: none;
         }
         .category-card.active .category-card-label {
           color: #1d4ed8;
