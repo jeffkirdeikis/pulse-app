@@ -153,23 +153,22 @@ const ConsumerHeader = React.memo(function ConsumerHeader({
               <svg className="pulse-icon-premium" viewBox="0 0 100 120" fill="none" aria-hidden="true">
                 <defs>
                   <linearGradient id="pulseGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" style={{stopColor: '#60a5fa'}} />
-                    <stop offset="100%" style={{stopColor: '#3b82f6'}} />
+                    <stop offset="0%" style={{stopColor: '#3b82f6'}} />
+                    <stop offset="100%" style={{stopColor: '#2563eb'}} />
                   </linearGradient>
                 </defs>
+                {/* Location pin - filled blue */}
                 <path d="M50 8C33 8 19 22 19 39C19 52 28 63 50 95C72 63 81 52 81 39C81 22 67 8 50 8Z"
-                      stroke="url(#pulseGradient)"
-                      strokeWidth="7"
-                      fill="none"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"/>
-                <circle cx="50" cy="39" r="22"
-                        stroke="url(#pulseGradient)"
-                        strokeWidth="7"
-                        fill="none"/>
+                      fill="url(#pulseGradient)"/>
+                {/* Inner circle - white */}
+                <circle cx="50" cy="39" r="20"
+                        fill="url(#pulseGradient)"
+                        stroke="white"
+                        strokeWidth="4"/>
+                {/* Heartbeat pulse line - white */}
                 <path d="M33 39 L38 39 L42 33 L46 45 L50 28 L54 45 L58 33 L62 39 L67 39"
-                      stroke="url(#pulseGradient)"
-                      strokeWidth="4"
+                      stroke="white"
+                      strokeWidth="3.5"
                       fill="none"
                       strokeLinecap="round"
                       strokeLinejoin="round"/>
