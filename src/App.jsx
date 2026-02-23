@@ -1958,6 +1958,7 @@ export default function PulseApp() {
               freeCount={freeCount}
               weekendCount={weekendCount}
               currentSection={currentSection}
+              isAdmin={user.isAdmin}
             />
           )}
 

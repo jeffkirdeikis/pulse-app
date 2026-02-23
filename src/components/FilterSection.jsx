@@ -69,6 +69,7 @@ const FilterSection = React.memo(function FilterSection({
   freeCount = 0,
   weekendCount = 0,
   currentSection,
+  isAdmin,
 }) {
   const [catDropdownOpen, setCatDropdownOpen] = useState(false);
   const catDropdownRef = useRef(null);
@@ -173,7 +174,7 @@ const FilterSection = React.memo(function FilterSection({
               >
                 <span className="date-chip-day">{d.isToday ? 'Today' : d.dayName}</span>
                 <span className="date-chip-num">{d.dayNum}</span>
-                {hasEvents && !isSelected && (
+                {isAdmin && hasEvents && !isSelected && (
                   <span className="date-chip-count">{count > 99 ? '99+' : count}</span>
                 )}
                 {d.isToday && !isSelected && !hasEvents && <span className="date-chip-dot" />}
