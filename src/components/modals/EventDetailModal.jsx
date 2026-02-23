@@ -273,12 +273,12 @@ const EventDetailModal = memo(function EventDetailModal({
         <div className="event-section">
           <h2 className="event-section-title">About</h2>
           {event.description && (
-            <p className="event-about-text" style={{ whiteSpace: 'pre-line' }}>{stripHtml(event.description)}</p>
+            <p className="event-about-text" style={{ whiteSpace: 'pre-line' }}>{stripHtml(event.description, event.title)}</p>
           )}
 
           {/* Category & Tags (filter out internal/system tags) */}
           {(() => {
-            const internalPatterns = /^(auto-scraped|mindbody|wellnessliving|janeapp|scraped|source-|manual-entry|healcode|brandedweb|community-submitted|together-?nest|togethernest|website|perfectmind|wp-tribe-api|squarespace-api|communico-api|tockify-pinboard|gondola-website|tourism-squamish|bag-website)/i;
+            const internalPatterns = /^(auto-scraped|mindbody|wellnessliving|janeapp|scraped|source-|manual-entry|healcode|brandedweb|community-submitted|together-?nest|togethernest|website|perfectmind|wp-tribe-api|squarespace-api|communico-api|tockify-pinboard|gondola-website|tourism-squamish|bag-website|google-ical|amilia)/i;
             // Also filter venue-name slugs (kebab-case of the venue name)
             const venueSlug = venueName ? venueName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') : '';
             // Also generate a slug without apostrophe separation (e.g. "Trickster's" → "tricksters" not "trickster-s")

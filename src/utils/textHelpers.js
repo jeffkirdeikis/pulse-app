@@ -2,7 +2,7 @@
  * Strip HTML tags from a string, converting block elements to newlines
  * and decoding HTML entities.
  */
-export function stripHtml(html) {
+export function stripHtml(html, title) {
   if (!html) return '';
   let text = html
     .replace(/<br\s*\/?>/gi, '\n')
@@ -28,8 +28,17 @@ export function stripHtml(html) {
   // These are comma-separated repeating date+time entries prepended by Amilia scraper
   text = text.replace(/^(?:(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),\s+\w+\s+\d{1,2},\s+\d{4},\s+\d{1,2}:\d{2}\s+[AP]M\s*-\s*\d{1,2}:\d{2}\s+[AP]M[,\s]*)+/i, '');
 
-  // Strip "Book now" prefix that follows the dates
-  text = text.replace(/^Book now\s*/i, '');
+  // Strip everything up to and including "Book now" (Amilia CTA that appears after metadata)
+  text = text.replace(/^[\s\S]{0,300}?Book now\s*/i, '');
+
+  // Strip "Instructor: Name" prefix if it's at the start
+  text = text.replace(/^Instructor:\s*[^\n]{1,50}\s*/i, '');
+
+  // Strip repeated event title from start of description
+  if (title) {
+    const escaped = title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    text = text.replace(new RegExp('^' + escaped + '\\s*', 'i'), '');
+  }
 
   return text.replace(/\n{3,}/g, '\n\n').trim();
 }
