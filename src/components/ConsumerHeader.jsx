@@ -68,10 +68,11 @@ const ConsumerHeader = React.memo(function ConsumerHeader({
   const searchContainerRef = useRef(null);
   const inputRef = useRef(null);
 
-  // Auto-scroll active card into view
+  // Auto-scroll active card into view (only when strip actually overflows)
   useEffect(() => {
+    const strip = stripRef.current;
     const el = tabRefs.current[currentSection];
-    if (el && stripRef.current) {
+    if (el && strip && strip.scrollWidth > strip.clientWidth) {
       el.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
     }
   }, [currentSection]);
