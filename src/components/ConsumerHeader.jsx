@@ -232,7 +232,7 @@ const ConsumerHeader = React.memo(function ConsumerHeader({
                   ref={el => tabRefs.current[key] = el}
                   role="tab"
                   aria-selected={isActive}
-                  className={`category-card${isActive ? ' active' : ''}`}
+                  className={`category-card category-card--${key}${isActive ? ' active' : ''}`}
                   onClick={() => {
                     if (key === 'classes' || key === 'events' || key === 'deals') {
                       setCurrentSection(key);

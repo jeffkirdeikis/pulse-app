@@ -105,12 +105,6 @@
           flex-shrink: 0;
         }
 
-        .category-card.active .category-card-icon {
-          background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-          color: white;
-          box-shadow: 0 4px 14px rgba(37, 99, 235, 0.45);
-        }
-
         .category-card-label {
           font-size: 12px;
           font-weight: 700;
@@ -118,10 +112,6 @@
           white-space: nowrap;
           line-height: 1;
           letter-spacing: 0.02em;
-        }
-
-        .category-card.active .category-card-label {
-          color: #1d4ed8;
         }
 
         .category-card-count {
@@ -137,6 +127,52 @@
           min-width: 16px;
           text-align: center;
           line-height: 1.4;
+        }
+
+        /* ========== CATEGORY BRAND COLORS (inactive) ========== */
+        /* Classes — blue */
+        .category-card--classes .category-card-icon {
+          background: #dbeafe;
+          color: #2563eb;
+        }
+        .category-card--classes .category-card-label { color: #2563eb; }
+
+        /* Events — amber/gold */
+        .category-card--events .category-card-icon {
+          background: #fef3c7;
+          color: #d97706;
+        }
+        .category-card--events .category-card-label { color: #b45309; }
+
+        /* Deals — green */
+        .category-card--deals .category-card-icon {
+          background: #d1fae5;
+          color: #059669;
+        }
+        .category-card--deals .category-card-label { color: #047857; }
+
+        /* Services — orange */
+        .category-card--services .category-card-icon {
+          background: #ffedd5;
+          color: #ea580c;
+        }
+        .category-card--services .category-card-label { color: #c2410c; }
+
+        /* Wellness — purple-pink */
+        .category-card--wellness .category-card-icon {
+          background: #f3e8ff;
+          color: #9333ea;
+        }
+        .category-card--wellness .category-card-label { color: #7e22ce; }
+
+        /* Active state overrides — all go blue */
+        .category-card.active .category-card-icon {
+          background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+          color: white;
+          box-shadow: 0 4px 14px rgba(37, 99, 235, 0.45);
+        }
+        .category-card.active .category-card-label {
+          color: #1d4ed8;
         }
 
         /* ========== PREMIUM SEARCH BAR ========== */
