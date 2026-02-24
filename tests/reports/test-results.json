@@ -1,0 +1,155 @@
+{
+  "runDate": "2026-02-23",
+  "summary": {
+    "passed": 103,
+    "failed": 21,
+    "skipped": 185,
+    "total": 309,
+    "passRate": "33.3%",
+    "passRateExcludingSkips": "83.1%",
+    "duration": "~16m"
+  },
+  "failuresByFile": {
+    "01-account-setup.spec.js": 3,
+    "02-listing-management.spec.js": 1,
+    "04-events-classes.spec.js": 1,
+    "05-booking-appointments.spec.js": 3,
+    "06-customer-interaction.spec.js": 3,
+    "07-analytics.spec.js": 8,
+    "08-notifications-settings.spec.js": 1,
+    "09-community-engagement.spec.js": 1
+  },
+  "failureDetails": [
+    {
+      "file": "01-account-setup.spec.js",
+      "title": "1-E: Terms of Service and Privacy Policy links are present and open legal modal",
+      "category": "appBehavior"
+    },
+    {
+      "file": "01-account-setup.spec.js",
+      "title": "2-M: Auth modal shows verification prompt copy after signup attempt",
+      "category": "authGated"
+    },
+    {
+      "file": "01-account-setup.spec.js",
+      "title": "4-PARTIAL: SubmissionModal has description field for events/classes/deals",
+      "category": "authGated"
+    },
+    {
+      "file": "02-listing-management.spec.js",
+      "title": "23-M: Claim Business modal opens from business dashboard when no business is claimed",
+      "category": "authGated"
+    },
+    {
+      "file": "04-events-classes.spec.js",
+      "title": "36.5 — Submitting event form routes to pending_items (form submits without error)",
+      "category": "authGated"
+    },
+    {
+      "file": "05-booking-appointments.spec.js",
+      "title": "53.1 — Business view is accessible after login",
+      "category": "authGated"
+    },
+    {
+      "file": "05-booking-appointments.spec.js",
+      "title": "53.2 — BusinessDashboard Inbox button is visible",
+      "category": "authGated"
+    },
+    {
+      "file": "05-booking-appointments.spec.js",
+      "title": "58.1 — BusinessDashboard Analytics section is accessible",
+      "category": "authGated"
+    },
+    {
+      "file": "06-customer-interaction.spec.js",
+      "title": "62.1 — Inbox is accessible from Business view",
+      "category": "authGated"
+    },
+    {
+      "file": "06-customer-interaction.spec.js",
+      "title": "62.2 — Inbox has two tabs: Booking Requests and Messages",
+      "category": "authGated"
+    },
+    {
+      "file": "06-customer-interaction.spec.js",
+      "title": "62.7 — Inbox renders without console errors",
+      "category": "authGated"
+    },
+    {
+      "file": "07-analytics.spec.js",
+      "title": "BusinessDashboard displays profile_views metric",
+      "category": "authGated"
+    },
+    {
+      "file": "07-analytics.spec.js",
+      "title": "Profile views shows 7-day bar chart or numerical data",
+      "category": "authGated"
+    },
+    {
+      "file": "07-analytics.spec.js",
+      "title": "Time period selector is visible (30/90/365/all options)",
+      "category": "authGated"
+    },
+    {
+      "file": "07-analytics.spec.js",
+      "title": "BusinessDashboard shows event_views and class_views metrics",
+      "category": "authGated"
+    },
+    {
+      "file": "07-analytics.spec.js",
+      "title": "BusinessDashboard shows booking_clicks metric",
+      "category": "authGated"
+    },
+    {
+      "file": "07-analytics.spec.js",
+      "title": "BusinessDashboard has a TXT export button",
+      "category": "authGated"
+    },
+    {
+      "file": "07-analytics.spec.js",
+      "title": "BusinessDashboard has a CSV export button",
+      "category": "authGated"
+    },
+    {
+      "file": "07-analytics.spec.js",
+      "title": "Export report includes pulse score and analytics data",
+      "category": "authGated"
+    },
+    {
+      "file": "08-notifications-settings.spec.js",
+      "title": "ProfileModal Settings tab is accessible after login",
+      "category": "testInfra"
+    },
+    {
+      "file": "09-community-engagement.spec.js",
+      "title": "BusinessDashboard shows Weekly Goals section with XP labels",
+      "category": "testInfra"
+    }
+  ],
+  "failureCategories": {
+    "authGated": 16,
+    "appBehavior": 3,
+    "testInfra": 2
+  },
+  "improvements": {
+    "description": "Run 4 represents the fourth iteration of automated E2E testing on the Pulse app, building on fixes from three prior rounds.",
+    "rounds": [
+      {
+        "run": 1,
+        "description": "Baseline run establishing initial test suite coverage across 11 spec files. Identified widespread selector fragility, missing auth state setup, and skipped tests due to unimplemented features."
+      },
+      {
+        "run": 2,
+        "description": "Stabilised core navigation and public-facing tests. Reduced selector timeouts by switching to more resilient locators. Fixed modal open/close assertions that were triggering false negatives."
+      },
+      {
+        "run": 3,
+        "description": "Addressed auth-gated test failures by improving login flow helpers. Reduced total failures significantly. Identified that 185 tests are intentionally skipped pending feature completion."
+      },
+      {
+        "run": 4,
+        "description": "Run 4 (2026-02-23): 103 passed, 21 failed, 185 skipped out of 309 total. Pass rate of 83.1% excluding skips. Remaining 21 failures break down as: 16 auth-gated tests requiring a logged-in business owner account (not yet wired into CI), 3 app behaviour gaps (Terms of Service modal, verification prompt copy, SubmissionModal description field), and 2 test infrastructure issues (Settings tab and Weekly Goals assertions need selector updates). No regressions introduced relative to Run 3."
+      }
+    ]
+  }
+}

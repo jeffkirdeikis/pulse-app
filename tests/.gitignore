@@ -1,0 +1,4 @@
+# Test artifacts (regenerated on each run)
+screenshots/
+reports/html-report/
+reports/test-results-raw.json
