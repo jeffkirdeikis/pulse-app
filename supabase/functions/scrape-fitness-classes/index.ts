@@ -165,6 +165,7 @@ Deno.serve(async (req) => {
               is_free: false,
               price_description: 'See studio for pricing',
               status: 'active',
+              verified_at: new Date().toISOString(),
               tags: ['auto-scraped', 'mindbody-api', cls.studioName.toLowerCase().replace(/\s+/g, '-')]
             })
 

@@ -241,6 +241,15 @@ export async function insertClass(cls) {
     return false;
   }
 
+  // Trusted booking systems produce structured data — auto-verify on insert
+  const TRUSTED_SOURCES = [
+    'mindbody-api', 'mindbody-widget', 'mindbody-classic',
+    'wellnessliving', 'wellnessliving-api',
+    'perfectmind', 'marianatek', 'janeapp', 'sendmoregetbeta'
+  ];
+  const source = cls.bookingSystem || 'unknown';
+  const isTrusted = TRUSTED_SOURCES.includes(source);
+
   const eventData = {
     title: cls.title,
     description: cls.instructor
@@ -257,7 +266,8 @@ export async function insertClass(cls) {
     is_free: cls.isFree || false,
     price_description: cls.priceDescription || 'See venue for pricing',
     status: 'active',
-    tags: cls.tags || ['auto-scraped', cls.bookingSystem || 'unknown', (cls.venueName || cls.studioName || '').toLowerCase().replace(/\s+/g, '-')]
+    tags: cls.tags || ['auto-scraped', source, (cls.venueName || cls.studioName || '').toLowerCase().replace(/\s+/g, '-')],
+    ...(isTrusted ? { verified_at: new Date().toISOString() } : {})
   };
 
   try {
