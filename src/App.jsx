@@ -35,6 +35,7 @@ const BookingSheet = lazy(() => import('./components/modals/BookingSheet'));
 const AdminPanelModal = lazy(() => import('./components/modals/AdminPanelModal'));
 const EditVenueModal = lazy(() => import('./components/modals/EditVenueModal'));
 import FeedbackWidget from './components/FeedbackWidget';
+const AppsDirectory = lazy(() => import('./components/AppsDirectory'));
 const ImageCropperModal = lazy(() => import('./components/modals/ImageCropperModal'));
 const ContactSheet = lazy(() => import('./components/modals/ContactSheet'));
 const EditEventModal = lazy(() => import('./components/modals/EditEventModal'));
@@ -71,7 +72,7 @@ const AGE_RANGE_OPTIONS = [
 // Map URL paths to internal section/view state
 function pathToState(pathname) {
   const clean = pathname.replace(/^\/+/, '').split('/')[0] || '';
-  const sectionMap = { classes: 'classes', events: 'events', deals: 'deals', services: 'services', wellness: 'wellness' };
+  const sectionMap = { classes: 'classes', events: 'events', deals: 'deals', services: 'services', wellness: 'wellness', apps: 'apps' };
   if (sectionMap[clean]) return { view: 'consumer', section: sectionMap[clean] };
   if (clean === 'business') return { view: 'business', section: 'classes' };
   if (clean === 'admin') return { view: 'admin', section: 'classes' };
@@ -84,7 +85,7 @@ function HashRedirect() {
   const hash = location.hash.replace('#', '');
   // Don't redirect OAuth callback hashes
   if (hash.includes('access_token') || hash.includes('error_description')) return null;
-  const validSections = ['classes', 'events', 'deals', 'services', 'wellness'];
+  const validSections = ['classes', 'events', 'deals', 'services', 'wellness', 'apps'];
   if (validSections.includes(hash)) {
     return <Navigate to={`/${hash}`} replace />;
   }
@@ -1984,7 +1985,7 @@ export default function PulseApp() {
 
           <PullToRefresh onRefresh={handlePullRefresh}>
           <main className="content" id="main-content">
-            {currentSection !== 'wellness' && (
+            {currentSection !== 'wellness' && currentSection !== 'apps' && (
             <div className="results-bar">
               <h2 className="results-count" aria-live="polite" aria-atomic="true">
                 <AnimatePresence mode="wait">
@@ -2115,6 +2116,10 @@ export default function PulseApp() {
                     showToast={showToast}
                     setShowAuthModal={setShowAuthModal}
                   />
+                ) : currentSection === 'apps' ? (
+                  <Suspense fallback={<SkeletonCards count={6} />}>
+                    <AppsDirectory showToast={showToast} />
+                  </Suspense>
                 ) : (
                   <div className="events-list">
                     {renderEventsWithDividers()}

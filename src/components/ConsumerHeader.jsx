@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
-import { Calendar, Star, DollarSign, Search, X, Heart, Wrench, MessageCircle, Bell, WifiOff, Clock, TrendingUp, Sparkles } from 'lucide-react';
+import { Calendar, Star, DollarSign, Search, X, Heart, Wrench, MessageCircle, Bell, WifiOff, Clock, TrendingUp, Sparkles, LayoutGrid } from 'lucide-react';
 import GlobalSearchDropdown from './GlobalSearchDropdown';
 
 const RECENT_SEARCHES_KEY = 'pulse-recent-searches';
@@ -60,6 +60,7 @@ const ConsumerHeader = React.memo(function ConsumerHeader({
     { key: 'deals', label: 'Deals', icon: DollarSign, hasCount: true },
     { key: 'services', label: 'Services', icon: Wrench, hasCount: false },
     { key: 'wellness', label: 'Wellness', icon: Sparkles, hasCount: false },
+    { key: 'apps', label: 'Apps', icon: LayoutGrid, hasCount: false },
   ], []);
   const tabRefs = useRef({});
   const stripRef = useRef(null);
@@ -255,7 +256,7 @@ const ConsumerHeader = React.memo(function ConsumerHeader({
       </nav>
 
       {/* Search Bar with Suggestions (hidden for wellness which has its own UI) */}
-      <div className="search-section-premium" style={currentSection === 'wellness' ? { display: 'none' } : undefined} ref={searchContainerRef}>
+      <div className="search-section-premium" style={currentSection === 'wellness' || currentSection === 'apps' ? { display: 'none' } : undefined} ref={searchContainerRef}>
         <div className="search-bar-premium">
           <Search size={20} className="search-icon-premium" />
           <input
