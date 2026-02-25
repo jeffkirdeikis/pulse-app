@@ -1,6 +1,6 @@
-import { StrictMode, lazy, Suspense } from 'react'
+import { StrictMode, lazy, Suspense, useEffect } from 'react'
 import { createRoot } from 'react-dom/client'
-import { BrowserRouter } from 'react-router-dom'
+import { BrowserRouter, useLocation } from 'react-router-dom'
 import './index.css'
 import App from './App.jsx'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
@@ -12,6 +12,17 @@ const Analytics = lazy(() => import('@vercel/analytics/react').then(m => ({ defa
 // Initialize Sentry error tracking (before rendering)
 initSentry()
 
+// Track SPA page views in Google Analytics
+function GaPageTracker() {
+  const location = useLocation()
+  useEffect(() => {
+    if (window.gtag) {
+      window.gtag('event', 'page_view', { page_path: location.pathname + location.search })
+    }
+  }, [location])
+  return null
+}
+
 const isProduction = import.meta.env.PROD
 // In production, app is served at /squamish via Vercel rewrite.
 // In dev, serve from root.
@@ -21,6 +32,7 @@ createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter basename={basename}>
       <ErrorBoundary>
+        <GaPageTracker />
         <App />
         {isProduction && (
           <Suspense fallback={null}>
