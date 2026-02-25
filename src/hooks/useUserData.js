@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { setUser as setSentryUser, clearUser as clearSentryUser } from '../lib/sentry';
+import { trackGA } from '../lib/ga';
 
 /**
  * Hook to manage all user data from Supabase
@@ -90,6 +91,9 @@ export function useUserData() {
       if (import.meta.env.DEV) console.log('[Auth] Auth state changed:', event, 'Session:', session ? 'exists' : 'null');
       if (event === 'TOKEN_REFRESHED' && import.meta.env.DEV) {
         console.log('[Auth] Token refreshed successfully');
+      }
+      if (event === 'SIGNED_IN' && session?.user) {
+        trackGA('login', { method: session.user.app_metadata?.provider || 'email' });
       }
       if (session?.user) {
         if (import.meta.env.DEV) console.log('[Auth] User from session:', session.user.id, session.user.email);

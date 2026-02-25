@@ -4,6 +4,7 @@ import {
   Phone, Share2, Star, Users, Wrench, X
 } from 'lucide-react';
 import { stripHtml } from '../../utils/textHelpers';
+import { trackGA } from '../../lib/ga';
 
 function getSafeWebsiteUrl(url) {
   if (!url) return null;
@@ -31,6 +32,7 @@ const ServiceDetailModal = memo(function ServiceDetailModal({
   const safeWebsite = getSafeWebsiteUrl(service.website);
 
   const handleShare = async () => {
+    trackGA('share', { content_type: 'business', item_id: service.id, method: 'native' });
     const shareData = {
       title: service.name,
       text: `Check out ${service.name} in Squamish`,

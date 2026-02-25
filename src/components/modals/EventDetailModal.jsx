@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { PACIFIC_TZ } from '../../utils/timezoneHelpers';
 import { stripHtml } from '../../utils/textHelpers';
+import { trackGA } from '../../lib/ga';
 
 const EventDetailModal = memo(function EventDetailModal({
   event,
@@ -40,6 +41,7 @@ const EventDetailModal = memo(function EventDetailModal({
   const venue = venues?.find(v => v.id === event.venueId);
 
   const handleShare = async () => {
+    trackGA('share', { content_type: 'event', item_id: event.id, method: 'native' });
     const shareData = {
       title: event.title,
       text: `Check out ${event.title} at ${venueName}`,

@@ -4,6 +4,7 @@ import {
   Navigation, Share2, Star, Ticket
 } from 'lucide-react';
 import { generateSmartDealTitle, generateEnhancedDealDescription, getRelatedDeals } from '../../utils/dealHelpers';
+import { trackGA } from '../../lib/ga';
 
 const DealDetailModal = memo(function DealDetailModal({
   deal,
@@ -26,6 +27,7 @@ const DealDetailModal = memo(function DealDetailModal({
   const saved = isItemSavedLocal('deal', deal.id);
 
   const handleShare = async () => {
+    trackGA('share', { content_type: 'deal', item_id: deal.id, method: 'native' });
     const shareData = {
       title: deal.title,
       text: `Check out this deal: ${deal.title} at ${venueName || 'a local business'}`,

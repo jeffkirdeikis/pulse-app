@@ -3,6 +3,7 @@ import { Routes, Route, Navigate, useNavigate, useLocation, useParams } from 're
 import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowUp, Calendar, Check, X, Plus, CheckCircle, Moon, Percent, Sparkles, Sun, Sunset, LayoutList, List } from 'lucide-react';
 import { supabase } from './lib/supabase';
+import { trackGA } from './lib/ga';
 import { useUserData } from './hooks/useUserData';
 import { useCardAnimation } from './hooks/useCardAnimation';
 import { useMessaging } from './hooks/useMessaging';
@@ -565,6 +566,7 @@ export default function PulseApp() {
 
   // Track analytics event
   const trackAnalytics = useCallback(async (eventType, businessId, referenceId = null) => {
+    trackGA(eventType, { business_id: businessId, reference_id: referenceId });
     try {
       await supabase.from('business_analytics').insert({
         business_id: businessId,
@@ -1776,6 +1778,8 @@ export default function PulseApp() {
     // Prevent concurrent save operations on the same item
     if (savingInProgressRef.current.has(itemKey)) return;
 
+    trackGA('toggle_save', { item_type: type, item_id: id, item_name: name });
+
     if (!isAuthenticated) {
       // Use local storage when not logged in
       setLocalSavedItems(prev => {
@@ -1867,9 +1871,12 @@ export default function PulseApp() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(searchQuery);
+      if (searchQuery.trim()) {
+        trackGA('search', { search_term: searchQuery.trim(), section: currentSection });
+      }
     }, 150);
     return () => clearTimeout(timer);
-  }, [searchQuery]);
+  }, [searchQuery]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Card scroll-in animations (IntersectionObserver)
   useCardAnimation(dealCardRefs, 'deal-card-visible', [currentSection, dealCategoryFilter, searchQuery]);
