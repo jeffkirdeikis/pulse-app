@@ -206,6 +206,7 @@ const AdminDashboard = memo(function AdminDashboard({
   setSelectedEvent,
 }) {
   const venueCardRefs = useRef({});
+  const [adminVenueLimit, setAdminVenueLimit] = useState(50);
 
   // Guard against undefined data during initial load
   if (!services || !dbEvents || !dbDeals) {
