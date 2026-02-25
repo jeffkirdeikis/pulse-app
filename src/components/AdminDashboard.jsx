@@ -1,7 +1,7 @@
-import React, { memo, useRef, useState } from 'react';
+import React, { memo, useEffect, useRef, useState } from 'react';
 import {
   AlertCircle, Calendar, Check, CheckCircle, Clock, DollarSign,
-  Edit2, Eye, FileText, Plus, Search, ShieldCheck, SlidersHorizontal, Trash2, User, XCircle
+  Edit2, Eye, FileText, MessageSquare, Plus, Search, ShieldCheck, SlidersHorizontal, Trash2, User, XCircle
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { getPacificDateStr } from '../utils/timezoneHelpers';
@@ -207,6 +207,14 @@ const AdminDashboard = memo(function AdminDashboard({
 }) {
   const venueCardRefs = useRef({});
   const [adminVenueLimit, setAdminVenueLimit] = useState(50);
+  const [feedbackItems, setFeedbackItems] = useState([]);
+  const [feedbackLoading, setFeedbackLoading] = useState(true);
+
+  useEffect(() => {
+    supabase.from('feedback').select('*').order('created_at', { ascending: false }).limit(50)
+      .then(({ data }) => { setFeedbackItems(data || []); setFeedbackLoading(false); })
+      .catch(() => { setFeedbackItems([]); setFeedbackLoading(false); });
+  }, []);
 
   // Guard against undefined data during initial load
   if (!services || !dbEvents || !dbDeals) {
@@ -745,6 +753,53 @@ const AdminDashboard = memo(function AdminDashboard({
           </button>
         </div>
       </div>
+        {/* User Feedback Section */}
+        <div className="premium-section">
+          <div className="section-header-premium">
+            <div>
+              <h2><MessageSquare size={22} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '8px' }} />User Feedback</h2>
+              <p className="section-subtitle">{feedbackItems.length} submissions</p>
+            </div>
+          </div>
+          {feedbackLoading ? (
+            <div style={{ textAlign: 'center', padding: '24px', color: '#6b7280' }}>Loading feedback...</div>
+          ) : feedbackItems.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '32px', color: '#9ca3af' }}>
+              <MessageSquare size={48} style={{ margin: '0 auto 12px', opacity: 0.4 }} />
+              <p>No feedback yet</p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {feedbackItems.map(fb => (
+                <div key={fb.id} style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '16px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <span style={{
+                      display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: '600', padding: '4px 10px', borderRadius: '20px',
+                      background: fb.type === 'bug' ? '#fef2f2' : fb.type === 'suggestion' ? '#fffbeb' : '#f0fdf4',
+                      color: fb.type === 'bug' ? '#dc2626' : fb.type === 'suggestion' ? '#d97706' : '#16a34a',
+                    }}>
+                      {fb.type === 'bug' ? '🐛' : fb.type === 'suggestion' ? '💡' : '💬'} {fb.type}
+                    </span>
+                    <span style={{ fontSize: '12px', color: '#9ca3af' }}>
+                      {fb.created_at && !isNaN(new Date(fb.created_at).getTime())
+                        ? new Date(fb.created_at).toLocaleString('en-CA', { timeZone: 'America/Vancouver', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                        : ''}
+                    </span>
+                  </div>
+                  <p style={{ margin: '0 0 8px', whiteSpace: 'pre-wrap', fontSize: '14px', color: '#1f2937', lineHeight: '1.5' }}>{fb.message}</p>
+                  {fb.email && <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>📧 {fb.email}</div>}
+                  <div style={{ fontSize: '11px', color: '#9ca3af', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                    {fb.page_url && <span>{fb.page_url.replace(/https?:\/\/(www\.)?/, '').split('?')[0]}</span>}
+                    {fb.viewport && <span>{fb.viewport}</span>}
+                    {fb.user_id && <span>User: {fb.user_id.slice(0, 8)}...</span>}
+                  </div>
+                  {fb.screenshot_url && (() => { try { const u = new URL(fb.screenshot_url); return ['http:', 'https:'].includes(u.protocol) ? <a href={u.href} target="_blank" rel="noopener noreferrer" style={{ fontSize: '12px', color: '#3b82f6', marginTop: '4px', display: 'inline-block' }}>📸 View screenshot</a> : null; } catch { return null; } })()}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         </>
       )}
     </div>
