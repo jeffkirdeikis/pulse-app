@@ -12,6 +12,11 @@ serve(async (req) => {
 
     const { type, message, email, screenshot_url, page_url, user_agent, viewport, user_id, created_at } = record
 
+    // Basic validation — require a message
+    if (!message || typeof message !== 'string' || message.trim().length === 0) {
+      return new Response(JSON.stringify({ error: 'Message required' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
+    }
+
     const typeLabel = type === 'bug' ? '🐛 Bug Report' : type === 'suggestion' ? '💡 Suggestion' : '💬 Comment'
     const subject = `[Pulse Feedback] New ${typeLabel}: "${(message || '').substring(0, 50)}${(message || '').length > 50 ? '...' : ''}"`
 
