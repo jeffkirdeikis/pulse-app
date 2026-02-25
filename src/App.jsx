@@ -307,7 +307,8 @@ export default function PulseApp() {
     registerForEvent,
     refreshUserData,
     deleteAccount,
-    signOut
+    signOut,
+    loading: authLoading
   } = useUserData();
 
   const markNotificationRead = useCallback(async (notifId) => {
@@ -524,8 +525,9 @@ export default function PulseApp() {
     fetchAdminClaims();
   }, [fetchAdminClaims]);
 
-  // Handle /admin route — redirect non-admins
+  // Handle /admin route — redirect non-admins (wait for auth to resolve first)
   useEffect(() => {
+    if (authLoading) return;
     if (location.pathname === '/admin' || location.pathname.startsWith('/admin')) {
       if (user?.isGuest) {
         setShowAuthModal(true);
@@ -533,7 +535,7 @@ export default function PulseApp() {
         navigate('/classes', { replace: true });
       }
     }
-  }, [user?.isAdmin, user?.isGuest, location.pathname, navigate]);
+  }, [authLoading, user?.isAdmin, user?.isGuest, location.pathname, navigate]);
 
   // Close modals on browser back/forward (React Router handles popstate,
   // but we still need to close any open modals when the route changes)

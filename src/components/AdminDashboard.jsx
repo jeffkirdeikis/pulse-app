@@ -206,6 +206,19 @@ const AdminDashboard = memo(function AdminDashboard({
   setSelectedEvent,
 }) {
   const venueCardRefs = useRef({});
+
+  // Guard against undefined data during initial load
+  if (!services || !dbEvents || !dbDeals) {
+    return (
+      <div className="admin-view-premium" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+        <div style={{ textAlign: 'center', color: '#6b7280' }}>
+          <div className="loading-spinner" style={{ margin: '0 auto 16px' }}></div>
+          <p>Loading admin dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="admin-view-premium">
       {/* Check if user is authenticated and admin */}
