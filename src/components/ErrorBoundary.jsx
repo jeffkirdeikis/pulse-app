@@ -154,8 +154,8 @@ class ErrorBoundary extends React.Component {
               </button>
             </div>
 
-            {/* Show error details in development */}
-            {import.meta.env.DEV && this.state.error && (
+            {/* Show error details — temporarily enabled for debugging */}
+            {this.state.error && (
               <details style={{
                 marginTop: '24px',
                 textAlign: 'left',
@@ -169,7 +169,7 @@ class ErrorBoundary extends React.Component {
                   fontWeight: '500',
                   color: '#991b1b',
                 }}>
-                  Error Details (Dev Only)
+                  Error Details
                 </summary>
                 <pre style={{
                   marginTop: '12px',
