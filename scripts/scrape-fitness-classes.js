@@ -38,6 +38,13 @@ const FITNESS_STUDIOS = [
     address: 'Squamish, BC',
     category: 'Fitness',
     bookingSystem: 'mindbody'
+  },
+  {
+    name: 'F45 Training Squamish',
+    widgetId: '5b161541d142',
+    address: '11/12-1257 Commercial Way, Squamish, BC V8B 0Z4',
+    category: 'Fitness',
+    bookingSystem: 'mindbody'
   }
   // Studios using WellnessLiving (different API - not yet implemented):
   // - Breathe Fitness: k_business=338540

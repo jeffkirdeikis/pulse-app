@@ -100,6 +100,19 @@ export const RELIABLE_SOURCES = [
     verified: true,
     notes: 'CrossFit-style gym - uses numeric widget API ID (not hex embed ID)'
   },
+  {
+    name: 'F45 Training Squamish',
+    booking_system: 'mindbody-widget',
+    widget_id: '5b161541d142',
+    studio_id: '5721182',
+    url: 'https://f45training.com/ca/studio/squamish/',
+    address: '11/12-1257 Commercial Way, Squamish, BC V8B 0Z4',
+    category: 'Fitness',
+    scrape_frequency: 'daily',
+    priority: 9,
+    verified: true,
+    notes: 'F45 functional training - uses hex schedule widget ID'
+  },
 
   // ========================================
   // MINDBODY CLASSIC (Web scraping)
