@@ -26,6 +26,7 @@ import {
 import { sendTelegramAlert as telegramAlert } from './lib/alerting.js';
 import {
   RELIABLE_SOURCES,
+  getAllSourcesAsync,
   getSourcesBySystem,
   recordScrapeSuccess,
   recordScrapeFailure,
@@ -1194,17 +1195,21 @@ async function main() {
   console.log('🎯 RELIABLE SOURCES SCRAPER');
   console.log('='.repeat(70));
   console.log(`Started: ${new Date().toLocaleString()}`);
-  console.log(`Sources: ${RELIABLE_SOURCES.length}`);
+
+  // Sync hardcoded sources to database (ensures they exist for tracking)
+  await syncSourcesToDatabase();
+
+  // Load ALL active sources from database (includes hardcoded + auto-discovered)
+  const sources = await getAllSourcesAsync();
+
+  console.log(`Sources: ${sources.length}`);
   console.log(`Scrape window: ${DAYS_TO_SCRAPE} days`);
   console.log('='.repeat(70));
 
-  // Sync sources to database (ensures recordScrapeSuccess/Failure has rows to update)
-  await syncSourcesToDatabase();
-
   // List all sources
   console.log('\n📋 Sources to scrape:');
-  for (const source of RELIABLE_SOURCES) {
-    console.log(`   • ${source.name} (${source.booking_system})`);
+  for (const source of sources) {
+    console.log(`   • ${source.name} (${source.booking_system})${source.verified ? '' : ' [unverified]'}`);
   }
 
   const BROWSER_ARGS = ['--no-sandbox', '--disable-setuid-sandbox', '--disable-blink-features=AutomationControlled', '--disable-dev-shm-usage'];
@@ -1213,8 +1218,8 @@ async function main() {
   let browser = await puppeteer.launch({ headless: 'new', args: BROWSER_ARGS });
 
   try {
-    for (let idx = 0; idx < RELIABLE_SOURCES.length; idx++) {
-      const source = RELIABLE_SOURCES[idx];
+    for (let idx = 0; idx < sources.length; idx++) {
+      const source = sources[idx];
       stats.sourcesAttempted++;
 
       // Restart browser periodically to prevent memory leaks

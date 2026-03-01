@@ -18,7 +18,7 @@ const SUPABASE_KEY = SUPABASE_SERVICE_KEY();
 // FETCH HELPER
 // ============================================================
 
-async function fetchWithTimeout(url, timeoutMs = 8000) {
+export async function fetchWithTimeout(url, timeoutMs = 8000) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -128,7 +128,9 @@ const PROVIDER_SIGNATURES = {
         const resp = await fetchWithTimeout(url, 8000);
         if (!resp.ok) return null;
         const data = await resp.json();
-        if (Array.isArray(data) && data.length > 0) {
+        // API returns { treatments: [...] } or raw array depending on version
+        const treatments = Array.isArray(data) ? data : data?.treatments;
+        if (Array.isArray(treatments) && treatments.length > 0) {
           return { booking_system: 'janeapp', studio_id: slug };
         }
       } catch { /* probe failed */ }
