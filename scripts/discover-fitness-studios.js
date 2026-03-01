@@ -1,16 +1,17 @@
 #!/usr/bin/env node
 
 /**
- * Automated Fitness Studio Discovery Pipeline
+ * Automated Booking System Discovery Pipeline
  *
- * Queries fitness businesses from the database, visits their websites,
+ * Queries businesses from the database, visits their websites,
  * detects booking systems using PROVIDER_SIGNATURES patterns, extracts
  * widget/studio IDs, and upserts discoveries into scraping_sources table.
  *
  * Usage:
- *   node scripts/discover-fitness-studios.js              # Full discovery
- *   node scripts/discover-fitness-studios.js --dry-run     # Detect without inserting
- *   node scripts/discover-fitness-studios.js --limit 10    # Test with 10 businesses
+ *   node scripts/discover-fitness-studios.js                    # Scan ALL businesses
+ *   node scripts/discover-fitness-studios.js --fitness-only      # Only fitness categories
+ *   node scripts/discover-fitness-studios.js --dry-run           # Detect without inserting
+ *   node scripts/discover-fitness-studios.js --limit 10          # Test with N businesses
  *
  * Runs weekly via GitHub Actions (HTTP-only, no Puppeteer needed).
  */
@@ -27,6 +28,7 @@ const SUPABASE_KEY = SUPABASE_SERVICE_KEY();
 
 const args = process.argv.slice(2);
 const DRY_RUN = args.includes('--dry-run');
+const FITNESS_ONLY = args.includes('--fitness-only');
 const LIMIT_IDX = args.indexOf('--limit');
 const LIMIT = LIMIT_IDX !== -1 ? parseInt(args[LIMIT_IDX + 1], 10) : 0;
 
@@ -55,17 +57,24 @@ const PAUSE_DURATION_MS = 5000;
 // ============================================================
 
 /**
- * Fetch fitness businesses with websites from the businesses table.
+ * Fetch businesses with websites from the businesses table.
+ * If fitnessOnly is true, filters to fitness-related categories.
  */
-async function getFitnessBusinesses() {
-  // Build OR filter for fitness categories using ilike
-  // PostgREST uses * as wildcard alias for % (avoids URL encoding issues)
-  const categoryFilters = FITNESS_CATEGORIES
-    .map(cat => `category.ilike.*${cat}*`)
-    .join(',');
+async function getBusinesses(fitnessOnly = false) {
+  let url;
 
-  const filterParam = encodeURIComponent(`(${categoryFilters})`);
-  const url = `${SUPABASE_URL}/rest/v1/businesses?or=${filterParam}&website=not.is.null&select=id,name,category,website&order=name`;
+  if (fitnessOnly) {
+    // Build OR filter for fitness categories using ilike
+    // PostgREST uses * as wildcard alias for % (avoids URL encoding issues)
+    const categoryFilters = FITNESS_CATEGORIES
+      .map(cat => `category.ilike.*${cat}*`)
+      .join(',');
+
+    const filterParam = encodeURIComponent(`(${categoryFilters})`);
+    url = `${SUPABASE_URL}/rest/v1/businesses?or=${filterParam}&website=not.is.null&select=id,name,category,website&order=name`;
+  } else {
+    url = `${SUPABASE_URL}/rest/v1/businesses?website=not.is.null&select=id,name,category,website&order=name`;
+  }
 
   const resp = await fetch(url, {
     headers: {
@@ -239,17 +248,18 @@ async function upsertDiscoveredSource(business, detection) {
 
 async function main() {
   console.log('\n' + '='.repeat(70));
-  console.log('🔍 FITNESS STUDIO DISCOVERY PIPELINE');
+  console.log('🔍 BOOKING SYSTEM DISCOVERY PIPELINE');
   console.log('='.repeat(70));
   console.log(`Started: ${new Date().toLocaleString()}`);
+  console.log(`Scope: ${FITNESS_ONLY ? 'Fitness categories only' : 'All businesses'}`);
   if (DRY_RUN) console.log('Mode: DRY RUN (no database writes)');
   if (LIMIT) console.log(`Limit: ${LIMIT} businesses`);
   console.log('='.repeat(70));
 
-  // Step 1: Fetch fitness businesses
-  console.log('\n📋 Fetching fitness businesses from database...');
-  const allBusinesses = await getFitnessBusinesses();
-  console.log(`   Found ${allBusinesses.length} fitness businesses with websites`);
+  // Step 1: Fetch businesses
+  console.log(`\n📋 Fetching ${FITNESS_ONLY ? 'fitness ' : ''}businesses from database...`);
+  const allBusinesses = await getBusinesses(FITNESS_ONLY);
+  console.log(`   Found ${allBusinesses.length} businesses with websites`);
 
   // Step 2: Get existing sources to skip
   console.log('\n📋 Checking existing scraping sources...');
