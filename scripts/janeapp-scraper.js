@@ -36,6 +36,8 @@ const CLINICS = [
   { slug: 'anchorsquamish', name: 'Anchor Health & Wellness' },
   { slug: 'twr', name: 'The Wellness Room', bookingPath: '/locations/clinic-tantalus-rd-location/book' },
   { slug: 'seedsquamish', name: 'Seed Studio', bookingPath: '/locations/seed-studio/book' },
+  { slug: 'teawc', name: 'The Essence Wellness Centre' },
+  { slug: 'squamishbarbell', name: 'Squamish Barbell Clinic' },
 ];
 
 /**
