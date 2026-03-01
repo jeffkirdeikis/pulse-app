@@ -1107,16 +1107,12 @@ async function scrapeJaneApp(source, browser) {
   console.log('-'.repeat(50));
 
   const slug = source.studio_id;
-  const clinic = JANEAPP_CLINICS.find(c => c.slug === slug);
-
-  if (!clinic) {
-    const msg = `JaneApp clinic slug "${slug}" not found in CLINICS list — add it to janeapp-scraper.js`;
-    console.error(`   ❌ ${msg}`);
-    stats.errors.push({ source: source.name, error: msg });
-    sourceResults.push({ name: source.name, classesFound: 0, classesAdded: 0, error: msg });
-    await recordScrapeFailure(source.name, msg);
-    return { classesFound: 0, classesAdded: 0 };
-  }
+  // Look up in CLINICS first, fall back to constructing from source config
+  const clinic = JANEAPP_CLINICS.find(c => c.slug === slug) || {
+    slug,
+    name: source.name,
+    bookingPath: null
+  };
 
   try {
     const providerMap = await getJaneAppProviderMap();
@@ -1200,7 +1196,9 @@ async function main() {
   await syncSourcesToDatabase();
 
   // Load ALL active sources from database (includes hardcoded + auto-discovered)
-  const sources = await getAllSourcesAsync();
+  // Filter out website-verified sources — those are handled by the orchestrator scraper
+  const allSources = await getAllSourcesAsync();
+  const sources = allSources.filter(s => s.booking_system !== 'website-verified');
 
   console.log(`Sources: ${sources.length}`);
   console.log(`Scrape window: ${DAYS_TO_SCRAPE} days`);
