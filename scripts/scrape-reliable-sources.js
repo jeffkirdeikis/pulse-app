@@ -1139,6 +1139,146 @@ async function scrapeJaneApp(source, browser) {
 }
 
 // ============================================================
+// ZENPLANNER SCRAPER (Martial arts / gyms)
+// ============================================================
+
+/**
+ * Scrape a ZenPlanner calendar page using Puppeteer.
+ * ZenPlanner uses ColdFusion (.cfm) pages behind Cloudflare.
+ */
+async function scrapeZenPlanner(source, browser) {
+  console.log(`\n📍 ${source.name} (ZenPlanner)`);
+  console.log('-'.repeat(50));
+
+  const slug = source.studio_id;
+  const calendarUrl = `https://${slug}.sites.zenplanner.com/calendar.cfm`;
+
+  const page = await browser.newPage();
+  let classesFound = 0;
+  let classesAdded = 0;
+
+  try {
+    await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36');
+    await page.goto(calendarUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+
+    // Wait for Cloudflare challenge to resolve
+    await page.waitForFunction(() => !document.title.includes('moment'), { timeout: 15000 }).catch(() => {});
+
+    // ZenPlanner calendar structure: table rows with class info
+    // Each day has a column, each time slot is a row
+    const classes = await page.evaluate(() => {
+      const results = [];
+
+      // Try multiple known ZenPlanner DOM structures
+      // Structure 1: Table-based calendar with .calendar-day and .calendar-event
+      const events = document.querySelectorAll('.calendar-event, .event, [class*="class-item"], [class*="session"], tr[onclick], .schedule-item');
+      events.forEach(el => {
+        const text = el.textContent.trim();
+        if (text.length > 3) {
+          results.push({ raw: text, element: el.className });
+        }
+      });
+
+      // Structure 2: Day columns with events listed underneath
+      const dayCols = document.querySelectorAll('.day-column, .calendar-day, td[class*="day"]');
+      dayCols.forEach(col => {
+        const dateEl = col.querySelector('.date, .day-header, th');
+        const date = dateEl ? dateEl.textContent.trim() : '';
+        const items = col.querySelectorAll('a, .item, .event, div[class*="class"]');
+        items.forEach(item => {
+          const text = item.textContent.trim();
+          if (text.length > 3) {
+            results.push({ raw: text, date, element: item.className });
+          }
+        });
+      });
+
+      // Structure 3: Generic - get all links that look like class bookings
+      if (results.length === 0) {
+        const links = document.querySelectorAll('a[href*="reservation"], a[href*="class"], a[href*="signup"]');
+        links.forEach(link => {
+          results.push({ raw: link.textContent.trim(), href: link.href, element: 'link' });
+        });
+      }
+
+      // Fallback: get the full page text for parsing
+      if (results.length === 0) {
+        results.push({ raw: document.body.innerText.substring(0, 5000), element: 'body-fallback' });
+      }
+
+      return results;
+    });
+
+    console.log(`   Found ${classes.length} raw calendar entries`);
+
+    // Parse the ZenPlanner calendar data into class records
+    const today = getTodayPacific();
+    const endDate = getEndDatePacific(14); // 2 weeks
+
+    for (const cls of classes) {
+      if (cls.element === 'body-fallback') {
+        console.log(`   📄 Page body (first 200 chars): ${cls.raw.substring(0, 200)}`);
+        continue;
+      }
+
+      // Try to parse time and class name from raw text
+      // Common format: "6:00 AM - 7:00 AM  Class Name" or "6:00AM Class Name"
+      const timeMatch = cls.raw.match(/(\d{1,2}:\d{2}\s*(?:AM|PM)?)\s*[-–]?\s*(\d{1,2}:\d{2}\s*(?:AM|PM))?/i);
+      const className = cls.raw.replace(/\d{1,2}:\d{2}\s*(?:AM|PM)?\s*[-–]?\s*\d{0,2}:?\d{0,2}\s*(?:AM|PM)?/gi, '').trim();
+
+      if (!className || className.length < 3) continue;
+
+      const startTime = timeMatch ? parseTime(timeMatch[1]) : null;
+      const endTime = timeMatch && timeMatch[2] ? parseTime(timeMatch[2]) : null;
+
+      // Use the date from the calendar context if available
+      let classDate = cls.date || today;
+
+      // Skip if we can't parse meaningful data
+      if (!startTime && !className) continue;
+
+      const exists = await classExists(
+        className,
+        classDate,
+        startTime || '00:00',
+        source.name
+      );
+
+      if (!exists) {
+        await insertClass({
+          title: className,
+          date: classDate,
+          start_time: startTime || null,
+          end_time: endTime || null,
+          venue: source.name,
+          source: `zenplanner_${slug}`,
+          booking_url: calendarUrl,
+          tags: ['fitness', 'martial-arts'],
+          category: source.category || 'Fitness'
+        });
+        classesAdded++;
+      }
+      classesFound++;
+    }
+
+    console.log(`   ✅ Found: ${classesFound} classes, Added: ${classesAdded}`);
+    stats.classesFound += classesFound;
+    stats.classesAdded += classesAdded;
+    stats.sourcesSuccessful++;
+    sourceResults.push({ name: source.name, classesFound, classesAdded, error: null });
+    await recordScrapeSuccess(source.name, classesFound);
+
+  } catch (error) {
+    console.error(`   ❌ Error: ${error.message}`);
+    stats.errors.push({ source: source.name, error: error.message });
+    sourceResults.push({ name: source.name, classesFound: 0, classesAdded: 0, error: error.message });
+    await recordScrapeFailure(source.name, error.message);
+  } finally {
+    await page.close();
+  }
+}
+
+// ============================================================
 // RE-SCRAPE HELPER (for provider change auto-switch)
 // ============================================================
 
@@ -1175,6 +1315,10 @@ async function reScrapeSource(source, browser) {
       return await scrapeMarianaTekClasses(source);
     case 'janeapp': {
       await scrapeJaneApp(source, browser);
+      return null;
+    }
+    case 'zenplanner': {
+      await scrapeZenPlanner(source, browser);
       return null;
     }
     default:
@@ -1263,6 +1407,9 @@ async function main() {
         }
         case 'janeapp':
           await scrapeJaneApp(source, browser);
+          break;
+        case 'zenplanner':
+          await scrapeZenPlanner(source, browser);
           break;
         default:
           console.log(`\n⚠️  Unknown booking system: ${source.booking_system} for ${source.name}`);

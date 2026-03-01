@@ -38,6 +38,7 @@ const CLINICS = [
   { slug: 'seedsquamish', name: 'Seed Studio', bookingPath: '/locations/seed-studio/book' },
   { slug: 'teawc', name: 'The Essence Wellness Centre' },
   { slug: 'squamishbarbell', name: 'Squamish Barbell Clinic' },
+  { slug: 'falllineperformance', name: 'Fall Line Fitness', bookingPath: '/locations/fall-line-fitness/book' },
 ];
 
 /**

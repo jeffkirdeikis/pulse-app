@@ -165,6 +165,49 @@ const PROVIDER_SIGNATURES = {
     ],
     extractSlug: (match) => match[1] || null,
     probe: null // Needs browser
+  },
+
+  'zenplanner': {
+    name: 'ZenPlanner',
+    htmlPatterns: [
+      /([a-z0-9-]+)\.sites\.zenplanner\.com/i,
+      /zenplanner\.com\/([a-z0-9-]+)/i,
+      /zenplanner\.com/i
+    ],
+    extractSlug: (match) => match[1] || null,
+    probe: async (slug) => {
+      const url = `https://${slug}.sites.zenplanner.com/calendar.cfm`;
+      try {
+        const resp = await fetchWithTimeout(url, 8000);
+        if (!resp.ok) return null;
+        const html = await resp.text();
+        if (html.includes('calendar') || html.includes('class') || html.includes('schedule')) {
+          return { booking_system: 'zenplanner', studio_id: slug };
+        }
+      } catch { /* probe failed */ }
+      return null;
+    }
+  },
+
+  'pushpress': {
+    name: 'PushPress',
+    htmlPatterns: [
+      /([a-z0-9-]+)\.pushpress\.com/i,
+      /pushpress\.com/i
+    ],
+    extractSlug: (match) => match[1] || null,
+    probe: async (slug) => {
+      const url = `https://${slug}.pushpress.com/open/calendar`;
+      try {
+        const resp = await fetchWithTimeout(url, 8000);
+        if (!resp.ok) return null;
+        const html = await resp.text();
+        if (html.includes('calendar') || html.includes('class') || html.includes('schedule')) {
+          return { booking_system: 'pushpress', studio_id: slug };
+        }
+      } catch { /* probe failed */ }
+      return null;
+    }
   }
 };
 
